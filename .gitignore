@@ -1,0 +1,26 @@
+# ignore stuff
+
+build
+node_modules
+.idea
+.arcconfig
+*.iml
+bin
+/mutagen.sh
+venv
+.env
+bigtable-admin.json
+bigtable-writer.json
+
+
+# rust stuff
+target
+
+# misc stuff
+test-ledger
+~\$*
+*.swp
+.vscode/*
+
+# system stuff
+.DS_STORE
