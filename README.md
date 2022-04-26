@@ -10,4 +10,6 @@ We have enabled discussions and will be open to feedback throughout the developm
 
 Likewise feel free to comment on issues as they come up. We use an org-wide labeling system, but will have specific labels for this repository to denote contract type, client tooling, etc.
 
-[In parting, may we leave you with this gift, oh fellow dev traveller -- a Solana program template repo for arbitrarily complex contracts with **no** framework.](
+[In parting, may we leave you with this gift, oh fellow dev traveller -- a Solana program template repo for arbitrarily complex contracts with **no** framework.](https://github.com/interlock-network/solana-program-template)
+
+Enjoy!
