@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/ERC20Pausable.sol)
+//
+// Interlock ERC-20 INTR Token Mint Platform
+// 		(containing)
+// OpenZeppelin v4.4.1 contract (token/ERC20/extensions/ERC20Pausable.sol)
+//
+// Contributors:
+// blairmunroakusa
+// ...
 
 pragma solidity ^0.8.0;
 
 import "../ERC20.sol";
-import "../../../security/Pausable.sol";
+import "../utils/Pausable.sol";
 
 /**
  * @dev ERC20 token with pausable token transfers, minting and burning.

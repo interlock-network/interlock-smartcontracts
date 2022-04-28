@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.5.0) (token/ERC20/extensions/ERC20Burnable.sol)
+//
+// Interlock ERC-20 INTR Token Mint Platform
+// 		(containing)
+// OpenZeppelin v4.5.0 contract (token/ERC20/extensions/ERC20Burnable.sol)
+//
+// Contributors:
+// blairmunroakusa
+// ...
 
 pragma solidity ^0.8.0;
 
 import "../ERC20.sol";
-import "../../../utils/Context.sol";
+import "../utils/Context.sol";
 
 /**
  * @dev Extension of {ERC20} that allows token holders to destroy both their own

@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (token/ERC20/utils/SafeERC20.sol)
+//
+// Interlock ERC-20 INTR Token Mint Platform
+// 		(containing)
+// OpenZeppelin v4.4.1 contract (token/ERC20/utils/SafeERC20.sol)
+//
+// Contributors:
+// blairmunroakusa
+// ...
 
 pragma solidity ^0.8.0;
 
 import "../IERC20.sol";
-import "../../../utils/Address.sol";
+import "./Address.sol";
 
 /**
  * @title SafeERC20
