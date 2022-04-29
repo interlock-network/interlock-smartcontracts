@@ -238,7 +238,7 @@ contract ERC20 is Context, IERC20 {
         	_totalSupply += amount;
         	_balances[account] += amount;
         	emit Transfer(address(0), account, amount);
-        _	afterTokenTransfer(address(0), account, amount); }
+        	_afterTokenTransfer(address(0), account, amount); }
 
 
 		   // emitting Transfer, reverting on failure
