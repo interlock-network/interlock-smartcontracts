@@ -17,6 +17,11 @@ bigtable-writer.json
 target
 
 # misc stuff
+ethereum-contracts/ERC20-mint/contracts
+migrations
+build
+test
+truffle-config.js
 test-ledger
 ~\$*
 *.swp
