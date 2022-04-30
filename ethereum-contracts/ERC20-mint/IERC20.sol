@@ -23,19 +23,21 @@ interface IERC20 {
     	event Transfer(
 		address indexed from,
 		address indexed to,
-		uint256 value
-	);
+		uint256 value );
 
 		// `value` is the new allowance.
     	event Approval(
 		address indexed owner,
 		address indexed spender,
-		uint256 value
-	);
+		uint256 value );
 
     	/**
      	* getter methods
      	**/
+		// gets token supply cap (1_000_000_000)
+	function cap() external view returns (uint256);
+
+
 		// gets token name (Interlock Network)
 	function name() external view returns (string memory);
 

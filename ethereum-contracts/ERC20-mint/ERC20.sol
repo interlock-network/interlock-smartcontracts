@@ -11,6 +11,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
+import "./utils/Modifiers.sol";
 import "./utils/Context.sol";
 
  /**
@@ -31,9 +32,13 @@ import "./utils/Context.sol";
  * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
+ *
+ * ( I believe the reason for needing atomic increase
+ * is that the operation ties down allowance getter
+ * preventing an allowance access before increase is complete. )
  **/
 
-contract ERC20 is Context, IERC20 {
+contract ERC20INTR is IERC20, Modifiers {
 
     	/**
      	* setup
@@ -47,17 +52,20 @@ contract ERC20 is Context, IERC20 {
     	string private _name;
     	string private _symbol;
 	string private _decimals;
+	string private _cap;
 
 	
     		// initializes contract
 	constructor(
 		string memory name_,
 		string memory symbol_,
-		string memory decimals_
+		string memory decimals_,
+		string memory cap_
 	) {
         	_name = name_;
         	_symbol = symbol_;
-		_decimals = decimals_; }
+		_decimals = decimals_;
+		_cap = cap_; }
 
 
     	/**
@@ -115,7 +123,7 @@ contract ERC20 is Context, IERC20 {
     	function transfer(
 		address to,
 		uint256 amount
-	) public virtual override returns (bool) {
+	) public override returns (bool) {
         	address owner = _msgSender();
         	_transfer(owner, to, amount);
         	return true; }
@@ -125,18 +133,10 @@ contract ERC20 is Context, IERC20 {
         	address from,
         	address to,
         	uint256 amount
-    	) internal virtual {
-        	require(from != address(0),
-			"ERC20: transfer from the zero address");
-        	require(to != address(0),
-			"ERC20: transfer to the zero address");
+    	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
         	_beforeTokenTransfer(from, to, amount);
-        	uint256 fromBalance = _balances[from];
-        	require(fromBalance >= amount,
-			"ERC20: transfer amount exceeds balance");
         	unchecked {
-            		_balances[from] = fromBalance - amount;
-        	}
+            		_balances[from] = fromBalance - amount;}
         	_balances[to] += amount;
         	emit Transfer(from, to, amount);
         	_afterTokenTransfer(from, to, amount); }
@@ -159,11 +159,7 @@ contract ERC20 is Context, IERC20 {
         	address owner,
         	address spender,
         	uint256 amount
-    	) internal virtual {
-        	require(owner != address(0),
-			"ERC20: approve from the zero address");
-        	require(spender != address(0),
-			"ERC20: approve to the zero address");
+    	) internal virtual noZero(owner) noZero(spender) {
 		_allowances[owner][spender] = amount;
         	emit Approval(owner, spender, amount); }
 
@@ -199,12 +195,8 @@ contract ERC20 is Context, IERC20 {
  * Above and below are alternatives to {approve} that can be used
  * as a mitigation for problems described in {IERC20-approve}.
  *
- * I believe the reason for needing atomic increase
- * is that the operation ties down allowance getter
- * preventing an allowance access before increase is complete
  *
  * ?? Why is there no owner balance check for increaseAllowance() ??
- * ?? Why unchecked _approve ?? --save on gas
  **/
 		   // emitting Approval, reverting on failure
 		  // where `spender` must have allowance >= `subtractedValue`
@@ -212,15 +204,11 @@ contract ERC20 is Context, IERC20 {
 		// atomically decreases spender's allowance
    	function decreaseAllowance(
 		address spender,
-		uint256 subtractedValue
-	) public virtual returns (bool) {
+		uint256 amount
+	) public isEnough(allowance(_msgSender(), spender), amount) returns (bool) {
         	address owner = _msgSender();
-        	uint256 currentAllowance = allowance(owner, spender);
-        	require(currentAllowance >= subtractedValue,
-			"ERC20: decreased allowance below zero");
         	unchecked {
-            		_approve(owner, spender, currentAllowance - subtractedValue);
-		}
+            		_approve(owner, spender, allowance(owner, spender) - amount);}
         	return true; }
 
 
@@ -231,9 +219,7 @@ contract ERC20 is Context, IERC20 {
     	function _mint(
 		address account,
 		uint256 amount
-	) internal virtual {
-        	require(account != address(0),
-			"ERC20: mint to the zero address");
+	) internal underCap(amount) noZero(account) {
         	_beforeTokenTransfer(address(0), account, amount);
         	_totalSupply += amount;
         	_balances[account] += amount;
@@ -248,16 +234,10 @@ contract ERC20 is Context, IERC20 {
 	function _burn(
 		address account,
 		uint256 amount
-	) internal virtual {
-        	require(account != address(0),
-			"ERC20: burn from the zero address");
+	) internal noZero(account) isEnough(_balances[account], amount) {
         	_beforeTokenTransfer(account, address(0), amount);
-        	uint256 accountBalance = _balances[account];
-        	require(accountBalance >= amount,
-			"ERC20: burn amount exceeds balance");
         	unchecked {
-            		_balances[account] = accountBalance - amount;
-        	}
+            		_balances[account] = _balances[account] - amount;}
         	_totalSupply -= amount;
         	emit Transfer(account, address(0), amount);
         	_afterTokenTransfer(account, address(0), amount); }
@@ -271,14 +251,10 @@ contract ERC20 is Context, IERC20 {
         	address owner,
         	address spender,
         	uint256 amount
-    	) internal virtual {
-        	uint256 currentAllowance = allowance(owner, spender);
-        	if (currentAllowance != type(uint256).max) {
-            		require(currentAllowance >= amount,
-				"ERC20: insufficient allowance");
-            		unchecked {
-                		_approve(owner, spender, currentAllowance - amount);
-            		} } }
+    	) internal isEnough(allowance(owner, spender), amount) {
+            	unchecked {
+                	_approve(owner, spender, currentAllowance - amount);}
+	} }
 
 
 		    // where `from` && `to` != zero account => to be regular xfer
