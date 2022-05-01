@@ -12,8 +12,12 @@ pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
 import "./utils/Context.sol";
+import "./INTRpool.sol";
+import "./INTRwhitelist.sol";
+import "./INTRpublicsale.sol";
 
- /**
+
+ /** from oz
  * This implementation is agnostic to the way tokens are created. This means
  * that a supply mechanism has to be added in a derived contract using {_mint}.
  * For a generic mechanism see {ERC20PresetMinterPauser}.
@@ -39,43 +43,125 @@ import "./utils/Context.sol";
 
 contract ERC20INTR is IERC20, Context {
 
-	/** @dev
+	/** @dev **/
 
-	/**
-	* setup
-	**/
+
+	string[12] public poolNames = [
+		"earlyvc",
+		"ps1",
+		"ps2",
+		"ps3",
+		"team",
+		"ov",
+		"advise",
+		"reward",
+		"founder",
+		"partner",
+		"white",
+		"public" ];
+
+	uint8 constant poolNumber = 12;
+
+	struct PoolData {
+		string names;
+		uint32 tokens;
+		uint8 payments;
+		uint8 cliff;
+		uint32 members;}
+	PoolData[] public pool;
+
 
 	mapping(address => uint256) private _balances;
-	mapping(address => mapping(address => uint256)) private _allowances;
+	mapping(address => mapping(address => uint256)) public _allowances;
 
 
-	uint256 private _cap;
 	string private _name;
 	string private _symbol;
-	uint8 private _decimals;
+	address private _owner;
+	address private _whitelist;
+	address private _publicsale;
+	address[] private _pools;
 	uint256 private _totalSupply;
 
-	
+	/**
+	* setup methods     INSTALL GUARDS!!!
+	**/
+		  // owned by msg.sender
+		 // minting entire supply
 		// initializes contract
 	constructor(
 		string memory name_,
 		string memory symbol_,
-		uint8 decimals_,
-		uint256 cap_
+		uint256 totalSupply_,
+		uint32[poolNumber] memory poolTokens_,
+		uint8[poolNumber] memory monthlyPayments_,
+		uint8[poolNumber] memory poolCliffs_,
+		uint32[poolNumber] memory poolMembers_
 	) {
-	    _name = name_;
+		_name = name_;
 		_symbol = symbol_;
-		_decimals = decimals_;
-		_cap = cap_; }
+		_owner = _msgSender();
+		_totalSupply = totalSupply_;
+		_balances[address(this)] = 0; 
 
+		for (uint8 i = 0; i < poolNumber; i++) {
+			pool.push(
+				PoolData(
+					poolNames[i],
+					poolTokens_[i],
+					monthlyPayments_[i],
+					poolCliffs_[i],
+					poolMembers_[i]
+				)
+			); } }
+
+
+	function splitSupply() public {
+
+		for (uint8 i = 0; i < poolNumber - 2; i++) {
+			address Pool = address(new INTRpool(address(this)));
+			_pools.push(Pool);
+			_balances[Pool] = 0;
+			_allowances[address(this)][Pool] = pool[i].tokens; }
+
+		address Whitelist;
+		Whitelist = address(new INTRwhitelist(address(this)));
+		_balances[Whitelist] = 0;
+		_allowances[address(this)][Whitelist] = pool[10].tokens;
+		_whitelist = Whitelist;
+
+		address Publicsale = address(new INTRpublicsale(address(this)));
+		_balances[Publicsale] = 0;
+		_allowances[address(this)][Publicsale] = pool[11].tokens;
+		_publicsale = Publicsale;
+						
+		//switch supplySplit to True in that clever way I can't recall
+	}
+
+	function triggerTGE() public {
+		//require(supplySplit && poolSplit, "tokens not split up properly");
+		_balances[address(this)] = _totalSupply;
+
+		// put bit here that starts the clock for time vault pools
+		
+		// put magical thing here that makes it impossible to TGE again
+	}
+
+	function disown() public {
+		_owner = address(0); }
+
+	function changeOwner(address newOwner) public {
+		_owner = newOwner; }
+		// emit "new owner set"; }
+
+	
+	//now, as tokens are released on schedule, allowances will be incremented for all stakeholders. As they claim funds, balance will transfer and (TransferFrom) and deduct spendable allowance. This will also increase the 'circulating tokens'
+		
+		
 
 	/**
 	* getter methods
 	**/
-		// gets token supply cap (1_000_000_000)
-	function cap() public view override returns (uint256) {
-		return _cap; }
-
 
 		// gets token name (Interlock Network)
 	function name() public view override returns (string memory) {
@@ -87,9 +173,6 @@ contract ERC20INTR is IERC20, Context {
 		return _symbol; }
 
 
-		// gets token decimals (18)
-	function decimals() public view override returns (uint8) {
-		return _decimals; }
 
  /* Returns the number of decimals used to get its user representation.
  *  For example, if `decimals` equals `2`, a balance of `505` tokens should
@@ -100,7 +183,7 @@ contract ERC20INTR is IERC20, Context {
  **/
 
 
-		// gets tokens minted so far (total circulating)
+		// gets tokens minted
 	function totalSupply() public view override returns (uint256) {
 		return _totalSupply; }
 
@@ -118,29 +201,26 @@ contract ERC20INTR is IERC20, Context {
 		return _allowances[owner][spender]; }
 
 
+		// gets total tokens paid out in circulation
+	function circulation() public view returns (uint256) {
+		return _totalSupply - _balances[address(this)]; }
+
+
 	/**
 	* modifiers
 	**/
-		// verifies impending mint will not exceed cap
-	modifier underCap(uint256 _amount) {
-		require(cap() >= _amount + totalSupply(),
-			"ERC20: mint amount exceeds token cap");
-		_; }
-
 
 		// verifies zero address was not provied
 	modifier noZero(address _address) {
 		require(_address != address(0),
-			"ERC20: invalid zero address provided");
+			"zero address where it shouldn't be");
 		_; }
 
 
 		// verifies there exists enough token to proceed
-	modifier isEnough(uint _available, uint256 _amount) {
-		require(_available < type(uint256).max - cap(),
-			"ERC20: invalid--impossibly large availability");
+	modifier isEnough(uint256 _available, uint256 _amount) {
 		require(_available >= _amount,
-			"ERC20: cannot meet amount requested");
+			"not enough tokens available");
 		_; }
 
 
@@ -173,9 +253,8 @@ contract ERC20INTR is IERC20, Context {
 		_afterTokenTransfer(from, to, amount); }
 
 
-		   // emitting Approval, reverting on failure
-		  // (=> no allownance delta when TransferFrom)
-		 // where amount = u256.max => infinite allowance
+		  // emitting Approval, reverting on failure
+		 // (=> no allownance delta when TransferFrom)
 		// defines tokens available to spender from msg.sender
 	function approve(
 		address spender,
@@ -242,21 +321,6 @@ contract ERC20INTR is IERC20, Context {
 		return true; }
 
 
-		   // reverting on failure
-		  // emitting Transfer event _from_ zero address
-		 // where `account` cannot = zero address
-		// increases token supply by assigning to account
-	function _mint(
-		address account,
-		uint256 amount
-	) internal underCap(amount) noZero(account) {
-		_beforeTokenTransfer(address(0), account, amount);
-		_totalSupply += amount;
-		_balances[account] += amount;
-		emit Transfer(address(0), account, amount);
-		_afterTokenTransfer(address(0), account, amount); }
-
-
 		   // emitting Transfer, reverting on failure
 		  // where `account` must have >= burn amount
 		 // where `account` cannot = zero address
@@ -310,3 +374,4 @@ contract ERC20INTR is IERC20, Context {
 	) internal virtual {}
 
 }
+
