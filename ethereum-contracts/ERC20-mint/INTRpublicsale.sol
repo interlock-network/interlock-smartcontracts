@@ -12,12 +12,15 @@ import "./ERC20INTR.sol";
 
 contract INTRpublicsale {
 
-    address _mintAddress;
-    ERC20INTR public mint;
+    	address _mintAddress;
+    	ERC20INTR public mint;
 
-    constructor (address mintAddress_) {
-        _mintAddress = mintAddress_;
-        mint = ERC20INTR(_mintAddress); }
+    	constructor (address mintAddress_, uint8 paymentsTotal_) {
+        	_mintAddress = mintAddress_;
+        	mint = ERC20INTR(_mintAddress);
+		_patmentsTotal = paymentsTotal_;
+		_paymentsMade = 0; }
+
 
 	function splitPool(uint256 share, address member) public {
         require(mint.balanceOf(member) == 0, "already added");

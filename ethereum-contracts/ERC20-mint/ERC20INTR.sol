@@ -82,6 +82,8 @@ contract ERC20INTR is IERC20, Context {
 	address private _publicsale;
 	address[] private _pools;
 	uint256 private _totalSupply;
+	uint256 public lastPayout;
+	uint256 public nextPayout;
 
 	/**
 	* setup methods     INSTALL GUARDS!!!
@@ -119,18 +121,18 @@ contract ERC20INTR is IERC20, Context {
 	function splitSupply() public {
 
 		for (uint8 i = 0; i < poolNumber - 2; i++) {
-			address Pool = address(new INTRpool(address(this)));
+			address Pool = address(new INTRpool(address(this), pool[i].payments));
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = pool[i].tokens; }
 
 		address Whitelist;
-		Whitelist = address(new INTRwhitelist(address(this)));
+		Whitelist = address(new INTRwhitelist(address(this), pool[10].payments));
 		_balances[Whitelist] = 0;
 		_allowances[address(this)][Whitelist] = pool[10].tokens;
 		_whitelist = Whitelist;
 
-		address Publicsale = address(new INTRpublicsale(address(this)));
+		address Publicsale = address(new INTRpublicsale(address(this), pool[11].payments));
 		_balances[Publicsale] = 0;
 		_allowances[address(this)][Publicsale] = pool[11].tokens;
 		_publicsale = Publicsale;
@@ -143,9 +145,21 @@ contract ERC20INTR is IERC20, Context {
 		_balances[address(this)] = _totalSupply;
 
 		// put bit here that starts the clock for time vault pools
+		lastPayout = now;
+		nextPayout = lastPayout + 4 weeks + 2 days;
 		
 		// put magical thing here that makes it impossible to TGE again
 	}
+
+	function checkTime(address pool, address, claimer) public return (bool) {
+		if (now > lastPayout && now > nextPayout) {
+			lastPayout = nextPayout;
+			nextPayout = lastPayout + 4 weeks + 2 days;
+			for (uint8 i = 0; i < poolNumber - 2; i++) {
+				
+			transferFrom(address(this), _pools[i], 
+			
+
 
 	function disown() public {
 		_owner = address(0); }
