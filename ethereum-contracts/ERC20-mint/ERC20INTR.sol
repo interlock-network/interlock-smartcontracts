@@ -78,9 +78,10 @@ contract ERC20INTR is IERC20, Context {
 		uint256 paid;
 		uint256 share;
 		address pool; }
-	AccountStatus[] public status;
-	mapping(address => AccountStatus) public stausMap;
+	MemberStatus[] public status;
+	mapping(address => MemberStatus) public statusMap;
 	address[] private _members;
+	mapping(address => address[]) _cohorts;
 
 		// core token functionality | balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -128,7 +129,7 @@ contract ERC20INTR is IERC20, Context {
 				)
 			); } }
 
-		// allocates total supply between pools
+		// allocates total supply allowances between pools
 	function splitSupply() public {
 		require(msg.sender == _owner,
 			"not owner");
@@ -145,17 +146,18 @@ contract ERC20INTR is IERC20, Context {
 		_alreadySplit[Pool] = true; }
 	
 
-		  // in batches by pool
+		  // in csv tx batches by pool
 		 // which happens one member at a time
 		// allocates pool supply between members
 	function splitPool(uint256 share, address member, uint8 pool) public {
 		require(msg.sender == _owner,
-			"must be owner";
-        	require(statusMap[member].split != true,
+			"must be owner");
+		require(statusMap[member] == address(0),
 			"member already added");
 		statusMap[member].paid = 0;
 		statusMap[member].share = share;
 		statusMap[member].pool = _pools[pool];
+		_cohorts[pool].push(member);
         	approve(member, share);
 		_members.push[member];
 		statusMap[member].split = true; }	
@@ -189,6 +191,10 @@ contract ERC20INTR is IERC20, Context {
 				for (uint8 j = 0; j < pool[i].members; j++) {
 					transerFrom(
 						_pools[i],
+						_cohorts[_pools[i]][j],
+						
+						
+						
 						
 			
 ;
