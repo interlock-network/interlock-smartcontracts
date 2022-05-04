@@ -45,7 +45,7 @@ contract ERC20INTR is IERC20, Context {
 
 	/** @dev **/
 
-
+		// pools
 	string[12] public poolNames = [
 		"earlyvc",
 		"ps1",
@@ -59,51 +59,62 @@ contract ERC20INTR is IERC20, Context {
 		"partner",
 		"white",
 		"public" ];
-
 	uint8 constant poolNumber = 12;
 
+		// keeping track of pools
 	struct PoolData {
-		string names;
+		string name;
 		uint32 tokens;
 		uint8 payments;
 		uint8 cliff;
-		uint32 members;}
+		uint32 members; }
 	PoolData[] public pool;
+	mapping(address => PoolData) public poolMap;
+	address[] private _pools;
 
+		// keeping track of members
+	struct MemberStatus {
+		bool split;
+		uint256 paid;
+		uint256 share;
+		address pool; }
+	AccountStatus[] public status;
+	mapping(address => AccountStatus) public stausMap;
+	address[] private _members;
 
+		// core token functionality | balance and allowance mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) public _allowances;
 
-
-	string private _name;
-	string private _symbol;
+		// basic token data
+	string private _name = "Interlock Network";
+	string private _symbol = "INTR";
+	uint256 private _totalSupply = 1000000000;
 	address private _owner;
-	address private _whitelist;
-	address private _publicsale;
-	address[] private _pools;
-	uint256 private _totalSupply;
+	// decimals = 18 by default
+
+		// tracking time
 	uint256 public lastPayout;
 	uint256 public nextPayout;
+	uint8 public monthsPassed; 
+
+		// keeping track of irreversible actions
+	bool public TGEtriggered = false;
+	bool public supplySplit = false;
+	
 
 	/**
 	* setup methods     INSTALL GUARDS!!!
 	**/
-		  // owned by msg.sender
-		 // minting entire supply
+		 // owned by msg.sender
 		// initializes contract
 	constructor(
-		string memory name_,
-		string memory symbol_,
-		uint256 totalSupply_,
 		uint32[poolNumber] memory poolTokens_,
 		uint8[poolNumber] memory monthlyPayments_,
 		uint8[poolNumber] memory poolCliffs_,
 		uint32[poolNumber] memory poolMembers_
 	) {
-		_name = name_;
-		_symbol = symbol_;
 		_owner = _msgSender();
-		_totalSupply = totalSupply_;
 		_balances[address(this)] = 0; 
 
 		for (uint8 i = 0; i < poolNumber; i++) {
@@ -117,47 +128,94 @@ contract ERC20INTR is IERC20, Context {
 				)
 			); } }
 
-
+		// allocates total supply between pools
 	function splitSupply() public {
-
-		for (uint8 i = 0; i < poolNumber - 2; i++) {
-			address Pool = address(new INTRpool(address(this), pool[i].payments));
+		require(msg.sender == _owner,
+			"not owner");
+		require(supplySplit == false,
+			"supply split alreadt happened");
+		for (uint8 i = 0; i < poolNumber; i++) {
+			address Pool = address(new INTRpool());
+			require(Pool != address(0),
+				"failed to create pool");
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_allowances[address(this)][Pool] = pool[i].tokens; }
+			_allowances[address(this)][Pool] = pool[i].tokens;
+			poolMap[Pool] = pool[i]; }
+		_alreadySplit[Pool] = true; }
+	
 
-		address Whitelist;
-		Whitelist = address(new INTRwhitelist(address(this), pool[10].payments));
-		_balances[Whitelist] = 0;
-		_allowances[address(this)][Whitelist] = pool[10].tokens;
-		_whitelist = Whitelist;
+		  // in batches by pool
+		 // which happens one member at a time
+		// allocates pool supply between members
+	function splitPool(uint256 share, address member, uint8 pool) public {
+		require(msg.sender == _owner,
+			"must be owner";
+        	require(statusMap[member].split != true,
+			"member already added");
+		statusMap[member].paid = 0;
+		statusMap[member].share = share;
+		statusMap[member].pool = _pools[pool];
+        	approve(member, share);
+		_members.push[member];
+		statusMap[member].split = true; }	
 
-		address Publicsale = address(new INTRpublicsale(address(this), pool[11].payments));
-		_balances[Publicsale] = 0;
-		_allowances[address(this)][Publicsale] = pool[11].tokens;
-		_publicsale = Publicsale;
-						
-		//switch supplySplit to True in that clever way I can't recall
-	}
-
+		// generates all the tokens
 	function triggerTGE() public {
-		//require(supplySplit && poolSplit, "tokens not split up properly");
+		require(supplySplit == true,
+			"supply not split");
+		require(msg.sender == _owner,
+			"must be owner");
+		require(TGEtriggered == false,
+			"TGE already happened");
 		_balances[address(this)] = _totalSupply;
 
-		// put bit here that starts the clock for time vault pools
-		lastPayout = now;
-		nextPayout = lastPayout + 4 weeks + 2 days;
-		
-		// put magical thing here that makes it impossible to TGE again
+		// start the clock for time vault pools
+		lastPayout = block.timestamp;
+		nextPayout = lastPayout + 30 days;
+		monthsPassed = 0;
+
+		// apply the initial round of token distributions
+		_poolDistribution();
+		_memberDistribution();
+
+		// this must never happen again
+		TGEtriggered = true;
 	}
 
-	function checkTime(address pool, address, claimer) public return (bool) {
-		if (now > lastPayout && now > nextPayout) {
-			lastPayout = nextPayout;
-			nextPayout = lastPayout + 4 weeks + 2 days;
-			for (uint8 i = 0; i < poolNumber - 2; i++) {
-				
-			transferFrom(address(this), _pools[i], 
+	function _memberDistribution() internal {
+		for (uint8 i = 0; i < poolNumber; i++) {
+			if (pool[i].cliff == 0) {
+				for (uint8 j = 0; j < pool[i].members; j++) {
+					transerFrom(
+						_pools[i],
+						
+			
+;
+	function _poolDistribution() internal (
+		for (uint8 i = 0; i < poolNumber; i++) {
+			if (pool[i].cliff == 0) {
+				transferFrom(
+					address(this), 
+					_pools[i],
+					pool[i].tokens/pool[i].payments
+				)
+			}
+			else {
+				pool[i].cliff--;
+			}
+		}
+
+
+	function checkTime() public return (bool) {
+		if (block.timestamp > nextPayout) {
+			nextPayout += 30 days;
+			nextPayout = lastPayout + 30 days;
+			_poolDistribution();
+			monthsPassed++;
+			return true;
+		}
+		require(
 			
 
 
