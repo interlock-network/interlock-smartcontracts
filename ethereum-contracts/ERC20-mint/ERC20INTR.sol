@@ -13,8 +13,6 @@ pragma solidity ^0.8.0;
 import "./IERC20.sol";
 import "./utils/Context.sol";
 import "./INTRpool.sol";
-import "./INTRwhitelist.sol";
-import "./INTRpublicsale.sol";
 
 
  /** from oz
@@ -104,8 +102,9 @@ contract ERC20INTR is IERC20, Context {
 	bool public supplySplit = false;
 	
 
+
 	/**
-	* setup methods     INSTALL GUARDS!!!
+	* setup methods     FINISH INSTALLING GUARDS!!!
 	**/
 		 // owned by msg.sender
 		// initializes contract
@@ -129,48 +128,68 @@ contract ERC20INTR is IERC20, Context {
 				)
 			); } }
 
-		// allocates total supply allowances between pools
-	function splitSupply() public {
+
+
+		// creates account for each pool
+	function splitSupply() public onlyowner {
+		
+		// guard
 		require(msg.sender == _owner,
 			"not owner");
 		require(supplySplit == false,
 			"supply split alreadt happened");
+
+		// create pool accounts and initiate
 		for (uint8 i = 0; i < poolNumber; i++) {
 			address Pool = address(new INTRpool());
 			require(Pool != address(0),
 				"failed to create pool");
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_allowances[address(this)][Pool] = pool[i].tokens;
+			_allowances[address(this)][Pool] = 0;
 			poolMap[Pool] = pool[i]; }
-		_alreadySplit[Pool] = true; }
 	
+
 
 		  // in csv tx batches by pool
 		 // which happens one member at a time
 		// allocates pool supply between members
-	function splitPool(uint256 share, address member, uint8 pool) public {
+	function splitPool(uint256 share, address member, uint8 pool) public onlyOwner {
+
+		//guards
 		require(msg.sender == _owner,
 			"must be owner");
 		require(statusMap[member] == address(0),
 			"member already added");
+
+		// intiate member  entry
 		statusMap[member].paid = 0;
 		statusMap[member].share = share;
 		statusMap[member].pool = _pools[pool];
 		_cohorts[pool].push(member);
-        	approve(member, share);
 		_members.push[member];
-		statusMap[member].split = true; }	
+		statusMap[member].split = true; 
+
+		// this must never happen again...
+		supplySplit = true; }
+
+	
 
 		// generates all the tokens
-	function triggerTGE() public {
+	function triggerTGE() public onlyOwner {
+
+		// guards
 		require(supplySplit == true,
 			"supply not split");
 		require(msg.sender == _owner,
 			"must be owner");
 		require(TGEtriggered == false,
 			"TGE already happened");
+
+		// mint
 		_balances[address(this)] = _totalSupply;
+		_approve(address(this), msg.sender, _totalSupply);
+		emit Transfer(address(0), address(this), _totalSupply);
 
 		// start the clock for time vault pools
 		lastPayout = block.timestamp;
@@ -181,56 +200,68 @@ contract ERC20INTR is IERC20, Context {
 		_poolDistribution();
 		_memberDistribution();
 
-		// this must never happen again
-		TGEtriggered = true;
-	}
+		// this must never happen again...
+		TGEtriggered = true; }
 
-	function _memberDistribution() internal {
+
+
+		// distribute shares to all investor members
+	function memberDistribution() public onlyOwner {
+		uint256 memory amount;
 		for (uint8 i = 0; i < poolNumber; i++) {
 			if (pool[i].cliff == 0) {
 				for (uint8 j = 0; j < pool[i].members; j++) {
-					transerFrom(
+					amount =
+						statusMap[_cohorts[_pools[i]][j]].share /
+						pool[i].payments;
+					transferFrom(
 						_pools[i],
 						_cohorts[_pools[i]][j],
-						
-						
+						amount );
+					statusMap[_cohorts[_pools[i]][j]].paid += amount; } } }
+
 						
 						
 			
-;
-	function _poolDistribution() internal (
+		// distribute tokens to pools on schedule
+	function poolDistribution() public onlyOwner {
+		require(_checkTime(), "too soon");
+		uint256 memory amount;
 		for (uint8 i = 0; i < poolNumber; i++) {
 			if (pool[i].cliff == 0) {
+				// transfer month's distribution to pools
+				amount = pool[i].tokens/pool[i].payments;
 				transferFrom(
-					address(this), 
+					address(this),
 					_pools[i],
-					pool[i].tokens/pool[i].payments
-				)
-			}
+					amount );
+				approve(
+					msg.sender,
+					amount ); }
 			else {
-				pool[i].cliff--;
-			}
-		}
+				pool[i].cliff--; } } }
 
 
-	function checkTime() public return (bool) {
+
+		// makes sure that distributions do not happen too early
+	function _checkTime() internal return (bool) {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			nextPayout = lastPayout + 30 days;
-			_poolDistribution();
 			monthsPassed++;
-			return true;
-		}
-		require(
+			return true; } }
 			
 
 
-	function disown() public {
+	function disown() public onlyOwner {
 		_owner = address(0); }
 
-	function changeOwner(address newOwner) public {
+
+
+	function changeOwner(address newOwner) public onlyOwner {
 		_owner = newOwner; }
 		// emit "new owner set"; }
+
 
 	
 	//now, as tokens are released on schedule, allowances will be incremented for all stakeholders. As they claim funds, balance will transfer and (TransferFrom) and deduct spendable allowance. This will also increase the 'circulating tokens'
@@ -244,6 +275,7 @@ contract ERC20INTR is IERC20, Context {
 		// gets token name (Interlock Network)
 	function name() public view override returns (string memory) {
 		return _name; }
+
 
 
 		// gets token symbol (INTR)
@@ -261,14 +293,17 @@ contract ERC20INTR is IERC20, Context {
  **/
 
 
+
 		// gets tokens minted
 	function totalSupply() public view override returns (uint256) {
 		return _totalSupply; }
 
 
+
 		// gets account balance (tokens payable)
 	function balanceOf(address account) public view override returns (uint256) {
 		return _balances[account]; }
+
 
 
 		// gets tokens spendable by spender from owner
@@ -279,9 +314,11 @@ contract ERC20INTR is IERC20, Context {
 		return _allowances[owner][spender]; }
 
 
+
 		// gets total tokens paid out in circulation
 	function circulation() public view returns (uint256) {
 		return _totalSupply - _balances[address(this)]; }
+
 
 
 	/**
@@ -295,11 +332,13 @@ contract ERC20INTR is IERC20, Context {
 		_; }
 
 
+
 		// verifies there exists enough token to proceed
 	modifier isEnough(uint256 _available, uint256 _amount) {
 		require(_available >= _amount,
 			"not enough tokens available");
 		_; }
+
 
 
 	/**
@@ -331,6 +370,7 @@ contract ERC20INTR is IERC20, Context {
 		_afterTokenTransfer(from, to, amount); }
 
 
+
 		  // emitting Approval, reverting on failure
 		 // (=> no allownance delta when TransferFrom)
 		// defines tokens available to spender from msg.sender
@@ -352,6 +392,7 @@ contract ERC20INTR is IERC20, Context {
 		emit Approval(owner, spender, amount); }
 
 
+
 		     // emitting Approval, reverting on failure
 		    // where msg.sender allowance w/`from` must be >= amount
 		   // where `from` balance must be >= amount
@@ -367,6 +408,7 @@ contract ERC20INTR is IERC20, Context {
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
 		return true; }
+
 
 
 		  // emitting Approval, reverting on failure
@@ -399,6 +441,7 @@ contract ERC20INTR is IERC20, Context {
 		return true; }
 
 
+
 		   // emitting Transfer, reverting on failure
 		  // where `account` must have >= burn amount
 		 // where `account` cannot = zero address
@@ -415,6 +458,7 @@ contract ERC20INTR is IERC20, Context {
 		_afterTokenTransfer(account, address(0), amount); }
 
 
+
 		   // emitting Approval if finite, reverting on failure 
 		  // will do nothing if infinite allowance
 		 // used strictly internally
@@ -428,6 +472,7 @@ contract ERC20INTR is IERC20, Context {
 			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
 
+
 		    // where `from` && `to` != zero account => to be regular xfer
 		   // where `from` = zero account => `amount` to be minted `to`
 		  // where `to` = zero account => `amount` to be burned `from`
@@ -438,6 +483,7 @@ contract ERC20INTR is IERC20, Context {
 		address to,
 		uint256 amount
 	) internal virtual {}
+
 
 
 		    // where `from` && `to` != zero account => was regular xfer
