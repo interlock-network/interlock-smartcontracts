@@ -11,7 +11,6 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./utils/Context.sol";
 import "./POOL.sol";
 
 
@@ -39,7 +38,7 @@ import "./POOL.sol";
  * preventing an allowance access before increase is complete. )
  **/
 
-contract ERC20INTR is IERC20, Context {
+contract ERC20INTR is IERC20 {
 
 	/** @dev **/
 
@@ -67,19 +66,17 @@ contract ERC20INTR is IERC20, Context {
 		uint8 cliff;
 		uint32 members; }
 	PoolData[] public pool;
-	mapping(address => PoolData) public poolMap;
 	address[] private _pools;
 
 		// keeping track of members
 	struct MemberStatus {
-		bool split;
 		uint256 paid;
 		uint256 share;
-		address pool; }
-	MemberStatus[] public status;
-	mapping(address => MemberStatus) public statusMap;
-	address[] private _members;
-	mapping(address => address[]) _cohorts;
+		address account;
+		uint8 cliff;
+		uint8 pool;
+		uint8 payments; }
+	MemberStatus[] private _members;
 
 		// core token functionality | balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -93,7 +90,6 @@ contract ERC20INTR is IERC20, Context {
 	// decimals = 18 by default
 
 		// tracking time
-	uint256 public lastPayout;
 	uint256 public nextPayout;
 	uint8 public monthsPassed; 
 
@@ -104,7 +100,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 	/**
-	* setup methods     FINISH INSTALLING GUARDS!!!
+	* setup methods
 	**/
 		 // owned by msg.sender
 		// initializes contract
@@ -114,7 +110,7 @@ contract ERC20INTR is IERC20, Context {
 		uint8[poolNumber] memory poolCliffs_,
 		uint32[poolNumber] memory poolMembers_
 	) {
-		_owner = _msgSender();
+		_owner = msg.sender;
 		_balances[address(this)] = 0; 
 
 		for (uint8 i = 0; i < poolNumber; i++) {
@@ -142,38 +138,37 @@ contract ERC20INTR is IERC20, Context {
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < poolNumber; i++) {
 			address Pool = address(new POOL());
-			require(Pool != address(0),
-				"failed to create pool");
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_allowances[address(this)][Pool] = 0;
-			poolMap[Pool] = pool[i]; }
-			//_cohorts[Pool] = new address[](pool[i].members);
-	
-
+			_allowances[address(this)][Pool] = 0; }
 
 		// this must never happen again...
 		supplySplit = true; }
 
 
-		  // in csv tx batches by pool
-		 // which happens one member at a time
+
+		 // in csv tx batches by pool
 		// allocates pool supply between members
-	function splitPool(uint256 share, address member, uint8 whichPool) public {
+	function addMembers (
+		uint256[] calldata payouts,
+		address[] calldata members,
+		uint8[] calldata whichPool
+	) public {
 
 		//guards
 		require(msg.sender == _owner,
 			"must be owner");
-		require(statusMap[member].split == false,
-			"member already added");
 
-		// intiate member  entry
-		statusMap[member].paid = 0;
-		statusMap[member].share = share;
-		statusMap[member].pool = _pools[whichPool];
-		_cohorts[_pools[whichPool]].push(member);
-		_members.push(member);
-		statusMap[member].split = true; }
+		// iterate through addMember input array
+		for (uint8 i = 0; i < payouts.length; i++) {
+			// intiate member  entry
+			MemberStatus memory member;
+			member.share = payouts[i];
+			member.cliff = pool[whichPool[i]].cliff;
+			member.payments = pool[whichPool[i]].payments;
+			member.account = members[i];
+			member.pool = whichPool[i];
+			_members.push(member); } }
 
 
 
@@ -198,88 +193,115 @@ contract ERC20INTR is IERC20, Context {
 		monthsPassed = 0;
 
 		// apply the initial round of token distributions
-		//_poolDistribution();
-		//_memberDistribution();
+		_poolDistribution();
+		_memberDistribution();
 
 		// this must never happen again...
 		TGEtriggered = true; }
 
-	event Print(uint256 input);
+
+
+	/**
+	* payout methods
+	**/
+		 // updates allowances and balances across pools and members
+		// calls successfully after 30 days pass
+	function distribute() public {
+
+		// guards
+		require(msg.sender == _owner,
+			"must be owner");
+		require(_checkTime(), "too soon");
+
+		// distribute tokens
+		_poolDistribution();
+		_memberDistribution; }
+
+
 
 		// distribute shares to all investor members
-	function _memberDistribution() public {
+	function _memberDistribution() internal {
 
+		// guards
 		require(msg.sender == _owner,
 			"must be owner");
-		uint256 amount;
-		for (uint8 i = 0; i < poolNumber; i++) {
-			if (pool[i].cliff <= monthsPassed) {
-				for (uint8 j = 0; j < pool[i].members; j++) {
-					amount = 
-						uint(statusMap[_cohorts[_pools[i]][j]].share) /
-							pool[i].payments;
-					transferFrom(
-						_pools[i],
-						_cohorts[_pools[i]][j],
-						amount);
-					statusMap[_cohorts[_pools[i]][j]].paid += amount; } } } }
 
-						
-						
+		// iterate through members
+		for (uint8 i = 0; i < _members.length; i++) {
+			if (_members[i].cliff <= monthsPassed) {
+					transferFrom(
+						_pools[_members[i].pool],
+						_members[i].account,
+						_members[i].share );
+					_members[i].paid += _members[i].share; } } }
+
+								
 			
 		// distribute tokens to pools on schedule
-	function _poolDistribution() public {
+	function _poolDistribution() internal {
+
+		// guards
 		require(msg.sender == _owner,
 			"must be owner");
-		uint256 amount;
+
+		// iterate through pools
 		for (uint8 i = 0; i < poolNumber; i++) {
 			if (pool[i].cliff <= monthsPassed) {
+
 				// transfer month's distribution to pools
-				amount = pool[i].tokens/pool[i].payments;
 				transferFrom(
 					address(this),
 					_pools[i],
-					amount );
+					pool[i].tokens/pool[i].payments );
 				_approve(
 					_pools[i],
 					msg.sender,
-					amount ); } } }
+					pool[i].tokens/pool[i].payments ); } } }
 
 
 
 		// makes sure that distributions do not happen too early
 	function _checkTime() internal returns (bool) {
+
+		// test time
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
 			return true; }
+
+		// not ready
 		return false; }
 			
 
 
+		// renders contract as ownerLESS
 	function disown() public {
+
+		// guard
 		require(msg.sender == _owner,
 			"must be owner");
+
+		//disown
 		_owner = address(0); }
 
 
 
+		// changes the contract owner
 	function changeOwner(address newOwner) public {
+
+		// guard
 		require(msg.sender == _owner,
 			"must be owner");
+
+		// reassign
 		_owner = newOwner; }
 		// emit "new owner set"; }
-
-
-	
-	//now, as tokens are released on schedule, allowances will be incremented for all stakeholders. As they claim funds, balance will transfer and (TransferFrom) and deduct spendable allowance. This will also increase the 'circulating tokens'
 		
-		
+
 
 	/**
 	* getter methods
 	**/
-
 		// gets token name (Interlock Network)
 	function name() public view override returns (string memory) {
 		return _name; }
@@ -332,7 +354,6 @@ contract ERC20INTR is IERC20, Context {
 	/**
 	* modifiers
 	**/
-
 		// verifies zero address was not provied
 	modifier noZero(address _address) {
 		require(_address != address(0),
@@ -348,6 +369,7 @@ contract ERC20INTR is IERC20, Context {
 		_; }
 
 
+
 	/**
 	* doer methods
 	**/
@@ -359,7 +381,7 @@ contract ERC20INTR is IERC20, Context {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-		address owner = _msgSender();
+		address owner = msg.sender;
 		_transfer(owner, to, amount);
 		return true; }
 
@@ -385,7 +407,7 @@ contract ERC20INTR is IERC20, Context {
 		address spender,
 		uint256 amount
 	) public override returns (bool) {
-		address owner = _msgSender();
+		address owner = msg.sender;
 		_approve(owner, spender, amount);
 		return true; }
 
@@ -411,7 +433,7 @@ contract ERC20INTR is IERC20, Context {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-		address spender = _msgSender();
+		address spender = msg.sender;
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
 		return true; }
@@ -425,7 +447,7 @@ contract ERC20INTR is IERC20, Context {
 		address spender,
 		uint256 addedValue
 	) public returns (bool) {
-		address owner = _msgSender();
+		address owner = msg.sender;
 		_approve(owner, spender, allowance(owner, spender) + addedValue);
 		return true; }
 
@@ -441,8 +463,8 @@ contract ERC20INTR is IERC20, Context {
 	function decreaseAllowance(
 		address spender,
 		uint256 amount
-	) public isEnough(allowance(_msgSender(), spender), amount) returns (bool) {
-		address owner = _msgSender();
+	) public isEnough(allowance(msg.sender, spender), amount) returns (bool) {
+		address owner = msg.sender;
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);}
 		return true; }
