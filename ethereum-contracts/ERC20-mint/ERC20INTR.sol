@@ -123,7 +123,7 @@ contract ERC20INTR is IERC20, Context {
 					poolNames[i],
 					poolTokens_[i],
 					monthlyPayments_[i],
-					poolCliffs_[i],
+					poolCliffs_[i]++,
 					poolMembers_[i]
 				)
 			); } }
@@ -131,7 +131,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// creates account for each pool
-	function splitSupply() public onlyowner {
+	function splitSupply() public {
 		
 		// guard
 		require(msg.sender == _owner,
@@ -141,42 +141,44 @@ contract ERC20INTR is IERC20, Context {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < poolNumber; i++) {
-			address Pool = address(new INTRpool());
+			address Pool = address(new POOL());
 			require(Pool != address(0),
 				"failed to create pool");
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0;
 			poolMap[Pool] = pool[i]; }
+			//_cohorts[Pool] = new address[](pool[i].members);
 	
+
+
+		// this must never happen again...
+		supplySplit = true; }
 
 
 		  // in csv tx batches by pool
 		 // which happens one member at a time
 		// allocates pool supply between members
-	function splitPool(uint256 share, address member, uint8 pool) public onlyOwner {
+	function splitPool(uint256 share, address member, uint8 whichPool) public {
 
 		//guards
 		require(msg.sender == _owner,
 			"must be owner");
-		require(statusMap[member] == address(0),
+		require(statusMap[member].split == false,
 			"member already added");
 
 		// intiate member  entry
 		statusMap[member].paid = 0;
 		statusMap[member].share = share;
-		statusMap[member].pool = _pools[pool];
-		_cohorts[pool].push(member);
-		_members.push[member];
-		statusMap[member].split = true; 
+		statusMap[member].pool = _pools[whichPool];
+		_cohorts[_pools[whichPool]].push(member);
+		_members.push(member);
+		statusMap[member].split = true; }
 
-		// this must never happen again...
-		supplySplit = true; }
 
-	
 
 		// generates all the tokens
-	function triggerTGE() public onlyOwner {
+	function triggerTGE() public {
 
 		// guards
 		require(supplySplit == true,
@@ -192,73 +194,73 @@ contract ERC20INTR is IERC20, Context {
 		emit Transfer(address(0), address(this), _totalSupply);
 
 		// start the clock for time vault pools
-		lastPayout = block.timestamp;
-		nextPayout = lastPayout + 30 days;
+		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
 
 		// apply the initial round of token distributions
-		_poolDistribution();
-		_memberDistribution();
+		//_poolDistribution();
+		//_memberDistribution();
 
 		// this must never happen again...
 		TGEtriggered = true; }
 
-
+	event Print(uint256 input);
 
 		// distribute shares to all investor members
-	function memberDistribution() public onlyOwner {
-		uint256 memory amount;
+	function _memberDistribution() public {
+		uint256 amount;
+	
 		for (uint8 i = 0; i < poolNumber; i++) {
-			if (pool[i].cliff == 0) {
+			if (pool[i].cliff <= monthsPassed) {
 				for (uint8 j = 0; j < pool[i].members; j++) {
+					emit Print(statusMap[_cohorts[_pools[i]][j]].share);
 					amount =
-						statusMap[_cohorts[_pools[i]][j]].share /
+						uint(statusMap[_cohorts[_pools[i]][j]].share) /
 						pool[i].payments;
 					transferFrom(
 						_pools[i],
 						_cohorts[_pools[i]][j],
 						amount );
-					statusMap[_cohorts[_pools[i]][j]].paid += amount; } } }
+					statusMap[_cohorts[_pools[i]][j]].paid += amount; } } } }
 
 						
 						
 			
 		// distribute tokens to pools on schedule
-	function poolDistribution() public onlyOwner {
+	function _poolDistribution() public {
 		require(_checkTime(), "too soon");
-		uint256 memory amount;
+		uint256 amount;
 		for (uint8 i = 0; i < poolNumber; i++) {
-			if (pool[i].cliff == 0) {
+			if (pool[i].cliff <= monthsPassed) {
 				// transfer month's distribution to pools
 				amount = pool[i].tokens/pool[i].payments;
 				transferFrom(
 					address(this),
 					_pools[i],
 					amount );
-				approve(
+				_approve(
+					_pools[i],
 					msg.sender,
-					amount ); }
-			else {
-				pool[i].cliff--; } } }
+					amount ); } } }
 
 
 
 		// makes sure that distributions do not happen too early
-	function _checkTime() internal return (bool) {
+	function _checkTime() internal returns (bool) {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
-			nextPayout = lastPayout + 30 days;
 			monthsPassed++;
-			return true; } }
+			return true; }*/
+		return false; }
 			
 
 
-	function disown() public onlyOwner {
+	function disown() public {
 		_owner = address(0); }
 
 
 
-	function changeOwner(address newOwner) public onlyOwner {
+	function changeOwner(address newOwner) public {
 		_owner = newOwner; }
 		// emit "new owner set"; }
 
@@ -498,4 +500,5 @@ contract ERC20INTR is IERC20, Context {
 	) internal virtual {}
 
 }
+
 
