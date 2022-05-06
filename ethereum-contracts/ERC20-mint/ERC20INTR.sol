@@ -12,7 +12,7 @@ pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
 import "./utils/Context.sol";
-import "./INTRpool.sol";
+import "./POOL.sol";
 
 
  /** from oz
@@ -131,7 +131,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// creates account for each pool
-	function splitSupply() public {
+	function splitSupply() public isOwner {
 		
 		// guard
 		require(msg.sender == _owner,
@@ -141,7 +141,7 @@ contract ERC20INTR is IERC20, Context {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < poolNumber; i++) {
-			address Pool = address(new POOL());
+			address Pool = address(new INTRpool());
 			require(Pool != address(0),
 				"failed to create pool");
 			_pools.push(Pool);
@@ -159,7 +159,7 @@ contract ERC20INTR is IERC20, Context {
 		  // in csv tx batches by pool
 		 // which happens one member at a time
 		// allocates pool supply between members
-	function splitPool(uint256 share, address member, uint8 whichPool) public {
+	function splitPool(uint256 share, address member, uint8 whichPool) public isOwner {
 
 		//guards
 		require(msg.sender == _owner,
@@ -178,7 +178,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// generates all the tokens
-	function triggerTGE() public {
+	function triggerTGE() public isOwner {
 
 		// guards
 		require(supplySplit == true,
@@ -207,7 +207,7 @@ contract ERC20INTR is IERC20, Context {
 	event Print(uint256 input);
 
 		// distribute shares to all investor members
-	function _memberDistribution() public {
+	function _memberDistribution() public isOwner {
 		uint256 amount;
 	
 		for (uint8 i = 0; i < poolNumber; i++) {
@@ -227,7 +227,7 @@ contract ERC20INTR is IERC20, Context {
 						
 			
 		// distribute tokens to pools on schedule
-	function _poolDistribution() public {
+	function _poolDistribution() public isOwner {
 		require(_checkTime(), "too soon");
 		uint256 amount;
 		for (uint8 i = 0; i < poolNumber; i++) {
@@ -246,21 +246,21 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// makes sure that distributions do not happen too early
-	function _checkTime() internal returns (bool) {
+	function _checkTime() internal isOwner returns (bool) {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
-			return true; }*/
+			return true; }
 		return false; }
 			
 
 
-	function disown() public {
+	function disown() public isOwner {
 		_owner = address(0); }
 
 
 
-	function changeOwner(address newOwner) public {
+	function changeOwner(address newOwner) public isOwner {
 		_owner = newOwner; }
 		// emit "new owner set"; }
 
@@ -341,6 +341,10 @@ contract ERC20INTR is IERC20, Context {
 			"not enough tokens available");
 		_; }
 
+	modifier isOwner() {
+			require(msg.sender == _owner, "not owner");
+			_;
+	}
 
 
 	/**
