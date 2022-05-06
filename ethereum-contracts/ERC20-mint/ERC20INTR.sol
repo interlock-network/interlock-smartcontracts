@@ -215,7 +215,7 @@ contract ERC20INTR is IERC20 {
 
 		// distribute tokens
 		_poolDistribution();
-		_memberDistribution; }
+		_memberDistribution(); }
 
 
 
