@@ -131,7 +131,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// creates account for each pool
-	function splitSupply() public isOwner {
+	function splitSupply() public {
 		
 		// guard
 		require(msg.sender == _owner,
@@ -141,7 +141,7 @@ contract ERC20INTR is IERC20, Context {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < poolNumber; i++) {
-			address Pool = address(new INTRpool());
+			address Pool = address(new POOL());
 			require(Pool != address(0),
 				"failed to create pool");
 			_pools.push(Pool);
@@ -159,7 +159,7 @@ contract ERC20INTR is IERC20, Context {
 		  // in csv tx batches by pool
 		 // which happens one member at a time
 		// allocates pool supply between members
-	function splitPool(uint256 share, address member, uint8 whichPool) public isOwner {
+	function splitPool(uint256 share, address member, uint8 whichPool) public {
 
 		//guards
 		require(msg.sender == _owner,
@@ -178,7 +178,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// generates all the tokens
-	function triggerTGE() public isOwner {
+	function triggerTGE() public {
 
 		// guards
 		require(supplySplit == true,
@@ -207,28 +207,30 @@ contract ERC20INTR is IERC20, Context {
 	event Print(uint256 input);
 
 		// distribute shares to all investor members
-	function _memberDistribution() public isOwner {
+	function _memberDistribution() public {
+
+		require(msg.sender == _owner,
+			"must be owner");
 		uint256 amount;
-	
 		for (uint8 i = 0; i < poolNumber; i++) {
 			if (pool[i].cliff <= monthsPassed) {
 				for (uint8 j = 0; j < pool[i].members; j++) {
-					emit Print(statusMap[_cohorts[_pools[i]][j]].share);
-					amount =
+					amount = 
 						uint(statusMap[_cohorts[_pools[i]][j]].share) /
-						pool[i].payments;
+							pool[i].payments;
 					transferFrom(
 						_pools[i],
 						_cohorts[_pools[i]][j],
-						amount );
+						amount);
 					statusMap[_cohorts[_pools[i]][j]].paid += amount; } } } }
 
 						
 						
 			
 		// distribute tokens to pools on schedule
-	function _poolDistribution() public isOwner {
-		require(_checkTime(), "too soon");
+	function _poolDistribution() public {
+		require(msg.sender == _owner,
+			"must be owner");
 		uint256 amount;
 		for (uint8 i = 0; i < poolNumber; i++) {
 			if (pool[i].cliff <= monthsPassed) {
@@ -246,7 +248,7 @@ contract ERC20INTR is IERC20, Context {
 
 
 		// makes sure that distributions do not happen too early
-	function _checkTime() internal isOwner returns (bool) {
+	function _checkTime() internal returns (bool) {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
@@ -255,12 +257,16 @@ contract ERC20INTR is IERC20, Context {
 			
 
 
-	function disown() public isOwner {
+	function disown() public {
+		require(msg.sender == _owner,
+			"must be owner");
 		_owner = address(0); }
 
 
 
-	function changeOwner(address newOwner) public isOwner {
+	function changeOwner(address newOwner) public {
+		require(msg.sender == _owner,
+			"must be owner");
 		_owner = newOwner; }
 		// emit "new owner set"; }
 
@@ -340,11 +346,6 @@ contract ERC20INTR is IERC20, Context {
 		require(_available >= _amount,
 			"not enough tokens available");
 		_; }
-
-	modifier isOwner() {
-			require(msg.sender == _owner, "not owner");
-			_;
-	}
 
 
 	/**
@@ -504,5 +505,6 @@ contract ERC20INTR is IERC20, Context {
 	) internal virtual {}
 
 }
+
 
 
