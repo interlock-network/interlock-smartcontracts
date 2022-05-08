@@ -13,21 +13,18 @@ pragma solidity ^0.8.0;
 import "./IERC20.sol";
 import "./POOL.sol";
 
-
- /** from oz
- * We have followed general OpenZeppelin Contracts guidelines: functions revert
- * instead returning `false` on failure. This behavior is nonetheless
- * conventional and does not conflict with the expectations of ERC20
- * applications.
+ /** derived from from oz:
+ * functions should revert instead returning `false` on failure.
+ * This behavior is nonetheless conventional and does not conflict
+ * with the expectations of ERC20 applications.
  *
- * Additionally, an {Approval} event is emitted on calls to {transferFrom}.
+ * An {Approval} event is emitted on calls to {transferFrom}.
  * This allows applications to reconstruct the allowance for all accounts just
- * by listening to said events. Other implementations of the EIP may not emit
- * these events, as it isn't required by the specification.
+ * by listening to said events.
  *
  * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
  * functions have been added to mitigate the well-known issues around setting
- * allowances. See {IERC20-approve}.
+ * allowances.
  **/
 
 contract ERC20INTR is IERC20 {
@@ -61,7 +58,7 @@ contract ERC20INTR is IERC20 {
 		uint8 payments;
 		uint8 cliff;
 		uint32 members; }
-	PoolData[] public pool;
+	PoolData[] private _pool;
 	address[] private _pools;
 
 		// keeping track of members
@@ -74,7 +71,7 @@ contract ERC20INTR is IERC20 {
 		uint8 payments; }
 	MemberStatus[] private _members;
 
-		// core token functionality | balance and allowance mappings
+		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(
 		address => uint256)) private _allowances;
@@ -115,7 +112,7 @@ contract ERC20INTR is IERC20 {
 
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			poolTokens_[i] *= _DECIMAL;
-			pool.push(
+			_pool.push(
 				PoolData(
 					_poolNames[i],
 					poolTokens_[i],
@@ -136,8 +133,7 @@ contract ERC20INTR is IERC20 {
 	) {
 		require(msg.sender == _owner,
 			"only owner can call");
-		_;
-	}
+		_; }
 
 /*************************************************/
 
@@ -201,8 +197,8 @@ contract ERC20INTR is IERC20 {
 			// intiate member  entry
 			MemberStatus memory member;
 			member.share = payouts[i] * _DECIMAL;
-			member.cliff = pool[whichPool[i]].cliff;
-			member.payments = pool[whichPool[i]].payments;
+			member.cliff = _pool[whichPool[i]].cliff;
+			member.payments = _pool[whichPool[i]].payments;
 			member.account = members[i];
 			member.pool = whichPool[i];
 			_members.push(member); } }
@@ -263,12 +259,14 @@ contract ERC20INTR is IERC20 {
 
 		// iterate through members
 		for (uint8 i = 0; i < _members.length; i++) {
-			if (_members[i].cliff <= monthsPassed) {
-					transferFrom(
-						_pools[_members[i].pool],
-						_members[i].account,
-						_members[i].share );
-					_members[i].paid += _members[i].share; } } }
+			if (_members[i].cliff <= monthsPassed &&
+				monthsPassed >= (_members[i].cliff + _members[i].payments)
+				) {
+				transferFrom(
+					_pools[_members[i].pool],
+					_members[i].account,
+					_members[i].share );
+				_members[i].paid += _members[i].share; } } }
 
 /*************************************************/								
 			
@@ -278,17 +276,18 @@ contract ERC20INTR is IERC20 {
 
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			if (pool[i].cliff <= monthsPassed) {
-
+			if (_pool[i].cliff <= monthsPassed &&
+				monthsPassed >= (_members[i].cliff + _members[i].payments)
+				) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
 					_pools[i],
-					pool[i].tokens/pool[i].payments );
+					_pool[i].tokens/_pool[i].payments );
 				_approve(
 					_pools[i],
 					msg.sender,
-					pool[i].tokens/pool[i].payments ); } } }
+					_pool[i].tokens/_pool[i].payments ); } } }
 
 /*************************************************/
 
@@ -303,7 +302,7 @@ contract ERC20INTR is IERC20 {
 			return true; }
 
 		// not ready
-		return false; }
+		return true; }
 			
 /*************************************************/
 
@@ -323,7 +322,6 @@ contract ERC20INTR is IERC20 {
 
 		// reassign
 		_owner = newOwner; }
-		// emit "new owner set"; }
 		
 /*************************************************/
 
