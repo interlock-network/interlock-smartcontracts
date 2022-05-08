@@ -35,11 +35,11 @@ contract ERC20INTR is IERC20 {
 	/** @dev **/
 
 		// divisibility factor
-	uint8 constant private _decimals = 18;
-	uint256 constant private _DECIMAL = 10**_decimals;
+	uint8 private _decimals = 18;
+	uint256 private _DECIMAL = 10 ** _decimals;
 
 		// pools
-	string[12] public poolNames = [
+	string[12] private _poolNames = [
 		"earlyvc",
 		"ps1",
 		"ps2",
@@ -52,7 +52,7 @@ contract ERC20INTR is IERC20 {
 		"partner",
 		"white",
 		"public" ];
-	uint8 constant poolNumber = 12;
+	uint8 constant private _poolNumber = 12;
 
 		// keeping track of pools
 	struct PoolData {
@@ -76,12 +76,13 @@ contract ERC20INTR is IERC20 {
 
 		// core token functionality | balance and allowance mappings
 	mapping(address => uint256) private _balances;
-	mapping(address => mapping(address => uint256)) public _allowances;
+	mapping(address => mapping(
+		address => uint256)) private _allowances;
 
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "INTR";
-	uint256 private _totalSupply = 1000000000 * DECIMAL;
+	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
 	// decimals = 18 by default
 
@@ -96,7 +97,7 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 	/**
-	* setup methods
+	* init
 	**/
 
 /*************************************************/
@@ -104,39 +105,79 @@ contract ERC20INTR is IERC20 {
 		 // owned by msg.sender
 		// initializes contract
 	constructor(
-		uint256[poolNumber] memory poolTokens_,
-		uint8[poolNumber] memory monthlyPayments_,
-		uint8[poolNumber] memory poolCliffs_,
-		uint32[poolNumber] memory poolMembers_
+		uint256[_poolNumber] memory poolTokens_,
+		uint8[_poolNumber] memory monthlyPayments_,
+		uint8[_poolNumber] memory poolCliffs_,
+		uint32[_poolNumber] memory poolMembers_
 	) {
 		_owner = msg.sender;
 		_balances[address(this)] = 0; 
 
-		for (uint8 i = 0; i < poolNumber; i++) {
-			poolTokens_[i] *= DECIMAL;
+		for (uint8 i = 0; i < _poolNumber; i++) {
+			poolTokens_[i] *= _DECIMAL;
 			pool.push(
 				PoolData(
-					poolNames[i],
+					_poolNames[i],
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
-					poolMembers_[i]
-				)
-			); } }
+					poolMembers_[i] ) ); } }
+
+/*************************************************/
+
+	/**
+	* modifiers
+	**/
+
+/*************************************************/
+
+		// only allows owner to call
+	modifier isOwner(
+	) {
+		require(msg.sender == _owner,
+			"only owner can call");
+		_;
+	}
+
+/*************************************************/
+
+		// verifies zero address was not provied
+	modifier noZero(
+		address _address
+	) {
+		require(_address != address(0),
+			"zero address where it shouldn't be");
+		_; }
+
+/*************************************************/
+
+		// verifies there exists enough token to proceed
+	modifier isEnough(
+		uint256 _available,
+		uint256 _amount
+	) {
+		require(_available >= _amount,
+			"not enough tokens available");
+		_; }
+
+/*************************************************/
+
+	/**
+	* setup methods
+	**/
 
 /*************************************************/
 
 		// creates account for each pool
-	function splitSupply() public {
+	function splitSupply(
+	) public isOwner {
 		
 		// guard
-		require(msg.sender == _owner,
-			"not owner");
 		require(supplySplit == false,
-			"supply split alreadt happened");
+			"supply split already happened");
 
 		// create pool accounts and initiate
-		for (uint8 i = 0; i < poolNumber; i++) {
+		for (uint8 i = 0; i < _poolNumber; i++) {
 			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
@@ -153,17 +194,13 @@ contract ERC20INTR is IERC20 {
 		uint256[] calldata payouts,
 		address[] calldata members,
 		uint8[] calldata whichPool
-	) public {
-
-		//guards
-		require(msg.sender == _owner,
-			"must be owner");
+	) public isOwner {
 
 		// iterate through addMember input array
 		for (uint8 i = 0; i < payouts.length; i++) {
 			// intiate member  entry
 			MemberStatus memory member;
-			member.share = payouts[i] * DECIMAL;
+			member.share = payouts[i] * _DECIMAL;
 			member.cliff = pool[whichPool[i]].cliff;
 			member.payments = pool[whichPool[i]].payments;
 			member.account = members[i];
@@ -173,13 +210,12 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// generates all the tokens
-	function triggerTGE() public {
+	function triggerTGE(
+	) public isOwner {
 
 		// guards
 		require(supplySplit == true,
 			"supply not split");
-		require(msg.sender == _owner,
-			"must be owner");
 		require(TGEtriggered == false,
 			"TGE already happened");
 
@@ -209,11 +245,10 @@ contract ERC20INTR is IERC20 {
 
 		 // updates allowances and balances across pools and members
 		// calls successfully after 30 days pass
-	function distribute() public {
+	function distribute(
+	) public isOwner {
 
 		// guards
-		require(msg.sender == _owner,
-			"must be owner");
 		require(_checkTime(), "too soon");
 
 		// distribute tokens
@@ -223,11 +258,8 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// distribute shares to all investor members
-	function _memberDistribution() internal {
-
-		// guards
-		require(msg.sender == _owner,
-			"must be owner");
+	function _memberDistribution(
+	) internal {
 
 		// iterate through members
 		for (uint8 i = 0; i < _members.length; i++) {
@@ -241,14 +273,11 @@ contract ERC20INTR is IERC20 {
 /*************************************************/								
 			
 		// distribute tokens to pools on schedule
-	function _poolDistribution() internal {
-
-		// guards
-		require(msg.sender == _owner,
-			"must be owner");
+	function _poolDistribution(
+	) internal {
 
 		// iterate through pools
-		for (uint8 i = 0; i < poolNumber; i++) {
+		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (pool[i].cliff <= monthsPassed) {
 
 				// transfer month's distribution to pools
@@ -264,7 +293,8 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// makes sure that distributions do not happen too early
-	function _checkTime() internal returns (bool) {
+	function _checkTime(
+	) internal returns (bool) {
 
 		// test time
 		if (block.timestamp > nextPayout) {
@@ -278,11 +308,8 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// renders contract as ownerLESS
-	function disown() public {
-
-		// guard
-		require(msg.sender == _owner,
-			"must be owner");
+	function disown(
+	) public isOwner {
 
 		//disown
 		_owner = address(0); }
@@ -290,11 +317,9 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// changes the contract owner
-	function changeOwner(address newOwner) public {
-
-		// guard
-		require(msg.sender == _owner,
-			"must be owner");
+	function changeOwner(
+		address newOwner
+	) public isOwner {
 
 		// reassign
 		_owner = newOwner; }
@@ -309,31 +334,37 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 		// gets token name (Interlock Network)
-	function name() public view override returns (string memory) {
+	function name(
+	) public view override returns (string memory) {
 		return _name; }
 
 /*************************************************/
 
 		// gets token symbol (INTR)
-	function symbol() public view override returns (string memory) {
+	function symbol(
+	) public view override returns (string memory) {
 		return _symbol; }
 
 /*************************************************/
 
-		// gets token symbol (INTR)
-	function decimals() public view override returns (uint8) {
+		// gets token decimal number
+	function decimals(
+	) public view override returns (uint8) {
 		return _decimals; }
 
 /*************************************************/
 
 		// gets tokens minted
-	function totalSupply() public view override returns (uint256) {
+	function totalSupply(
+	) public view override returns (uint256) {
 		return _totalSupply; }
 
 /*************************************************/
 
 		// gets account balance (tokens payable)
-	function balanceOf(address account) public view override returns (uint256) {
+	function balanceOf(
+		address account
+	) public view override returns (uint256) {
 		return _balances[account]; }
 
 /*************************************************/
@@ -350,28 +381,6 @@ contract ERC20INTR is IERC20 {
 		// gets total tokens paid out in circulation
 	function circulation() public view returns (uint256) {
 		return _totalSupply - _balances[address(this)]; }
-
-/*************************************************/
-
-	/**
-	* modifiers
-	**/
-
-/*************************************************/
-
-		// verifies zero address was not provied
-	modifier noZero(address _address) {
-		require(_address != address(0),
-			"zero address where it shouldn't be");
-		_; }
-
-/*************************************************/
-
-		// verifies there exists enough token to proceed
-	modifier isEnough(uint256 _available, uint256 _amount) {
-		require(_available >= _amount,
-			"not enough tokens available");
-		_; }
 
 /*************************************************/
 
