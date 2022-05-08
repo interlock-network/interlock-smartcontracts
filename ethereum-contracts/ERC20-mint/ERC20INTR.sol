@@ -15,10 +15,6 @@ import "./POOL.sol";
 
 
  /** from oz
- * This implementation is agnostic to the way tokens are created. This means
- * that a supply mechanism has to be added in a derived contract using {_mint}.
- * For a generic mechanism see {ERC20PresetMinterPauser}.
- *
  * We have followed general OpenZeppelin Contracts guidelines: functions revert
  * instead returning `false` on failure. This behavior is nonetheless
  * conventional and does not conflict with the expectations of ERC20
@@ -32,15 +28,15 @@ import "./POOL.sol";
  * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
- *
- * ( I believe the reason for needing atomic increase
- * is that the operation ties down allowance getter
- * preventing an allowance access before increase is complete. )
  **/
 
 contract ERC20INTR is IERC20 {
 
 	/** @dev **/
+
+		// divisibility factor
+	uint8 constant private _decimals = 18;
+	uint256 constant private _DECIMAL = 10**_decimals;
 
 		// pools
 	string[12] public poolNames = [
@@ -61,7 +57,7 @@ contract ERC20INTR is IERC20 {
 		// keeping track of pools
 	struct PoolData {
 		string name;
-		uint32 tokens;
+		uint256 tokens;
 		uint8 payments;
 		uint8 cliff;
 		uint32 members; }
@@ -85,7 +81,7 @@ contract ERC20INTR is IERC20 {
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "INTR";
-	uint256 private _totalSupply = 1000000000;
+	uint256 private _totalSupply = 1000000000 * DECIMAL;
 	address private _owner;
 	// decimals = 18 by default
 
@@ -97,15 +93,18 @@ contract ERC20INTR is IERC20 {
 	bool public TGEtriggered = false;
 	bool public supplySplit = false;
 	
-
+/*************************************************/
 
 	/**
 	* setup methods
 	**/
+
+/*************************************************/
+
 		 // owned by msg.sender
 		// initializes contract
 	constructor(
-		uint32[poolNumber] memory poolTokens_,
+		uint256[poolNumber] memory poolTokens_,
 		uint8[poolNumber] memory monthlyPayments_,
 		uint8[poolNumber] memory poolCliffs_,
 		uint32[poolNumber] memory poolMembers_
@@ -114,17 +113,18 @@ contract ERC20INTR is IERC20 {
 		_balances[address(this)] = 0; 
 
 		for (uint8 i = 0; i < poolNumber; i++) {
+			poolTokens_[i] *= DECIMAL;
 			pool.push(
 				PoolData(
 					poolNames[i],
 					poolTokens_[i],
 					monthlyPayments_[i],
-					poolCliffs_[i]++,
+					poolCliffs_[i],
 					poolMembers_[i]
 				)
 			); } }
 
-
+/*************************************************/
 
 		// creates account for each pool
 	function splitSupply() public {
@@ -145,7 +145,7 @@ contract ERC20INTR is IERC20 {
 		// this must never happen again...
 		supplySplit = true; }
 
-
+/*************************************************/
 
 		 // in csv tx batches by pool
 		// allocates pool supply between members
@@ -163,14 +163,14 @@ contract ERC20INTR is IERC20 {
 		for (uint8 i = 0; i < payouts.length; i++) {
 			// intiate member  entry
 			MemberStatus memory member;
-			member.share = payouts[i];
+			member.share = payouts[i] * DECIMAL;
 			member.cliff = pool[whichPool[i]].cliff;
 			member.payments = pool[whichPool[i]].payments;
 			member.account = members[i];
 			member.pool = whichPool[i];
 			_members.push(member); } }
 
-
+/*************************************************/
 
 		// generates all the tokens
 	function triggerTGE() public {
@@ -199,11 +199,14 @@ contract ERC20INTR is IERC20 {
 		// this must never happen again...
 		TGEtriggered = true; }
 
-
+/*************************************************/
 
 	/**
 	* payout methods
 	**/
+
+/*************************************************/
+
 		 // updates allowances and balances across pools and members
 		// calls successfully after 30 days pass
 	function distribute() public {
@@ -217,7 +220,7 @@ contract ERC20INTR is IERC20 {
 		_poolDistribution();
 		_memberDistribution(); }
 
-
+/*************************************************/
 
 		// distribute shares to all investor members
 	function _memberDistribution() internal {
@@ -235,7 +238,7 @@ contract ERC20INTR is IERC20 {
 						_members[i].share );
 					_members[i].paid += _members[i].share; } } }
 
-								
+/*************************************************/								
 			
 		// distribute tokens to pools on schedule
 	function _poolDistribution() internal {
@@ -258,7 +261,7 @@ contract ERC20INTR is IERC20 {
 					msg.sender,
 					pool[i].tokens/pool[i].payments ); } } }
 
-
+/*************************************************/
 
 		// makes sure that distributions do not happen too early
 	function _checkTime() internal returns (bool) {
@@ -272,7 +275,7 @@ contract ERC20INTR is IERC20 {
 		// not ready
 		return false; }
 			
-
+/*************************************************/
 
 		// renders contract as ownerLESS
 	function disown() public {
@@ -284,7 +287,7 @@ contract ERC20INTR is IERC20 {
 		//disown
 		_owner = address(0); }
 
-
+/*************************************************/
 
 		// changes the contract owner
 	function changeOwner(address newOwner) public {
@@ -297,44 +300,43 @@ contract ERC20INTR is IERC20 {
 		_owner = newOwner; }
 		// emit "new owner set"; }
 		
-
+/*************************************************/
 
 	/**
 	* getter methods
 	**/
+
+/*************************************************/
+
 		// gets token name (Interlock Network)
 	function name() public view override returns (string memory) {
 		return _name; }
 
-
+/*************************************************/
 
 		// gets token symbol (INTR)
 	function symbol() public view override returns (string memory) {
 		return _symbol; }
 
+/*************************************************/
 
+		// gets token symbol (INTR)
+	function decimals() public view override returns (uint8) {
+		return _decimals; }
 
- /* Returns the number of decimals used to get its user representation.
- *  For example, if `decimals` equals `2`, a balance of `505` tokens should
- *  be displayed to a user as `5.05` (`505 / 10 ** 2`).
- *
- *  NOTE: This information is only used for _display_ purposes: it in
- *  no way affects any of the arithmetic of the contract.
- **/
-
-
+/*************************************************/
 
 		// gets tokens minted
 	function totalSupply() public view override returns (uint256) {
 		return _totalSupply; }
 
-
+/*************************************************/
 
 		// gets account balance (tokens payable)
 	function balanceOf(address account) public view override returns (uint256) {
 		return _balances[account]; }
 
-
+/*************************************************/
 
 		// gets tokens spendable by spender from owner
 	function allowance(
@@ -343,24 +345,27 @@ contract ERC20INTR is IERC20 {
 	) public view virtual override returns (uint256) {
 		return _allowances[owner][spender]; }
 
-
+/*************************************************/
 
 		// gets total tokens paid out in circulation
 	function circulation() public view returns (uint256) {
 		return _totalSupply - _balances[address(this)]; }
 
-
+/*************************************************/
 
 	/**
 	* modifiers
 	**/
+
+/*************************************************/
+
 		// verifies zero address was not provied
 	modifier noZero(address _address) {
 		require(_address != address(0),
 			"zero address where it shouldn't be");
 		_; }
 
-
+/*************************************************/
 
 		// verifies there exists enough token to proceed
 	modifier isEnough(uint256 _available, uint256 _amount) {
@@ -368,11 +373,14 @@ contract ERC20INTR is IERC20 {
 			"not enough tokens available");
 		_; }
 
-
+/*************************************************/
 
 	/**
 	* doer methods
 	**/
+
+/*************************************************/
+
 		   // emitting Transfer, reverting on failure
 		  // where caller balanceOf must be >= amount
 		 // where `to` cannot = zero  address
@@ -398,7 +406,7 @@ contract ERC20INTR is IERC20 {
 		emit Transfer(from, to, amount);
 		_afterTokenTransfer(from, to, amount); }
 
-
+/*************************************************/
 
 		  // emitting Approval, reverting on failure
 		 // (=> no allownance delta when TransferFrom)
@@ -420,7 +428,7 @@ contract ERC20INTR is IERC20 {
 		_allowances[owner][spender] = amount;
 		emit Approval(owner, spender, amount); }
 
-
+/*************************************************/
 
 		     // emitting Approval, reverting on failure
 		    // where msg.sender allowance w/`from` must be >= amount
@@ -438,7 +446,7 @@ contract ERC20INTR is IERC20 {
 		_transfer(from, to, amount);
 		return true; }
 
-
+/*************************************************/
 
 		  // emitting Approval, reverting on failure
 		 // where `spender` cannot = zero address
@@ -469,7 +477,7 @@ contract ERC20INTR is IERC20 {
 			_approve(owner, spender, allowance(owner, spender) - amount);}
 		return true; }
 
-
+/*************************************************/
 
 		   // emitting Transfer, reverting on failure
 		  // where `account` must have >= burn amount
@@ -486,7 +494,7 @@ contract ERC20INTR is IERC20 {
 		emit Transfer(account, address(0), amount);
 		_afterTokenTransfer(account, address(0), amount); }
 
-
+/*************************************************/
 
 		   // emitting Approval if finite, reverting on failure 
 		  // will do nothing if infinite allowance
@@ -500,7 +508,7 @@ contract ERC20INTR is IERC20 {
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
-
+/*************************************************/
 
 		    // where `from` && `to` != zero account => to be regular xfer
 		   // where `from` = zero account => `amount` to be minted `to`
@@ -513,7 +521,7 @@ contract ERC20INTR is IERC20 {
 		uint256 amount
 	) internal virtual {}
 
-
+/*************************************************/
 
 		    // where `from` && `to` != zero account => was regular xfer
 		   // where `from` = zero account => `amount` was minted `to`
@@ -525,6 +533,8 @@ contract ERC20INTR is IERC20 {
 		address to,
 		uint256 amount
 	) internal virtual {}
+
+/*************************************************/
 
 }
 
