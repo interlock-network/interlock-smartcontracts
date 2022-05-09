@@ -11,7 +11,8 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./INTRpool.sol";
+import "./POOL.sol";
+import "./utils/ECDSA.sol";
 
  /** derived from from oz:
  * functions should revert instead returning `false` on failure.
@@ -30,6 +31,15 @@ import "./INTRpool.sol";
 contract ERC20INTR is IERC20 {
 
 	/** @dev **/
+
+/*************************************************/
+	/**
+	* declarations
+	**/
+/*************************************************/
+
+		// libraries
+    using ECDSA for bytes32;
 
 		// divisibility factor
 	uint8 private _decimals = 18;
@@ -71,6 +81,15 @@ contract ERC20INTR is IERC20 {
 		uint8 payments; }
 	MemberStatus[] private _members;
 
+		// keeping track of whitelisters
+	MemberStatus[] private _whitelisters;
+
+		// EIP712 signature implementation
+	address private _whitelistKey = address(0);
+	bytes32 public DOMAIN_SEPARATOR;
+	bytes32 public constant MINTER_TYPEHASH =
+		keccak256("Minter(address wallet)");
+
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(
@@ -92,11 +111,9 @@ contract ERC20INTR is IERC20 {
 	bool public supplySplit = false;
 	
 /*************************************************/
-
 	/**
 	* init
 	**/
-
 /*************************************************/
 
 		 // owned by msg.sender
@@ -110,6 +127,7 @@ contract ERC20INTR is IERC20 {
 		_owner = msg.sender;
 		_balances[address(this)] = 0; 
 
+			// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			poolTokens_[i] *= _DECIMAL;
 			_pool.push(
@@ -118,14 +136,22 @@ contract ERC20INTR is IERC20 {
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
-					poolMembers_[i] ) ); } }
+					poolMembers_[i] ) ); }
+
+			// initiate EIP712 standard for whitelist
+		DOMAIN_SEPARATOR = keccak256(
+			abi.encode(
+				keccak256(
+					"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+				keccak256(bytes("WhitelistToken")),
+				keccak256(bytes("1")),
+				block.chainid,
+				address(this) ) ); }
 
 /*************************************************/
-
 	/**
 	* modifiers
 	**/
-
 /*************************************************/
 
 		// only allows owner to call
@@ -157,11 +183,9 @@ contract ERC20INTR is IERC20 {
 		_; }
 
 /*************************************************/
-
 	/**
 	* setup methods
 	**/
-
 /*************************************************/
 
 		// creates account for each pool
@@ -174,7 +198,7 @@ contract ERC20INTR is IERC20 {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new INTRpool());
+			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0; }
@@ -232,11 +256,9 @@ contract ERC20INTR is IERC20 {
 		TGEtriggered = true; }
 
 /*************************************************/
-
 	/**
 	* payout methods
 	**/
-
 /*************************************************/
 
 		 // updates allowances and balances across pools and members
@@ -322,13 +344,62 @@ contract ERC20INTR is IERC20 {
 
 		// reassign
 		_owner = newOwner; }
-		
+
+/*************************************************/
+	/**
+	* whitelist stuff
+	**/
 /*************************************************/
 
+		// validate whitelister address and invitation
+	function claimWhitelist(
+	) public returns (bool) {
+
+	}
+
+/*************************************************/
+
+		// sets to serverside whitelist signing key
+	function setWhitelistKey(
+		address newKey
+	) public isOwner {
+		_whitelistKey = newKey;
+	}
+
+/*************************************************/
+
+		// determine if claim is valid whitelister
+	function validateWhitelister(
+		bytes calldata signature
+	) public view returns (bool) {
+
+		// make sure key has been entered
+		require(_whitelistKey != address(0),
+			"whitelist key has not been set");
+
+		// recreate datastructure sent by client
+		bytes32 digest = keccak256(
+			abi.encodePacked(
+				"\x19\x01",
+				DOMAIN_SEPARATOR,
+				keccak256(
+					abi.encode(
+						MINTER_TYPEHASH,
+						msg.sender) ) ) ); 
+		
+		// recover signing key
+		address recoveredAddress = digest.recover(signature);
+
+		// check that recovered address is the whitelistKey
+		require(recoveredAddress == _whitelistKey,
+			"this signature is invalid");
+		return true; }
+
+
+/*************************************************/
 	/**
 	* getter methods
 	**/
-
 /*************************************************/
 
 		// gets token name (Interlock Network)
@@ -381,11 +452,9 @@ contract ERC20INTR is IERC20 {
 		return _totalSupply - _balances[address(this)]; }
 
 /*************************************************/
-
 	/**
 	* doer methods
 	**/
-
 /*************************************************/
 
 		   // emitting Transfer, reverting on failure
