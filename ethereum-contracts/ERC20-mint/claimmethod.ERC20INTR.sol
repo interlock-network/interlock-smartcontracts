@@ -87,7 +87,7 @@ contract ERC20INTR is IERC20 {
 	bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
 		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract");
 	bytes32 constant VALIDATION_TYPEHASH = keccak256(
-		"Validator(address wallet,uint256 pool,unit256 share)");
+		"Validator(address wallet,uint8 pool,unit256 share)");
 
 		// domain separator
 	struct EIP712Domain {
@@ -100,7 +100,7 @@ contract ERC20INTR is IERC20 {
 	struct Validation {
 		address wallet;
 		uint256 share;
-		uint256 pool; }
+		uint8 pool; }
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -155,7 +155,7 @@ contract ERC20INTR is IERC20 {
 			name: "Validator",
 			version: '1',
 			chainId: block.chainid,
-			address(this) } ) ); }
+			verifyingContract: address(this) } ) ); }
 
 /*************************************************/
 	/**
@@ -238,7 +238,6 @@ contract ERC20INTR is IERC20 {
 
 		// apply the initial round of token distributions
 		_poolDistribution();
-		_memberDistribution();
 
 		// this must never happen again...
 		TGEtriggered = true; }
@@ -256,7 +255,7 @@ contract ERC20INTR is IERC20 {
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[i].cliff + _members[i].payments)
+				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)
 				) {
 				// transfer month's distribution to pools
 				transferFrom(
@@ -318,7 +317,7 @@ contract ERC20INTR is IERC20 {
 
 		// generate DOMAIN_SEPARATOR part of digest
 	function hash(
-		EIP712Domain eip712Domain
+		EIP712Domain memory eip712Domain
 	) internal pure returns (bytes32) {
 		return keccak256(abi.encode(
 			EIP712DOMAIN_TYPEHASH,
@@ -329,7 +328,7 @@ contract ERC20INTR is IERC20 {
 
 		// generate VALIDATION part of digest
 	function hash(
-		Validation validation
+		Validation memory validation
 	) internal pure returns (bytes32) {
 		return keccak256(abi.encode(
 			VALIDATION_TYPEHASH,
@@ -343,7 +342,7 @@ contract ERC20INTR is IERC20 {
 		// checks incoming signature packet
 	function validate(
 		Validation memory validation,
-		bytes calldata signature,
+		bytes calldata signature
 	) public {
 		require(_validationKey != address(0),
 			"validation key has not been set");
@@ -358,8 +357,8 @@ contract ERC20INTR is IERC20 {
 		member.account = validation.wallet;
 		member.share = validation.share * _DECIMAL;
 		member.cliff = _pool[member.pool].cliff;
-		member.payments = _pool[member.pool].payments
-		_members.push(member); }
+		member.payments = _pool[member.pool].payments;
+		_members[member.account] = member; }
 
 /*************************************************/
 	/**
