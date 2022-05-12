@@ -344,14 +344,22 @@ contract ERC20INTR is IERC20 {
 		Validation memory validation,
 		bytes calldata signature
 	) public {
+
+		//  guard
 		require(_validationKey != address(0),
 			"validation key has not been set");
+
+		// recreate digest
 		bytes32 digest = keccak256(abi.encodePacked(
 			"\x19\x01",
 			DOMAIN_SEPARATOR,
 			hash(validation) ) );
+
+		// verify signature
 		require(digest.recover(signature) == _validationKey,
 			"invalid validation packet");
+		
+		// pack calldata into new member record
 		MemberStatus memory member;
 		member.pool = validation.pool;
 		member.account = validation.wallet;
