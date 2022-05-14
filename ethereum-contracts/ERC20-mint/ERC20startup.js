@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 //
 // Interlock ERC-20 INTR Token Mint Platform
-// 	   EIP712 data signer 
+// 	   testing startup script
 //
 // Contributors:
 // blairmunroakusa
 // ...
+//
 
 const fs		=	require('fs');
 const Web3 		=	require('web3');
