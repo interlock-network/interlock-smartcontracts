@@ -6,6 +6,8 @@ node_modules
 .arcconfig
 *.iml
 bin
+*.bin
+*.abi
 /mutagen.sh
 venv
 .env

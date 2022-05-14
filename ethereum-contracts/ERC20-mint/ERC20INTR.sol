@@ -11,7 +11,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./POOL.sol";
+import "./INTRpool.sol";
 import "./utils/ECDSA.sol";
 
  /** derived from from oz:
@@ -198,7 +198,7 @@ contract ERC20INTR is IERC20 {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new POOL());
+			address Pool = address(new INTRpool());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0; }

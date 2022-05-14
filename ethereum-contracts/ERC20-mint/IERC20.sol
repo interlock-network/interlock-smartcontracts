@@ -34,9 +34,6 @@ interface IERC20 {
     	/**
      	* getter methods
      	**/
-		// gets token supply cap (1_000_000_000)
-	function cap() external view returns (uint256);
-
 
 		// gets token name (Interlock Network)
 	function name() external view returns (string memory);
