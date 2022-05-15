@@ -31,12 +31,24 @@ const abi = JSON.parse(fs.readFileSync('ERC20INTR_sol_ERC20INTR.abi').toString()
 
 
 
+async function startup() {
 
-ERC20INTR = new web3.eth.Contract(abi);
-ERC20INTR
-	.deploy({data: bytecode, arguments: constructor})
-	.send({
-		from: from,
-		gas: 5000000,
-		gasPrice:web3.utils.toWei(gasprice, 'ether')})
-	.then((newContractInstance) => {ERC20INTR.options.address = newContractInstance.options.address});
+	try {
+
+		ERC20INTR = new web3.eth.Contract(abi);
+		await ERC20INTR
+			.deploy({data: bytecode, arguments: constructor})
+			.send({
+				from: from,
+				gas: 5000000,
+				gasPrice:web3.utils.toWei(gasprice, 'ether')})
+			.then((newContractInstance) =>
+				{ERC20INTR.options.address = newContractInstance.options.address});
+
+	} catch(error) {
+		console.log('Error: ' + error);
+	}
+
+}
+
+startup();
