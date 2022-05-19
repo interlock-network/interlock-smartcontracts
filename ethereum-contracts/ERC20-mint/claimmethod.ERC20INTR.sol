@@ -11,7 +11,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./POOL.sol";
+import "./INTRpool.sol";
 import "./utils/ECDSA.sol";
 
  /** derived from from oz:
@@ -207,7 +207,7 @@ contract ERC20INTR is IERC20 {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new POOL());
+			address Pool = address(new INTRpool());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0; }
@@ -335,13 +335,15 @@ contract ERC20INTR is IERC20 {
 			validation.wallet,
 			validation.pool,
 			validation.share ) ); }
+    	event debug(
+		address recover, uint8 test);
 
 		   // unpacks validation data and stores new member record
 		  // reverts if _validationKey not set
 		 // reverts if recovered key != _validationKey
 		// checks incoming signature packet
 	function validate(
-		Validation memory validation,
+		Validation calldata validation,
 		bytes calldata signature
 	) public {
 
@@ -354,10 +356,11 @@ contract ERC20INTR is IERC20 {
 			"\x19\x01",
 			DOMAIN_SEPARATOR,
 			hash(validation) ) );
+		//emit debug( /*digest.recover(signature)*/ _validationKey, 77);
 
 		// verify signature
 		require(digest.recover(signature) == _validationKey,
-			"invalid validation packet");
+			"test");
 		
 		// pack calldata into new member record
 		MemberStatus memory member;

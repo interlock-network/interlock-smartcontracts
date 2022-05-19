@@ -19,15 +19,15 @@ const tokens		=	ERC20startup['tokens'];
 const payments 		=	ERC20startup['payments'];
 const cliffs 		=	ERC20startup['cliffs'];
 const members 		=	ERC20startup['members'];
-const constructor = [
-	tokens,
-	payments,
-	cliffs,
-	members ];
+const constructor	= [
+				tokens,
+				payments,
+				cliffs,
+				members ];
 
 
-const bytecode = fs.readFileSync('ERC20INTR_sol_ERC20INTR.bin').toString();
-const abi = JSON.parse(fs.readFileSync('ERC20INTR_sol_ERC20INTR.abi').toString());
+const bytecode = fs.readFileSync('claimmethod_ERC20INTR_sol_ERC20INTR.bin').toString();
+const abi = JSON.parse(fs.readFileSync('claimmethod_ERC20INTR_sol_ERC20INTR.abi').toString());
 
 
 
