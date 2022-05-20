@@ -1,5 +1,5 @@
 /****************************************************************
- * Solana program template
+ * INTR Solana Contract
  ****************************************************************/
 
 #![allow(non_snake_case)]
@@ -14,9 +14,7 @@ use crate::{
         utils::utils::*,
     };
 
-// this is example instruction_data 'unpack' implementation
-// (not related to the Pack implementations for account states)
-//
+
 // it is customary to specify instruction type with leading tag
 //
 // tag is one byte, so we could have up to 256 instructions

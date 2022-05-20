@@ -1,13 +1,6 @@
 /****************************************************************
- * Solana program template
+ * INTR Solana Contract
  ****************************************************************/
 
-pub mod FIRST;
-pub mod SECOND;
-
-// additional modules
-// .
-// .
-// .
-// V
+pub mod GLOBAL;
 

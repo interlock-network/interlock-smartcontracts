@@ -1,8 +1,7 @@
 /****************************************************************
- * Solana program template
+ * INTR Solana Contract
  ****************************************************************/
 
 pub mod run;
-pub mod instructionOne;
-pub mod instructionTwo;
-pub mod instructionThree;
+pub mod ProgramInit;
+pub mod UpdateGlobal;

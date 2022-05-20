@@ -1,13 +1,15 @@
 /****************************************************************
- * Solana program template
+ * INTR Solana Contract
  ****************************************************************/
 
 use thiserror::Error;
 
 use solana_program::program_error::ProgramError;
 
-// besides the msg! I didn't these I didn't alter these much from the paulx implementation
-// the msg! prints the error name in the log, instead of 'custom program error x00', etc
+// TODO:
+// . clean out unneeded err
+//
+
 
 #[derive(Error, Debug, Copy, Clone)]
 pub enum ContractError {
@@ -30,8 +32,8 @@ pub enum ContractError {
     GlobalAlreadyExistsError,
 }
 
-impl From<TemplateError> for ProgramError {
-    fn from(error: TemplateError) -> Self {
+impl From<ContractError> for ProgramError {
+    fn from(error: ContractError) -> Self {
         msg!("{:?}", error);
         ProgramError::Custom(error as u32)
     }

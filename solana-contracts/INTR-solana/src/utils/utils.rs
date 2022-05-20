@@ -1,5 +1,5 @@
 /****************************************************************
- * Solana program template 
+ * INTR Solana Contract
  ****************************************************************/
 
 #![allow(non_snake_case)]
@@ -27,10 +27,10 @@ pub const SIZE_SECOND: u8 = (PUBKEY_LEN + BALANCE_LEN + STRING_LEN) as u8;
 pub fn pack_flags(flags: BitVec) -> u32 {
 
     let flagbytes = BitVec::to_bytes(&flags);
-    let bigflag = ((flagbytes[0] as u32) << 24
+    let bigflag =    (flagbytes[0] as u32) << 24
                    | (flagbytes[1] as u32) << 16
-                   | (flagbytes[2] as u32) <<8
-                   | flagbytes[3] as u32);
+                   | (flagbytes[2] as u32) << 8
+                   | (flagbytes[3] as u32);
 
     return bigflag
 }
