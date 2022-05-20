@@ -30,6 +30,8 @@ pub enum ContractError {
     InstructionOneAttemptError,
     #[error("Global Account Already Exists")]
     GlobalAlreadyExistsError,
+    #[error("'Owner' is an imposter!")]
+    OwnerImposterError,
 }
 
 impl From<ContractError> for ProgramError {

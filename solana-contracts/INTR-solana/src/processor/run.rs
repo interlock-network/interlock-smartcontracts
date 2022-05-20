@@ -40,26 +40,13 @@ impl Processor {
             },
 
             ContractInstruction::UpdateGlobal {
-                dataNumberA,
-                dataStringA,
+                updateFlags,    
             } => {
                 msg!("Instruction: UpdateGlobal");
-                Self::process_instruction_two(
+                Self::process_update_global(
                     program_id,
                     accounts,
-                    dataNumberA,
-                    dataStringA,
-                )
-            },
-
-            TemplateInstruction::InstructionThree {
-                dataNumberC,
-            } => {
-                msg!("Instruction: InstructionThree");
-                Self::process_instruction_three(
-                    program_id,
-                    accounts,
-                    dataNumberC,
+                    updateFlags,
                 )
             },
         }

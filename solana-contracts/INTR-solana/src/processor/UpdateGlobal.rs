@@ -26,7 +26,6 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            SECOND::*,
         },
     };
 
@@ -34,62 +33,54 @@ use crate::{
 //
 // 0, owner pubkey, is signer
 // 1, GLOBAL pda
-// 2, system rent account
+// 2, owner pubkey, or newowner if changing ownership
 
 impl Processor {
 
-    pub fn process_program_init(
+    pub fn process_update_global(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bumpGLOBAL: u8,
-        seedGLOBAL: Vec<u8>,
+        updateFlags: u32,
     ) -> ProgramResult {
 
-        // it is customary to iterate through accounts like so
+        // iterate and get accounts
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?
-        let rent = next_account_info(account_info_iter)?;
+        let newOwner = next_account_info(account_info_iter)?
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // calculate rent if we want to create new account
-        let rentGLOBAL = Rent::from_account_info(rent)?
-            .minimum_balance(SIZE_GLOBAL.into());
-
         // get GLOBAL account info
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&first.try_borrow_data()?)?;
-        let flags = unpack_flags(GLOBALinfo.flags);
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
-        // revert if global account already created
-        if flags[0] {
-            return Err(ContractError::GlobalAreadyExistsError.into());
+        // check that owner is *actually* owner
+        if GLOBALinfo.owner != owner.key {
+            return Err(ContractError::OwnerImposterError.into());
         }
 
-        // create pdaGLOBAL
-        invoke_signed(
-        &system_instruction::create_account(
-            &owner.key,
-            &pdaGLOBAL.key,
-            rentGLOBAL,
-            SIZE_GLOBAL.into(),
-            &program_id
-        ),
-        &[
-            owner.clone(),
-            pdaGLOBAL.clone()
-        ],
-        &[&[&seedGLOBAL, &[bumpGLOBAL]]]
-        )?;
-        msg!("Successfully created pdaGLOBAL");
+        // if newOwner is different than owner, set new owner and return
+        if owner.key != newOwner.key {
+            GLOBALinfo.owner = newOwner.key;
+            GLOBAL::pack(GLOBALinfo, &mut first.try_borrow_mut_data()?)?;
+            Ok(())
+        }
+        
+        // unpack ix data flags specifying which global variable to update
+        let flags = unpack_flags(updateFlags);
 
+        if flags[0] {/*set first global variable*/}
+        if flags[1] {/*set second global variable*/}
+        // ...
+        if flags[31] {/*set 32nd global variable*/}
 
-        // set flag, #1 == global account initialized
-        let mut flags = BitVec::from_elem(32, false);
-        flags.set(1, true);
+        // ability to have many global variables
+        
+        // this may be troublesome...may need to modularize global account to allow for future
+        // growth
 
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_flags(flags);

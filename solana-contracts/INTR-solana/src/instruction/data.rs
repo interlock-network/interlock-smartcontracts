@@ -14,11 +14,7 @@ pub enum ContractInstruction {
 
     UpdateGlobal {
 
-    },
-
-    InstructionThree {
-
-        dataNumberC: u32,
+        updateFlags: u32,
     },
 }
 

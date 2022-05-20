@@ -26,7 +26,6 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            SECOND::*,
         },
     };
 
@@ -61,7 +60,7 @@ impl Processor {
             .minimum_balance(SIZE_GLOBAL.into());
 
         // get GLOBAL account info
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&first.try_borrow_data()?)?;
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
         let flags = unpack_flags(GLOBALinfo.flags);
 
         // revert if global account already created

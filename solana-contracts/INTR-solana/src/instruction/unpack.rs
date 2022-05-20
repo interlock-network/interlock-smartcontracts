@@ -29,16 +29,11 @@ impl ContractInstruction {
 
         Ok( match tag {
             0 => Self::CreateGlobal {
-                dataNumberA: rest[0],
-                dataStringA: rest[9..].to_vec(),
-                dataNumberB: unpack_number_u64(&rest[1..9])?,
+                bumpGLOBAL: rest[0],
+                seedGLOBAL: rest[1..].to_vec(),
             },
             1 => Self::UpdateGlobal {
-                dataNumberA: rest[0],
-                dataStringA: rest[1..].to_vec(),
-            },
-            2 => Self::InstructionThree {
-                dataNumberC: unpack_number_u32(&rest[0..])?,
+                updateFlags: unpack_number_u32(&rest[0..FLAGS_LEN])?,
             },
             _ => return Err(InvalidInstruction.into()),
         })
