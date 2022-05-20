@@ -13,35 +13,41 @@ use bit_vec::BitVec;
 use crate::error::error::TemplateError::InvalidInstruction;
 
 
-// here is where I put a bunch of constants
-// |
-// |
-// V
-
 pub const STRING_LEN: usize = 32;
 pub const PUBKEY_LEN: usize = 32;
-pub const FLAGS_LEN: usize = 2;
+pub const FLAGS_LEN: usize = 4;
 pub const BALANCE_LEN: usize = 8;
-pub const SIZE_FIRST: u8 = (FLAGS_LEN + PUBKEY_LEN + BALANCE_LEN + STRING_LEN) as u8;
-    // 74 bytes
+pub const SIZE_GLOBAL: u8 = (FLAGS_LEN + PUBKEY_LEN) as u8;
+    // 36 bytes
 pub const SIZE_SECOND: u8 = (PUBKEY_LEN + BALANCE_LEN + STRING_LEN) as u8;
     // 74 bytes
 
-// here is where I put a bunch of utility functions
-// |
-// |
-// V
 
-// example function, pack flag values into a single u16
-pub fn pack_flags(flags: BitVec) -> u16 {
+// pack flag values into a single u32
+pub fn pack_flags(flags: BitVec) -> u32 {
 
     let flagbytes = BitVec::to_bytes(&flags);
-    let bigflag = ((flagbytes[0] as u16) << 8) | flagbytes[1] as u16;
+    let bigflag = ((flagbytes[0] as u32) << 24
+                   | (flagbytes[1] as u32) << 16
+                   | (flagbytes[2] as u32) <<8
+                   | flagbytes[3] as u32);
 
     return bigflag
 }
 
-// example funtions to pack a string into fixed size byte array
+// unpack flag values from a single u32
+pub fn unpack_flags(flags: u16) -> BitVec {
+
+    let flag4: u8 = (flags >> 24) as u8;
+    let flag3: u8 = (flags >> 16 & 0xff) as u8;
+    let flag2: u8 = (flags >> 8 & 0xff) as u8;
+    let flag1: u8 = (flags & 0xff) as u8;
+    let flagbits = BitVec::from_bytes(&[flag4, flag3, flag2, flag1]);
+
+    return flagbits
+}
+
+//  pack a string into fixed size byte array
 pub fn pack_stringy(stringy: Vec<u8>) -> [u8; STRING_LEN] {
 
     let mut stringy_bytes: Vec<u8>;
@@ -58,7 +64,7 @@ fn stringypack(vector: Vec<u8>) -> Result<stringyOutput, TryFromSliceError> {
     vector.as_slice().try_into()
 }
 
-// example functions to unpack instruction_data numbers
+// unpack instruction_data numbers
 pub fn unpack_number_u64(input: &[u8]) -> Result<u64, ProgramError> {
     let amount = input
         .get(..8)

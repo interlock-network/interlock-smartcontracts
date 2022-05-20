@@ -11,11 +11,10 @@
 
 pub enum ContractInstruction {
 
-    CreateGlobal {
+    ProgramInit {
 
-        dataNumberA: u8,
-        dataStringA: Vec<u8>,
-        dataNumberB: u64,
+        bumpGLOBAL: u8,
+        seedGLOBAL: Vec<u8>,
     },
 
     UpdateGlobal {

@@ -22,30 +22,28 @@ impl Processor {
         instruction_data: &[u8],
     ) -> ProgramResult {
 
-        let instruction = TemplateInstruction::unpack(instruction_data)?;
+        let instruction = ContractInstruction::unpack(instruction_data)?;
 
         match instruction {
 
-            TemplateInstruction::InstructionOne {
-                dataNumberA,
-                dataStringA,
-                dataNumberB,
+            ContractInstruction::ProgramInit  {
+                bumpGLOBAL,
+                seedGLOBAL,
             } => {
-                msg!("Instruction: InstructionOne");
-                Self::process_instruction_one(
+                msg!("Instruction: ProgramInit");
+                Self::process_program_init(
                     program_id,
                     accounts,
-                    dataNumberA,
-                    dataStringA,
-                    dataNumberB,
+                    bumpGLOBAL,
+                    seedGLOBAL,
                 )
             },
 
-            TemplateInstruction::InstructionTwo {
+            ContractInstruction::UpdateGlobal {
                 dataNumberA,
                 dataStringA,
             } => {
-                msg!("Instruction: InstructionTwo");
+                msg!("Instruction: UpdateGlobal");
                 Self::process_instruction_two(
                     program_id,
                     accounts,

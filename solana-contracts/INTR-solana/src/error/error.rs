@@ -10,7 +10,7 @@ use solana_program::program_error::ProgramError;
 // the msg! prints the error name in the log, instead of 'custom program error x00', etc
 
 #[derive(Error, Debug, Copy, Clone)]
-pub enum TemplateError {
+pub enum ContractError {
     /// Invalid instruction
     #[error("Invalid Instruction")]
     InvalidInstruction,
@@ -26,11 +26,13 @@ pub enum TemplateError {
     /// Instruction One Attempt Fail
     #[error("Instruction One Attempt Fail")]
     InstructionOneAttemptError,
+    #[error("Global Account Already Exists")]
+    GlobalAlreadyExistsError,
 }
 
 impl From<TemplateError> for ProgramError {
     fn from(error: TemplateError) -> Self {
-        msg!(":?", error);
+        msg!("{:?}", error);
         ProgramError::Custom(error as u32)
     }
 }
