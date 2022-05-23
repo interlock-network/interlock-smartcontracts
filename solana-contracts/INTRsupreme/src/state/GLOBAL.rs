@@ -22,11 +22,13 @@ use arrayref::{
 
 use crate::utils::utils::*;
 
-
 // pack/unpack implementation for GLOBAL state account
+
 pub struct GLOBAL {
-    pub flags: u32,
+    pub flags: u64,
     pub owner: Pubkey,
+    pub values: [u64;64],
+    
 }
 
 impl Sealed for GLOBAL {}
@@ -38,11 +40,22 @@ impl Pack for GLOBAL {
         let (
             flags,
             owner,
-        ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN];
+            values,
+        ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
+
+        let mut valuesNumbers: [u64;64] = [0;64];
+        let mut i = 0;
+        let mut j = 0;
+        for value in valuesNumbers {
+            valuesNumbers[i] = u64::from_le_bytes(*values[j..(j + 8));
+            i += 1;
+            j += 8;
+        }
 
         Ok( GLOBAL {
-            flags: u32::from_le_bytes(*flags),
+            flags: u64::from_le_bytes(*flags),
             owner: Pubkey::new_from_array(*owner),
+            values: valuesNumbers, 
         })
     }
 
@@ -51,14 +64,25 @@ impl Pack for GLOBAL {
         let (
             flags_dst,
             owner_dst,
-        ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN];
+            values_dst,
+        ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let GLOBAL {
             flags,
             owner,
+            values,
         } = self;
 
+        let mut valuesBytes: [u8;512] = [0;512];
+        let mut i = 0;
+        for value in values {
+            valuesBytes[i..(i + 8)] = values[i..(i + 8)].to_le_bytes();
+            i += 8;
+        }
+            
         *flags_dst = flags.to_le_bytes();
         owner_dst.copy_from_slice(owner.as_ref());
+        values_dst = valuesBytes;
     }
 }
+

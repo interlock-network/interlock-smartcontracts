@@ -41,12 +41,14 @@ impl Processor {
 
             ContractInstruction::UpdateGlobal {
                 updateFlags,    
+                values,
             } => {
                 msg!("Instruction: UpdateGlobal");
                 Self::process_update_global(
                     program_id,
                     accounts,
                     updateFlags,
+                    values,
                 )
             },
         }

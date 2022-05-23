@@ -15,6 +15,7 @@ pub enum ContractInstruction {
     UpdateGlobal {
 
         updateFlags: u32,
+        values: [u64;64],
     },
 }
 

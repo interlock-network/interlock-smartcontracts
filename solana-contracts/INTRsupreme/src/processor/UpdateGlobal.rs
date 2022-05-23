@@ -40,7 +40,8 @@ impl Processor {
     pub fn process_update_global(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        updateFlags: u32,
+        updateFlags: u64,
+        values: [u64;64],
     ) -> ProgramResult {
 
         // iterate and get accounts
@@ -65,22 +66,21 @@ impl Processor {
         // if newOwner is different than owner, set new owner and return
         if owner.key != newOwner.key {
             GLOBALinfo.owner = newOwner.key;
-            GLOBAL::pack(GLOBALinfo, &mut first.try_borrow_mut_data()?)?;
+            GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
             Ok(())
         }
         
         // unpack ix data flags specifying which global variable to update
-        let flags = unpack_flags(updateFlags);
+        let mut flags = unpack_flags(updateFlags);
 
-        if flags[0] {/*set first global variable*/}
-        if flags[1] {/*set second global variable*/}
-        // ...
-        if flags[31] {/*set 32nd global variable*/}
 
-        // ability to have many global variables
-        
-        // this may be troublesome...may need to modularize global account to allow for future
-        // growth
+        // . check for values that need to be updated
+        // . flag high => value is to be changed
+        let mut i = 0;
+        for flag in flags {
+            if flag {GLOBALinfo.values[i] = values[i]}
+            i += 1;
+        }
 
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_flags(flags);

@@ -13,15 +13,11 @@ use bit_vec::BitVec;
 use crate::error::error::TemplateError::InvalidInstruction;
 
 
-pub const STRING_LEN: usize = 32;
 pub const PUBKEY_LEN: usize = 32;
-pub const FLAGS_LEN: usize = 64;
-pub const BALANCE_LEN: usize = 8;
-pub const SIZE_GLOBAL: u8 = (FLAGS_LEN + PUBKEY_LEN) as u8;
-    // 36 bytes
-pub const SIZE_SECOND: u8 = (PUBKEY_LEN + BALANCE_LEN + STRING_LEN) as u8;
-    // 74 bytes
-
+pub const FLAGS_LEN: usize = 8;
+pub const VALUES_LEN: usize = 512;
+pub const SIZE_GLOBAL: u8 = (FLAGS_LEN + PUBKEY_LEN + VALUES_LEN) as u8;
+    // 548 bytes
 
 // pack flag values into a single u32
 pub fn pack_flags(flags: BitVec) -> u64 {
@@ -89,6 +85,23 @@ pub fn unpack_number_u64(input: &[u8]) -> Result<u64, ProgramError> {
         .ok_or(InvalidInstruction)?;
     Ok(amount)
 }
+
+pub fn unpack_array_u64(input: &[u8]) -> Result<[u64,64], ProgramError> {
+    
+    let mut array: [u64;64] = [0;64];
+    let mut i = 0;
+    let mut j = 0;
+    for i < 512 {
+        let mut number = input
+            .get(i..(i + 8))
+            .and_then(|slice| slice.try_into().ok())
+            .map(u64::from_le_bytes)
+            .ok_or(InvalidInstruction)?;
+        array[j] = number
+        i += 8;
+        j += 1;
+}
+
 
 pub fn unpack_number_u32(input: &[u8]) -> Result<u32, ProgramError> {
     let amount = input

@@ -33,7 +33,8 @@ impl ContractInstruction {
                 seedGLOBAL: rest[1..].to_vec(),
             },
             1 => Self::UpdateGlobal {
-                updateFlags: unpack_number_u32(&rest[0..FLAGS_LEN])?,
+                updateFlags: unpack_number_u64(&rest[0..FLAGS_LEN])?,
+                values: unpack_array_u64(&rest[FLAGS_LEN..])?,
             },
             _ => return Err(InvalidInstruction.into()),
         })
