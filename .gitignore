@@ -27,6 +27,7 @@ truffle-config.js
 test-ledger
 ~\$*
 *.swp
+*.swo
 .vscode/*
 
 # system stuff

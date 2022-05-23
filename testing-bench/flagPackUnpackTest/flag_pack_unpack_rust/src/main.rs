@@ -42,13 +42,15 @@ flags.set(31, true);
 //flags.set(32, true);
 
 
-println!("{:?}", flags);
+println!("flags: {:?}", flags);
 
 let flags_packed = pack_flags(flags);
 
+println!("{}", flags_packed); // 17244031
+
 let flags_unpacked = unpack_flags(flags_packed);
 
-println!("{:?}", flags_unpacked);
+println!("flags: {:?}", flags_unpacked);
 
 }
 
