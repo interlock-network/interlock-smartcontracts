@@ -15,7 +15,7 @@ use crate::error::error::TemplateError::InvalidInstruction;
 
 pub const STRING_LEN: usize = 32;
 pub const PUBKEY_LEN: usize = 32;
-pub const FLAGS_LEN: usize = 4;
+pub const FLAGS_LEN: usize = 64;
 pub const BALANCE_LEN: usize = 8;
 pub const SIZE_GLOBAL: u8 = (FLAGS_LEN + PUBKEY_LEN) as u8;
     // 36 bytes
@@ -24,25 +24,41 @@ pub const SIZE_SECOND: u8 = (PUBKEY_LEN + BALANCE_LEN + STRING_LEN) as u8;
 
 
 // pack flag values into a single u32
-pub fn pack_flags(flags: BitVec) -> u32 {
+pub fn pack_flags(flags: BitVec) -> u64 {
 
     let flagbytes = BitVec::to_bytes(&flags);
-    let bigflag =    (flagbytes[0] as u32) << 24
-                   | (flagbytes[1] as u32) << 16
-                   | (flagbytes[2] as u32) << 8
-                   | (flagbytes[3] as u32);
+    let bigflag =    (flagbytes[0] as u64) << 56
+                   | (flagbytes[1] as u64) << 48
+                   | (flagbytes[2] as u64) << 40
+                   | (flagbytes[3] as u64) << 32
+                   | (flagbytes[4] as u64) << 24
+                   | (flagbytes[5] as u64) << 16
+                   | (flagbytes[6] as u64) << 8
+                   | (flagbytes[7] as u64);
 
     return bigflag
 }
 
 // unpack flag values from a single u32
-pub fn unpack_flags(flags: u16) -> BitVec {
+pub fn unpack_flags(flags: u64) -> BitVec {
 
-    let flag4: u8 = (flags >> 24) as u8;
-    let flag3: u8 = (flags >> 16 & 0xff) as u8;
-    let flag2: u8 = (flags >> 8 & 0xff) as u8;
-    let flag1: u8 = (flags & 0xff) as u8;
-    let flagbits = BitVec::from_bytes(&[flag4, flag3, flag2, flag1]);
+    let flag7: u8 = (flags >> 56) as u8;
+    let flag6: u8 = (flags >> 48 & 0xff) as u8;
+    let flag5: u8 = (flags >> 40 & 0xff) as u8;
+    let flag4: u8 = (flags >> 32 & 0xff) as u8;
+    let flag3: u8 = (flags >> 24 & 0xff) as u8;
+    let flag2: u8 = (flags >> 16 & 0xff) as u8;
+    let flag1: u8 = (flags >> 8 & 0xff) as u8;
+    let flag0: u8 = (flags & 0xff) as u8;
+    let flagbits = BitVec::from_bytes(&[flag7,
+                                        flag6,
+                                        flag5,
+                                        flag4,
+                                        flag3,
+                                        flag2,
+                                        flag1,
+                                        flag0,
+                                        ]);
 
     return flagbits
 }

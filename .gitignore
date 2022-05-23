@@ -28,6 +28,7 @@ test-ledger
 ~\$*
 *.swp
 *.swo
+*.swn
 .vscode/*
 
 # system stuff

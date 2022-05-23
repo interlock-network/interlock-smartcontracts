@@ -87,8 +87,8 @@ impl Processor {
 
 
         // set flag, #1 == global account initialized
-        let mut flags = BitVec::from_elem(32, false);
-        flags.set(1, true);
+        let mut flags0 = BitVec::from_elem(64, false);
+        flags.set(0, true);
 
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_flags(flags);
