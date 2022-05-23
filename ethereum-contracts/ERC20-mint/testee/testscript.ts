@@ -2,7 +2,7 @@
    
 import { Contract } from "@ethersproject/contracts";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { ethers } from "ethers";
+import { ethers } from "hardhat";
 import signWhitelist from "./signWhitelist";
 const { expectRevert } = require("@openzeppelin/test-helpers");
 

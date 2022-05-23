@@ -1,4 +1,5 @@
-import {ethers} from 'ethers';
+//import {ethers} from 'ethers';
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 export default async function signWhitelist() {
 
