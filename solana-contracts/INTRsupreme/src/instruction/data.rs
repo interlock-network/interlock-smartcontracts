@@ -4,6 +4,8 @@
 
 #![allow(non_snake_case)]
 
+use crate::utils::utils::*;
+
 pub enum ContractInstruction {
 
     ProgramInit {
@@ -15,7 +17,7 @@ pub enum ContractInstruction {
     UpdateGlobal {
 
         updateFlags: u32,
-        values: [u64;64],
+        values: [u32; VALUES],
     },
 }
 

@@ -9,6 +9,7 @@ use solana_program::{
             AccountInfo
         },
         entrypoint::ProgramResult,
+        program::invoke_signed,
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
@@ -17,11 +18,13 @@ use solana_program::{
             Sysvar,
         },
         msg,
+        system_instruction,
     };
 
 use bit_vec::BitVec;
 
 use crate::{
+        //error::error::ContractError::GlobalAlreadyExistsError,
         processor::run::Processor,
         utils::utils::*,
         state::{
@@ -47,7 +50,7 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let pdaGLOBAL = next_account_info(account_info_iter)?
+        let pdaGLOBAL = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
@@ -58,15 +61,6 @@ impl Processor {
         // calculate rent if we want to create new account
         let rentGLOBAL = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_GLOBAL.into());
-
-        // get GLOBAL account info
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-        let flags = unpack_flags(GLOBALinfo.flags);
-
-        // revert if global account already created
-        if flags[0] {
-            return Err(ContractError::GlobalAreadyExistsError.into());
-        }
 
         // create pdaGLOBAL
         invoke_signed(
@@ -84,16 +78,19 @@ impl Processor {
         &[&[&seedGLOBAL, &[bumpGLOBAL]]]
         )?;
         msg!("Successfully created pdaGLOBAL");
-
-
-        // set flag, #1 == global account initialized
-        let mut flags0 = BitVec::from_elem(64, false);
-        flags.set(0, true);
+// need to determine if create_account reverts if account already exists
+        
+        // get unititialized GLOBAL data
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+        
+        // init flags
+        let flags = BitVec::from_elem(32, false);
 
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_flags(flags);
         GLOBALinfo.owner = *owner.key;
-        GLOBAL::pack(GLOBALinfo, &mut first.try_borrow_mut_data()?)?;
+        GLOBALinfo.values = [0u32; VALUES];
+        GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
 
         Ok(())
     }

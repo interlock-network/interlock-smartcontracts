@@ -13,6 +13,7 @@ const abi = require('ethereumjs-abi');
 
 prikey = ethUtil.keccakFromString('cow', 256);
 signingAddress = ethUtil.privateToAddress(prikey);
+	// 0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826
 
 // data
 

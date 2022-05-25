@@ -4,12 +4,13 @@
 
 #![allow(non_snake_case)]
 
+
 use solana_program::{
         program_error::ProgramError,
     };
 
 use crate::{
-        error::error::TemplateError::InvalidInstruction,
+        error::error::ContractError::InvalidInstruction,
         instruction::data::ContractInstruction,
         utils::utils::*,
     };
@@ -28,13 +29,13 @@ impl ContractInstruction {
         let (tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
 
         Ok( match tag {
-            0 => Self::CreateGlobal {
+            0 => Self::ProgramInit {
                 bumpGLOBAL: rest[0],
                 seedGLOBAL: rest[1..].to_vec(),
             },
             1 => Self::UpdateGlobal {
-                updateFlags: unpack_number_u64(&rest[0..FLAGS_LEN])?,
-                values: unpack_array_u64(&rest[FLAGS_LEN..])?,
+                updateFlags: unpack_number_u32(&rest[0..FLAGS_LEN])?,
+                values: unpack_array_u32(&rest[FLAGS_LEN..])?,
             },
             _ => return Err(InvalidInstruction.into()),
         })

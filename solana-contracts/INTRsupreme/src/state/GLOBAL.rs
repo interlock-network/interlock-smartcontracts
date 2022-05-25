@@ -25,9 +25,9 @@ use crate::utils::utils::*;
 // pack/unpack implementation for GLOBAL state account
 
 pub struct GLOBAL {
-    pub flags: u64,
+    pub flags: u32,
     pub owner: Pubkey,
-    pub values: [u64;64],
+    pub values: [u32; VALUES],
     
 }
 
@@ -40,24 +40,27 @@ impl Pack for GLOBAL {
         let (
             flags,
             owner,
-            values,
+            _values,
         ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
 
-        let mut valuesNumbers: [u64;64] = [0;64];
+        let mut valuesNumbers: [u32; VALUES] = [0; VALUES];
+        let valuesBytes = &src[(FLAGS_LEN + PUBKEY_LEN)..]; 
         let mut i = 0;
         let mut j = 0;
-        for value in valuesNumbers {
-            valuesNumbers[i] = u64::from_le_bytes(*values[j..(j + 8));
+        for _ in valuesNumbers {
+            valuesNumbers[i] = u32::from_le_bytes(array_4u8(&valuesBytes[j..(j + VALUE_LEN)]));
             i += 1;
-            j += 8;
+            j += 4;
         }
 
         Ok( GLOBAL {
-            flags: u64::from_le_bytes(*flags),
+            flags: u32::from_le_bytes(*flags),
             owner: Pubkey::new_from_array(*owner),
             values: valuesNumbers, 
         })
     }
+
+
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dst = array_mut_ref![dst, 0, GLOBAL::LEN];
@@ -73,16 +76,14 @@ impl Pack for GLOBAL {
             values,
         } = self;
 
-        let mut valuesBytes: [u8;512] = [0;512];
-        let mut i = 0;
+        let mut valuesBytes = vec![];
         for value in values {
-            valuesBytes[i..(i + 8)] = values[i..(i + 8)].to_le_bytes();
-            i += 8;
+            valuesBytes.extend(&value.to_le_bytes()[..]);
         }
             
         *flags_dst = flags.to_le_bytes();
         owner_dst.copy_from_slice(owner.as_ref());
-        values_dst = valuesBytes;
+        *values_dst = pack_values(valuesBytes);
     }
 }
 
