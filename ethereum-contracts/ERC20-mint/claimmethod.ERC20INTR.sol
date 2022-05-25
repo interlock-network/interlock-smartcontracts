@@ -2,7 +2,7 @@
 //
 // Interlock ERC-20 INTR Token Mint Platform
 // 		(containing)
-// components from OpenZeppelin v4.6.0 contract (token/ERC20/ERC20.sol)
+// components from OpenZeppelin v4.6.0 contract
 //
 // Contributors:
 // blairmunroakusa
@@ -11,7 +11,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./INTRpool.sol";
+import "./POOL.sol";
 import "./utils/ECDSA.sol";
 
  /** derived from from oz:
@@ -23,9 +23,8 @@ import "./utils/ECDSA.sol";
  * This allows applications to reconstruct the allowance for all accounts just
  * by listening to said events.
  *
- * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
- * functions have been added to mitigate the well-known issues around setting
- * allowances.
+ * Nonstandard lifetime allowances and total token transfers implemented
+ * to protect against multiple withdrawal attacks.
  **/
 
 contract ERC20INTR is IERC20 {
@@ -37,9 +36,6 @@ contract ERC20INTR is IERC20 {
 	* declarations
 	**/
 /*************************************************/
-
-		// libraries
-    using ECDSA for bytes32;
 
 		// divisibility factor
 	uint8 private _decimals = 18;
@@ -87,7 +83,7 @@ contract ERC20INTR is IERC20 {
 	bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
 		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract");
 	bytes32 constant VALIDATION_TYPEHASH = keccak256(
-		"Validator(address wallet,uint8 pool,unit256 share)");
+		"Validation(address wallet,unit256 share,uint8 pool)");
 
 		// domain separator
 	struct EIP712Domain {
@@ -104,8 +100,8 @@ contract ERC20INTR is IERC20 {
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
-	mapping(address => mapping(
-		address => uint256)) private _allowances;
+	mapping(address => mapping(address => uint256)) private _lifetimeAllowances;
+    mapping(address => mapping(address => uint256)) private _transferTotals;
 
 		// basic token data
 	string private _name = "Interlock Network";
@@ -151,11 +147,12 @@ contract ERC20INTR is IERC20 {
 					poolMembers_[i] ) ); }
 
 			// initiate EIP712 standard for member validation
-		DOMAIN_SEPARATOR = hash(EIP712Domain({
-			name: "Validator",
-			version: '1',
-			chainId: block.chainid,
-			verifyingContract: address(this) } ) ); }
+		DOMAIN_SEPARATOR = keccak256(abi.encode(
+			EIP712DOMAIN_TYPEHASH,
+			keccak256(bytes("Validator")),
+			keccak256(bytes("1")),
+			1,
+			0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ) ); }
 
 /*************************************************/
 	/**
@@ -207,7 +204,7 @@ contract ERC20INTR is IERC20 {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new INTRpool());
+			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0; }
@@ -280,7 +277,7 @@ contract ERC20INTR is IERC20 {
 			return true; }
 
 		// not ready
-		return true; }
+		return false; }
 			
 /*************************************************/
 
@@ -315,61 +312,39 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 
-		// generate DOMAIN_SEPARATOR part of digest
-	function hash(
-		EIP712Domain memory eip712Domain
-	) internal pure returns (bytes32) {
+        // domain hash
+	function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
 		return keccak256(abi.encode(
 			EIP712DOMAIN_TYPEHASH,
 			keccak256(bytes(eip712Domain.name)),
 			keccak256(bytes(eip712Domain.version)),
 			eip712Domain.chainId,
-			eip712Domain.verifyingContract ) ); }
+			eip712Domain.verifyingContract
+		));
+	}
 
-		// generate VALIDATION part of digest
-	function hash(
-		Validation memory validation
-	) internal pure returns (bytes32) {
+        // data hash
+	function hash(Validation calldata validation) internal pure returns (bytes32) {
 		return keccak256(abi.encode(
 			VALIDATION_TYPEHASH,
 			validation.wallet,
-			validation.pool,
-			validation.share ) ); }
-    	event debug(
-		address recover, uint8 test);
+			validation.share,
+			validation.pool
+		));
+	}
 
-		   // unpacks validation data and stores new member record
-		  // reverts if _validationKey not set
-		 // reverts if recovered key != _validationKey
-		// checks incoming signature packet
-	function validate(
-		Validation calldata validation,
-		bytes calldata signature
-	) public {
+	event compare(address sig, address key);
 
-		//  guard
-		require(_validationKey != address(0),
-			"validation key has not been set");
-
-		// recreate digest
+        // validate
+	function verify(Validation calldata validation, uint8 v, bytes32 r, bytes32 s) public {
 		bytes32 digest = keccak256(abi.encodePacked(
 			"\x19\x01",
 			DOMAIN_SEPARATOR,
-			hash(validation) ) );
-		//emit debug( /*digest.recover(signature)*/ _validationKey, 77);
+			hash(validation)
+		));
+		emit compare(ecrecover(digest, v, r, s), _validationKey);
+	}
 
-		// verify signature
-		require(digest.recover(signature) == _validationKey,
-			"test");
-		
-		// pack calldata into new member record
-		MemberStatus memory member;
-		member.pool = validation.pool;
-		member.account = validation.wallet;
-		member.share = validation.share * _DECIMAL;
-		member.cliff = _pool[member.pool].cliff;
-		member.payments = _pool[member.pool].payments;
-		_members[member.account] = member; }
 
 /*************************************************/
 	/**
@@ -418,7 +393,10 @@ contract ERC20INTR is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
-		return _allowances[owner][spender]; }
+		if (_lifetimeAllowances[owner][spender] < _totalTransfers[owner][spender]) {
+            return 0;
+        }
+        return _lifetimeAllowances[owner][spender] - _totalTransfers[owner][spender];}
 
 /*************************************************/
 
@@ -476,7 +454,7 @@ contract ERC20INTR is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
-		_allowances[owner][spender] = amount;
+		_lifetimeAllowances[owner][spender] = _totalTransfers[owner][spender] + amount;
 		emit Approval(owner, spender, amount); }
 
 /*************************************************/
@@ -491,41 +469,11 @@ contract ERC20INTR is IERC20 {
 		address from,
 		address to,
 		uint256 amount
-	) public override returns (bool) {
-		address spender = msg.sender;
-		_spendAllowance(from, spender, amount);
+	) public override returns (bool) noZero(to) noZero(from) {
+        require((_lifetimeAllowances[from][to] - _totalTransfers[from][to]) > amount,
+            "insufficient allowance")
+		_totalTransfers[from][to] += amount;
 		_transfer(from, to, amount);
-		return true; }
-
-/*************************************************/
-
-		  // emitting Approval, reverting on failure
-		 // where `spender` cannot = zero address
-		// atomically increases spender's allowance
-	function increaseAllowance(
-		address spender,
-		uint256 addedValue
-	) public returns (bool) {
-		address owner = msg.sender;
-		_approve(owner, spender, allowance(owner, spender) + addedValue);
-		return true; }
-
- /* Above and below are alternatives to {approve} that can be used
- *  as a mitigation for problems described in {IERC20-approve}.
- *
- * ?? Why is there no owner balance check for increaseAllowance() ??
- **/
-		   // emitting Approval, reverting on failure
-		  // where `spender` must have allowance >= `subtractedValue`
-		 // where `spender` cannot = zero address
-		// atomically decreases spender's allowance
-	function decreaseAllowance(
-		address spender,
-		uint256 amount
-	) public isEnough(allowance(msg.sender, spender), amount) returns (bool) {
-		address owner = msg.sender;
-		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);}
 		return true; }
 
 /*************************************************/
@@ -544,20 +492,6 @@ contract ERC20INTR is IERC20 {
 		_totalSupply -= amount;
 		emit Transfer(account, address(0), amount);
 		_afterTokenTransfer(account, address(0), amount); }
-
-/*************************************************/
-
-		   // emitting Approval if finite, reverting on failure 
-		  // will do nothing if infinite allowance
-		 // used strictly internally
-		// deducts from spender's allowance with owner
-	function _spendAllowance(
-		address owner,
-		address spender,
-		uint256 amount
-	) internal isEnough(allowance(owner, spender), amount) {
-		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
 /*************************************************/
 
@@ -586,8 +520,5 @@ contract ERC20INTR is IERC20 {
 	) internal virtual {}
 
 /*************************************************/
-
-}
-
 
 
