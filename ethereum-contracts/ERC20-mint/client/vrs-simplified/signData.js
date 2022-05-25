@@ -19,26 +19,26 @@ signingAddress = ethUtil.privateToAddress(prikey);
 
 const typedData = {
 	types: {
-        	EIP712Domain: [
-            		{ name: 'name', type: 'string' },
-            		{ name: 'version', type: 'string' },
-            		{ name: 'chainId', type: 'uint256' },
-            		{ name: 'verifyingContract', type: 'address' },
-        	],
-        	Validation: [
-            		{ name: 'wallet', type: 'address' },
-            		{ name: 'share', type: 'uint256' },
-            		{ name: 'pool', type: 'uint8' }
-        	],
-    	},
-    	primaryType: 'Validation',
-    	domain: {
-        	name: 'Validator',
-        	version: '1',
-        	chainId: 1,
-        	verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-    	},
-    	message: {
+		EIP712Domain: [
+			{ name: 'name', type: 'string' },
+			{ name: 'version', type: 'string' },
+			{ name: 'chainId', type: 'uint256' },
+			{ name: 'verifyingContract', type: 'address' },
+		],
+		Validation: [
+			{ name: 'wallet', type: 'address' },
+			{ name: 'share', type: 'uint256' },
+			{ name: 'pool', type: 'uint8' }
+		],
+	},
+	primaryType: 'Validation',
+	domain: {
+		name: 'Validator',
+		version: '1',
+		chainId: 1,
+		verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
+	},
+	message: {
 		wallet: '0xeeBA65D9C7E5832918d1F4277DE0a78b78efEC43',
 		share: 1000,
 		pool: 5,
@@ -108,10 +108,10 @@ encValues = [];
 signatureHash = ethUtil.keccak256(
 	Buffer.concat([
 		Buffer.from('1901', 'hex'),
-            		domainStructHash,
-            		validationStructHash,
-        	]),
-    	);
+			domainStructHash,
+			validationStructHash,
+		]),
+	);
 
 // and finally, sign
 
