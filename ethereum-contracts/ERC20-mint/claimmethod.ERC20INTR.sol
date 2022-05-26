@@ -22,8 +22,6 @@ import "./POOL.sol";
  *
  * Nonstandard lifetime allowances and total token transfers implemented
  * to protect against multiple withdrawal attacks.
- **/
-
 
 contract ERC20INTR is IERC20 {
 
@@ -34,7 +32,7 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 	/** @dev **/
-    
+
 		// divisibility factor
 	uint8 private _decimals = 18;
 	uint256 private _DECIMAL = 10 ** _decimals;
@@ -98,15 +96,15 @@ contract ERC20INTR is IERC20 {
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
+	mapping(address => mapping(address => uint256)) private _allowances;
 	mapping(address => mapping(address => uint256)) private _lifetimeAllowances;
-    mapping(address => mapping(address => uint256)) private _transferTotals;
+	mapping(address => mapping(address => uint256)) private _transferTotals;
 
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "INTR";
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
-	// decimals = 18 by default
 
 		// tracking time
 	uint256 public nextPayout;
@@ -142,15 +140,18 @@ contract ERC20INTR is IERC20 {
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
-					poolMembers_[i] ) ); }
+					poolMembers_[i] ) );
+		}
 
 			// initiate EIP712 standard for member validation
-		DOMAIN_SEPARATOR = keccak256(abi.encode(
-			EIP712DOMAIN_TYPEHASH,
-			keccak256(bytes("Validator")),
-			keccak256(bytes("1")),
-			1,
-			0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ) ); }
+		DOMAIN_SEPARATOR = keccak256(
+			abi.encode(
+				IP712DOMAIN_TYPEHASH,
+				keccak256(bytes("Validator")),
+				eccak256(bytes("1")),
+				1,
+				0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ));
+	}
 
 /*************************************************/
 	/**
@@ -163,7 +164,8 @@ contract ERC20INTR is IERC20 {
 	) {
 		require(msg.sender == _owner,
 			"only owner can call");
-		_; }
+		_;
+	}
 
 /*************************************************/
 
@@ -173,7 +175,8 @@ contract ERC20INTR is IERC20 {
 	) {
 		require(_address != address(0),
 			"zero address where it shouldn't be");
-		_; }
+		_;
+	}
 
 /*************************************************/
 
@@ -182,9 +185,11 @@ contract ERC20INTR is IERC20 {
 		uint256 _available,
 		uint256 _amount
 	) {
-		require(_available >= _amount,
+		require(
+            _available >= _amount,
 			"not enough tokens available");
-		_; }
+		_;
+	}
 
 /*************************************************/
 	/**
@@ -197,19 +202,20 @@ contract ERC20INTR is IERC20 {
 	) public isOwner {
 		
 		// guard
-		require(supplySplit == false,
+		require(
+			supplySplit == false,
 			"supply split already happened");
-
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_lifetimeAllowances[address(this)][Pool] = 0;
-            _transferTotals[address(this)][Pool]; }
-
+			_transferTotals[address(this)][Pool];
+		}
 		// this must never happen again...
-		supplySplit = true; }
+		supplySplit = true;
+	}
 
 /*************************************************/
 
@@ -218,25 +224,30 @@ contract ERC20INTR is IERC20 {
 	) public isOwner {
 
 		// guards
-		require(supplySplit == true,
+		require(
+			supplySplit == true,
 			"supply not split");
-		require(TGEtriggered == false,
+		require(
+			TGEtriggered == false,
 			"TGE already happened");
-
 		// mint
 		_balances[address(this)] = _totalSupply;
-		_approve(address(this), msg.sender, _totalSupply);
-		emit Transfer(address(0), address(this), _totalSupply);
-
+		_approve(
+			address(this),
+			msg.sender,
+			_totalSupply);
+		emit Transfer(
+			address(0),
+			address(this),
+			_totalSupply);
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
-
 		// apply the initial round of token distributions
 		_poolDistribution();
-
 		// this must never happen again...
-		TGEtriggered = true; }
+		TGEtriggered = true;
+	}
 
 /*************************************************/
 	/**
@@ -251,8 +262,7 @@ contract ERC20INTR is IERC20 {
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)
-				) {
+				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
@@ -261,7 +271,10 @@ contract ERC20INTR is IERC20 {
 				_approve(
 					_pools[i],
 					msg.sender,
-					_pool[i].tokens/_pool[i].payments ); } } }
+					_pool[i].tokens/_pool[i].payments);
+			}
+		}
+	}
 
 /*************************************************/
 
@@ -273,10 +286,12 @@ contract ERC20INTR is IERC20 {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
-			return true; }
+			return true;
+		}
 
 		// not ready
-		return false; }
+		return false;
+	}
 			
 /*************************************************/
 
@@ -285,7 +300,8 @@ contract ERC20INTR is IERC20 {
 	) public isOwner {
 
 		//disown
-		_owner = address(0); }
+		_owner = address(0);
+	}
 
 /*************************************************/
 
@@ -295,7 +311,8 @@ contract ERC20INTR is IERC20 {
 	) public isOwner {
 
 		// reassign
-		_owner = newOwner; }
+		_owner = newOwner;
+	}
 
 /*************************************************/
 	/**
@@ -307,41 +324,55 @@ contract ERC20INTR is IERC20 {
 	function setValidationKey(
 		address newKey
 	) public isOwner {
-		_validationKey = newKey; }
+		_validationKey = newKey;
+	}
 
 /*************************************************/
 
         // domain hash
-	function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
-		return keccak256(abi.encode(
-			EIP712DOMAIN_TYPEHASH,
-			keccak256(bytes(eip712Domain.name)),
-			keccak256(bytes(eip712Domain.version)),
-			eip712Domain.chainId,
-			eip712Domain.verifyingContract
+		EIP712Domain memory eip712Domain
+	) internal pure returns (bytes32) {
+		return keccak256(
+			abi.encode(
+				EIP712DOMAIN_TYPEHASH,
+				keccak256(bytes(eip712Domain.name)),
+				keccak256(bytes(eip712Domain.version)),
+				eip712Domain.chainId,
+				eip712Domain.verifyingContract
 		));
 	}
 
         // data hash
-	function hash(Validation calldata validation) internal pure returns (bytes32) {
-		return keccak256(abi.encode(
-			VALIDATION_TYPEHASH,
-			validation.wallet,
-			validation.share,
-			validation.pool
+	function hash(
+		Validation calldata validation
+	) internal pure returns (bytes32) {
+		return keccak256(
+			abi.encode(
+				VALIDATION_TYPEHASH,
+				validation.wallet,
+				validation.share,
+				validation.pool
 		));
 	}
 
 	event compare(address sig, address key);
 
         // validate
-	function verify(Validation calldata validation, uint8 v, bytes32 r, bytes32 s) public {
-		bytes32 digest = keccak256(abi.encodePacked(
-			"\x19\x01",
-			DOMAIN_SEPARATOR,
-			hash(validation)
+	function verify(
+		Validation calldata validation,
+		uint8 v,
+		bytes32 r,
+		bytes32 s
+	) public {
+		bytes32 digest = keccak256(
+			abi.encodePacked(
+				"\x19\x01",
+				DOMAIN_SEPARATOR,
+				hash(validation)
 		));
-		emit compare(ecrecover(digest, v, r, s), _validationKey);
+		emit compare(
+			ecrecover(digest, v, r, s),
+			_validationKey);
 	}
 
 
@@ -354,28 +385,32 @@ contract ERC20INTR is IERC20 {
 		// gets token name (Interlock Network)
 	function name(
 	) public view override returns (string memory) {
-		return _name; }
+		return _name;
+	}
 
 /*************************************************/
 
 		// gets token symbol (INTR)
 	function symbol(
 	) public view override returns (string memory) {
-		return _symbol; }
+		return _symbol;
+	}
 
 /*************************************************/
 
 		// gets token decimal number
 	function decimals(
 	) public view override returns (uint8) {
-		return _decimals; }
+		return _decimals;
+	}
 
 /*************************************************/
 
 		// gets tokens minted
 	function totalSupply(
 	) public view override returns (uint256) {
-		return _totalSupply; }
+		return _totalSupply;
+	}
 
 /*************************************************/
 
@@ -383,7 +418,8 @@ contract ERC20INTR is IERC20 {
 	function balanceOf(
 		address account
 	) public view override returns (uint256) {
-		return _balances[account]; }
+		return _balances[account];
+	}
 
 /*************************************************/
 
@@ -392,16 +428,20 @@ contract ERC20INTR is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
+		// front-running occured thus reflect zero allowance (negative is undefined)
 		if (_lifetimeAllowances[owner][spender] < _transferTotals[owner][spender]) {
-            return 0;
-        }
-        return _lifetimeAllowances[owner][spender] - _transferTotals[owner][spender];}
+			return 0;
+		}
+		// if front running did not occur, allowance is simply delta
+		return _lifetimeAllowances[owner][spender] - _transferTotals[owner][spender];
+	}
 
 /*************************************************/
 
 		// gets total tokens paid out in circulation
 	function circulation() public view returns (uint256) {
-		return _totalSupply - _balances[address(this)]; }
+		return _totalSupply - _balances[address(this)];
+	}
 
 /*************************************************/
 	/**
@@ -418,8 +458,12 @@ contract ERC20INTR is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address owner = msg.sender;
-		_transfer(owner, to, amount);
-		return true; }
+		_transfer(
+			owner,
+			to,
+			amount);
+		return true;
+	}
 
 		// internal implementation of transfer() above
 	function _transfer(
@@ -427,12 +471,23 @@ contract ERC20INTR is IERC20 {
 		address to,
 		uint256 amount
 	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
-		_beforeTokenTransfer(from, to, amount);
+		_beforeTokenTransfer(
+			from,
+			to,
+			amount);
 		unchecked {
-			_balances[from] = _balances[from] - amount;}
+			_balances[from] = _balances[from] - amount;
+		}
 		_balances[to] += amount;
-		emit Transfer(from, to, amount);
-		_afterTokenTransfer(from, to, amount); }
+		emit Transfer(
+			from,
+			to,
+			amount);
+		_afterTokenTransfer(
+			from,
+			to,
+			amount);
+	}
 
 /*************************************************/
 
@@ -444,8 +499,12 @@ contract ERC20INTR is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address owner = msg.sender;
-		_approve(owner, spender, amount);
-		return true; }
+		_approve(
+			owner,
+			spender,
+			amount);
+		return true;
+	}
 
 		// internal implementation of approve() above 
 	function _approve(
@@ -453,8 +512,32 @@ contract ERC20INTR is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
-		_lifetimeAllowances[owner][spender] = _transferTotals[owner][spender] + amount;
-		emit Approval(owner, spender, amount); }
+			// valid front-running occured before prior allowance decrease was accepted onchain
+		if (_transferTotals[owner][spender] > _lifetimeAllowances[owner][spender]) {
+			_lifetimeAllowances[owner][spender] += amount;
+			if (_transferTotals[owner][spender] >= _lifetimeAllowances[owner][spender]) {
+				// emit 0 if additional allowance is less than delta
+				emit Approval(
+					owner,
+					spender,
+					0);
+			} else {
+				// emit value lesser than amount after overcoming transfer 'debt'
+				emit Approval(
+					owner,
+					spender,
+					_lifetimeAllowances[owner][spender] - _transferTotals[owner][spender]);
+			}
+  			// lower or raise allowance
+        	} else {
+			_lifetimeAllowances[owner][spender] = _transferTotals[owner][spender] + amount;
+			// emit approved allowance, delta between xfer and lifetime
+			emit Approval(
+				owner,
+				spender,
+				_lifetimeAllowances[owner][spender] - _transferTotals[owner][spender]);
+		}
+	}
 
 /*************************************************/
 
@@ -469,11 +552,13 @@ contract ERC20INTR is IERC20 {
 		address to,
 		uint256 amount
 	) public override noZero(to) noZero(from) returns (bool) {
-        require((_lifetimeAllowances[from][to] - _transferTotals[from][to]) > amount,
-            "insufficient allowance");
+		require(
+			(_lifetimeAllowances[from][to] - _transferTotals[from][to]) > amount,
+			"insufficient allowance");
 		_transferTotals[from][to] += amount;
 		_transfer(from, to, amount);
-		return true; }
+		return true;
+	}
 
 /*************************************************/
 
@@ -485,12 +570,23 @@ contract ERC20INTR is IERC20 {
 		address account,
 		uint256 amount
 	) internal noZero(account) isEnough(_balances[account], amount) {
-		_beforeTokenTransfer(account, address(0), amount);
+		_beforeTokenTransfer(
+			account,
+			address(0),
+			amount);
 		unchecked {
-			_balances[account] = _balances[account] - amount;}
+			_balances[account] = _balances[account] - amount;
+		}
 		_totalSupply -= amount;
-		emit Transfer(account, address(0), amount);
-		_afterTokenTransfer(account, address(0), amount); }
+		emit Transfer(
+ 			account,
+			address(0),
+			amount);
+		_afterTokenTransfer(
+			account,
+			address(0),
+			amount);
+	}
 
 /*************************************************/
 
@@ -521,3 +617,4 @@ contract ERC20INTR is IERC20 {
 /*************************************************/
 
 }
+
