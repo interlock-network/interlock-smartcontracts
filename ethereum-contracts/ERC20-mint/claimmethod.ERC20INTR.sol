@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
 // Interlock ERC-20 INTR Token Mint Platform
-// 		(containing)
-// components from OpenZeppelin v4.6.0 contract
 //
 // Contributors:
 // blairmunroakusa
@@ -12,7 +10,6 @@ pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
 import "./POOL.sol";
-import "./utils/ECDSA.sol";
 
  /** derived from from oz:
  * functions should revert instead returning `false` on failure.
@@ -27,9 +24,8 @@ import "./utils/ECDSA.sol";
  * to protect against multiple withdrawal attacks.
  **/
 
-contract ERC20INTR is IERC20 {
 
-	/** @dev **/
+contract ERC20INTR is IERC20 {
 
 /*************************************************/
 	/**
@@ -37,6 +33,8 @@ contract ERC20INTR is IERC20 {
 	**/
 /*************************************************/
 
+	/** @dev **/
+    
 		// divisibility factor
 	uint8 private _decimals = 18;
 	uint256 private _DECIMAL = 10 ** _decimals;
@@ -207,7 +205,8 @@ contract ERC20INTR is IERC20 {
 			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_allowances[address(this)][Pool] = 0; }
+			_lifetimeAllowances[address(this)][Pool] = 0;
+            _transferTotals[address(this)][Pool]; }
 
 		// this must never happen again...
 		supplySplit = true; }
@@ -393,10 +392,10 @@ contract ERC20INTR is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
-		if (_lifetimeAllowances[owner][spender] < _totalTransfers[owner][spender]) {
+		if (_lifetimeAllowances[owner][spender] < _transferTotals[owner][spender]) {
             return 0;
         }
-        return _lifetimeAllowances[owner][spender] - _totalTransfers[owner][spender];}
+        return _lifetimeAllowances[owner][spender] - _transferTotals[owner][spender];}
 
 /*************************************************/
 
@@ -454,7 +453,7 @@ contract ERC20INTR is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
-		_lifetimeAllowances[owner][spender] = _totalTransfers[owner][spender] + amount;
+		_lifetimeAllowances[owner][spender] = _transferTotals[owner][spender] + amount;
 		emit Approval(owner, spender, amount); }
 
 /*************************************************/
@@ -469,10 +468,10 @@ contract ERC20INTR is IERC20 {
 		address from,
 		address to,
 		uint256 amount
-	) public override returns (bool) noZero(to) noZero(from) {
-        require((_lifetimeAllowances[from][to] - _totalTransfers[from][to]) > amount,
-            "insufficient allowance")
-		_totalTransfers[from][to] += amount;
+	) public override noZero(to) noZero(from) returns (bool) {
+        require((_lifetimeAllowances[from][to] - _transferTotals[from][to]) > amount,
+            "insufficient allowance");
+		_transferTotals[from][to] += amount;
 		_transfer(from, to, amount);
 		return true; }
 
@@ -521,4 +520,4 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 
-
+}
