@@ -1,0 +1,14 @@
+"use strict";
+exports.__esModule = true;
+var hardhat_1 = require("hardhat");
+var signWhitelist_1 = require("./signWhitelist");
+var mintingKey;
+var whitelistKey;
+var maliciousKey;
+var accounts = await hardhat_1.ethers.getSigners();
+mintingKey = accounts[0];
+whitelistKey = accounts[1];
+console.log(mintingKey.address);
+console.log(whitelistKey.address);
+var chainId = 1..chainId;
+var sig = (0, signWhitelist_1["default"])(chainId, '0xd9145CCE52D386f254917e481eB44e9943F39138', whitelistKey, mintingKey.address);
