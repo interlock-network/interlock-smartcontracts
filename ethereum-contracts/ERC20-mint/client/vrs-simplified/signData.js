@@ -1,5 +1,5 @@
 // using ethereumjs-util 7.1.3
-const ethUtil = require('ethereumjs-util');
+const ethUtil = require('ethereumjs-util@7.1.3');
 
 // using ethereumjs-abi 0.6.9
 const abi = require('ethereumjs-abi');

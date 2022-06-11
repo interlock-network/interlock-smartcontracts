@@ -67,7 +67,7 @@ impl Processor {
         }
         
         // unpack ix data flags specifying which global variable to update
-        let flags = unpack_flags(updateFlags);
+        let flags = unpack_32_flags(updateFlags);
 
 
         // . check for values that need to be updated
@@ -79,7 +79,7 @@ impl Processor {
         }
 
         // populate and pack GLOBAL account info
-        GLOBALinfo.flags = pack_flags(flags);
+        GLOBALinfo.flags = pack_32_flags(flags);
         GLOBALinfo.owner = *owner.key;
         GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
 

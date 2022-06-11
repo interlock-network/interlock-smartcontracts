@@ -41,10 +41,10 @@ impl Pack for GLOBAL {
             flags,
             owner,
             _values,
-        ) = array_refs![src, 2*FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
+        ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let mut valuesNumbers: [u32; VALUES] = [0; VALUES];
-        let valuesBytes = &src[(2*FLAGS_LEN + PUBKEY_LEN)..]; 
+        let valuesBytes = &src[(FLAGS_LEN + PUBKEY_LEN)..]; 
         let mut i = 0;
         let mut j = 0;
         for _ in valuesNumbers {
@@ -68,7 +68,7 @@ impl Pack for GLOBAL {
             flags_dst,
             owner_dst,
             values_dst,
-        ) = mut_array_refs![dst, 2*FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
+        ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let GLOBAL {
             flags,

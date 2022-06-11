@@ -87,7 +87,7 @@ impl Processor {
         let flags = BitVec::from_elem(32, false);
 
         // populate and pack GLOBAL account info
-        GLOBALinfo.flags = pack_flags(flags);
+        GLOBALinfo.flags = pack_32_flags(flags);
         GLOBALinfo.owner = *owner.key;
         GLOBALinfo.values = [0u32; VALUES];
         GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;

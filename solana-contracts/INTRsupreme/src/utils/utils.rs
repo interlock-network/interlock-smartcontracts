@@ -18,14 +18,16 @@ use crate::error::error::ContractError::InvalidInstruction;
 
 pub const VALUES: usize = 64;
 pub const PUBKEY_LEN: usize = 32;
-pub const FLAGS_LEN: usize = 4;
+pub const FLAGS_LEN: usize = 2;
 pub const VALUE_LEN: usize = 4;
+pub const BALANCE_LEN: usize = 8;
 pub const VALUES_LEN: usize = VALUES * VALUE_LEN;
-pub const SIZE_GLOBAL: u16 = (FLAGS_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
+pub const SIZE_GLOBAL: u16 = (2*FLAGS_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
+pub const SIZE_ACCOUNT: u16 = (FLAGS_LEN + PUBKEY_LEN + BALANCE_LEN) as u16;
     // 292 bytes
 
 // pack flag values into a single u32
-pub fn pack_flags(flags: BitVec) -> u32 {
+pub fn pack_32_flags(flags: BitVec) -> u32 {
 
     let flagbytes = BitVec::to_bytes(&flags);
     let bigflag =  (flagbytes[0] as u32) << 24
@@ -37,7 +39,7 @@ pub fn pack_flags(flags: BitVec) -> u32 {
 }
 
 // unpack flag values from a single u32
-pub fn unpack_flags(flags: u32) -> BitVec {
+pub fn unpack_32_flags(flags: u32) -> BitVec {
 
     let flag3: u8 = (flags >> 24) as u8;
     let flag2: u8 = (flags >> 16 & 0xff) as u8;
