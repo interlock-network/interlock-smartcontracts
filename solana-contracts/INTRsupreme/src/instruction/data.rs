@@ -19,6 +19,12 @@ pub enum ContractInstruction {
         updateFlags: u32,
         values: [u32; VALUES],
     },
+    
+    RegisterInit {
+
+        bumpREGISTER: u32,
+        seedREGISTER: Vec<u8>,
+    },
 }
 
 

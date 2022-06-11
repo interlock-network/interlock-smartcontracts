@@ -51,6 +51,20 @@ impl Processor {
                     values,
                 )
             },
+
+            ContractInstruction::RegisterInit  {
+                bumpREGISTER,
+                seedREGISTER,
+            } => {
+                msg!("Instruction: RegisterInit");
+                Self::process_program_init(
+                    program_id,
+                    accounts,
+                    bumpREGISTER,
+                    seedREGISTER,
+                )
+            },
+
         }
     }
 }
