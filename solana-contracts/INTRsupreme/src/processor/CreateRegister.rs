@@ -42,7 +42,7 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_register_init(
+    pub fn process_create_register(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         bumpREGISTER: u8,

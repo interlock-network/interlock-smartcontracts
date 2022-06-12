@@ -20,7 +20,7 @@ pub enum ContractInstruction {
         values: [u32; VALUES],
     },
     
-    RegisterInit {
+    CreateRegister {
 
         bumpREGISTER: u32,
         seedREGISTER: Vec<u8>,

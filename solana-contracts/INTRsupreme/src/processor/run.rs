@@ -52,11 +52,11 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::RegisterInit  {
+            ContractInstruction::CreateRegister  {
                 bumpREGISTER,
                 seedREGISTER,
             } => {
-                msg!("Instruction: RegisterInit");
+                msg!("Instruction: CreateRegister");
                 Self::process_program_init(
                     program_id,
                     accounts,
@@ -64,7 +64,6 @@ impl Processor {
                     seedREGISTER,
                 )
             },
-
         }
     }
 }

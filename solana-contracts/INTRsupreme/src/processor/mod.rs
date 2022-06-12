@@ -5,3 +5,4 @@
 pub mod run;
 pub mod ProgramInit;
 pub mod UpdateGlobal;
+pub mod CreateRegister;

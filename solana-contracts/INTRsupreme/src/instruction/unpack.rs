@@ -37,7 +37,7 @@ impl ContractInstruction {
                 updateFlags: unpack_number_u32(&rest[0..FLAGS_LEN])?,
                 values: unpack_array_u32(&rest[FLAGS_LEN..])?,
             },
-            2 => Self::RegisterInit {
+            2 => Self::CreateRegister {
                 bumpREGISTER: rest[0],
                 seedREGISTER: rest[1..].to_vec(),
             },
