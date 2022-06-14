@@ -11,7 +11,8 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
-import "./INTRpool.sol";
+import "./IWORMHOLE.sol";
+import "./POOL.sol";
 import "./utils/ECDSA.sol";
 
  /** derived from from oz:
@@ -79,16 +80,28 @@ contract ERC20INTR is IERC20 {
 		uint8 cliff;
 		uint8 pool;
 		uint8 payments; }
-	MemberStatus[] private _members;
-
-		// keeping track of whitelisters
-	MemberStatus[] private _whitelisters;
+	mapping(address => MemberStatus) private _members;
 
 		// EIP712 signature implementation
-	address private _whitelistKey = address(0);
+	address private _validationKey = address(0);
 	bytes32 public DOMAIN_SEPARATOR;
-	bytes32 public constant MINTER_TYPEHASH =
-		keccak256("Minter(address wallet)");
+	bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
+		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract");
+	bytes32 constant VALIDATION_TYPEHASH = keccak256(
+		"Validation(address wallet,unit256 share,uint8 pool)");
+
+		// domain separator
+	struct EIP712Domain {
+        string  name;
+        string  version;
+        uint256 chainId;
+        address verifyingContract; }
+
+		// data struct for validation claim
+	struct Validation {
+		address wallet;
+		uint256 share;
+		uint8 pool; }
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -138,15 +151,13 @@ contract ERC20INTR is IERC20 {
 					poolCliffs_[i],
 					poolMembers_[i] ) ); }
 
-			// initiate EIP712 standard for whitelist
-		DOMAIN_SEPARATOR = keccak256(
-			abi.encode(
-				keccak256(
-					"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-				keccak256(bytes("WhitelistToken")),
-				keccak256(bytes("1")),
-				block.chainid,
-				address(this) ) ); }
+			// initiate EIP712 standard for member validation
+		DOMAIN_SEPARATOR = keccak256(abi.encode(
+			EIP712DOMAIN_TYPEHASH,
+			keccak256(bytes("Validator")),
+			keccak256(bytes("1")),
+			1,
+			0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ) ); }
 
 /*************************************************/
 	/**
@@ -198,34 +209,13 @@ contract ERC20INTR is IERC20 {
 
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new INTRpool());
+			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
 			_allowances[address(this)][Pool] = 0; }
 
 		// this must never happen again...
 		supplySplit = true; }
-
-/*************************************************/
-
-		 // in csv tx batches by pool
-		// allocates pool supply between members
-	function addMembers (
-		uint256[] calldata payouts,
-		address[] calldata members,
-		uint8[] calldata whichPool
-	) public isOwner {
-
-		// iterate through addMember input array
-		for (uint8 i = 0; i < payouts.length; i++) {
-			// intiate member  entry
-			MemberStatus memory member;
-			member.share = payouts[i] * _DECIMAL;
-			member.cliff = _pool[whichPool[i]].cliff;
-			member.payments = _pool[whichPool[i]].payments;
-			member.account = members[i];
-			member.pool = whichPool[i];
-			_members.push(member); } }
 
 /*************************************************/
 
@@ -250,7 +240,6 @@ contract ERC20INTR is IERC20 {
 
 		// apply the initial round of token distributions
 		_poolDistribution();
-		_memberDistribution();
 
 		// this must never happen again...
 		TGEtriggered = true; }
@@ -259,38 +248,7 @@ contract ERC20INTR is IERC20 {
 	/**
 	* payout methods
 	**/
-/*************************************************/
-
-		 // updates allowances and balances across pools and members
-		// calls successfully after 30 days pass
-	function distribute(
-	) public isOwner {
-
-		// guards
-		require(_checkTime(), "too soon");
-
-		// distribute tokens
-		_poolDistribution();
-		_memberDistribution(); }
-
-/*************************************************/
-
-		// distribute shares to all investor members
-	function _memberDistribution(
-	) internal {
-
-		// iterate through members
-		for (uint8 i = 0; i < _members.length; i++) {
-			if (_members[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[i].cliff + _members[i].payments)
-				) {
-				transferFrom(
-					_pools[_members[i].pool],
-					_members[i].account,
-					_members[i].share );
-				_members[i].paid += _members[i].share; } } }
-
-/*************************************************/								
+/*************************************************/							
 			
 		// distribute tokens to pools on schedule
 	function _poolDistribution(
@@ -299,7 +257,7 @@ contract ERC20INTR is IERC20 {
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[i].cliff + _members[i].payments)
+				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)
 				) {
 				// transfer month's distribution to pools
 				transferFrom(
@@ -347,54 +305,79 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 	/**
-	* whitelist stuff
+	* member validation methods
 	**/
 /*************************************************/
 
-		// validate whitelister address and invitation
-	function claimWhitelist(
-	) public returns (bool) {
-
-	}
-
-/*************************************************/
-
 		// sets to serverside whitelist signing key
-	function setWhitelistKey(
+	function setValidationKey(
 		address newKey
 	) public isOwner {
-		_whitelistKey = newKey;
-	}
+		_validationKey = newKey; }
 
 /*************************************************/
 
-		// determine if claim is valid whitelister
-	function validateWhitelister(
-		bytes calldata signature
-	) public view returns (bool) {
+		// generate DOMAIN_SEPARATOR part of digest
+	function hash(
+		EIP712Domain memory eip712Domain
+	) internal pure returns (bytes32) {
+		return keccak256(abi.encode(
+			EIP712DOMAIN_TYPEHASH,
+			keccak256(bytes(eip712Domain.name)),
+			keccak256(bytes(eip712Domain.version)),
+			eip712Domain.chainId,
+			eip712Domain.verifyingContract ) ); }
 
-		// make sure key has been entered
-		require(_whitelistKey != address(0),
-			"whitelist key has not been set");
+		// generate VALIDATION part of digest
+	function hash(
+		Validation memory validation
+	) internal pure returns (bytes32) {
+		return keccak256(abi.encode(
+			VALIDATION_TYPEHASH,
+			validation.wallet,
+			validation.share,
+			validation.pool ) ); }
 
-		// recreate datastructure sent by client
-		bytes32 digest = keccak256(
-			abi.encodePacked(
-				"\x19\x01",
-				DOMAIN_SEPARATOR,
-				keccak256(
-					abi.encode(
-						MINTER_TYPEHASH,
-						msg.sender) ) ) ); 
+		event debug(address sig, address key);
+		   // unpacks validation data and stores new member record
+		  // reverts if _validationKey not set
+		 // reverts if recovered key != _validationKey
+		// checks incoming signature packet
+
+	function validate(
+		Validation calldata validation,
+		uint8 v,
+		bytes32 r,
+		bytes32 s
+	) public {
+
+		//  guard
+		require(_validationKey != address(0),
+			"validation key has not been set");
+
+
+
+		// recreate digest
+		bytes32 digest = keccak256(abi.encodePacked(
+			"\x19\x01",
+			DOMAIN_SEPARATOR,
+			hash(validation) ) );
+		emit debug( ecrecover(digest, v, r, s), _validationKey);
+
+		// verify signature
+		//require(digest.recover(signature) == _validationKey,
+
+		//:w
+	//	"test");
 		
-		// recover signing key
-		address recoveredAddress = digest.recover(signature);
-
-		// check that recovered address is the whitelistKey
-		require(recoveredAddress == _whitelistKey,
-			"this signature is invalid");
-		return true; }
-
+		// pack calldata into new member record
+		MemberStatus memory member;
+		member.pool = validation.pool;
+		member.account = validation.wallet;
+		member.share = validation.share * _DECIMAL;
+		member.cliff = _pool[member.pool].cliff;
+		member.payments = _pool[member.pool].payments;
+		_members[member.account] = member; }
 
 /*************************************************/
 	/**
@@ -612,7 +595,98 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 
+event debughash(bytes32 digest);
+
+function test(bytes calldata signature, Validation calldata validation) public {
+	bytes32 digest = keccak256(
+		abi.encodePacked(
+			"\x19\x01",
+			DOMAIN_SEPARATOR,
+			keccak256(abi.encode(
+				VALIDATION_TYPEHASH,
+				validation.wallet,
+				validation.share,
+				validation.pool
+				))
+		)
+	);
+	emit debug(digest.recover(signature), _validationKey);
 }
+
+/*************************************************/
+	//
+	// wormhole
+	//
+/*************************************************/
+
+    // Hardcode the Wormhole Core Bridge contract address
+    // In a real contract, we would set this in a constructor or Setup
+    address a = address(0xC89Ce4735882C9F0f0FE26686c53074E09B0D550);
+    IWORMHOLE _wormhole = IWORMHOLE(a);
+
+    mapping(bytes32 => bool) _completedMessages;
+    mapping(uint16 => bytes32) _bridgeContracts;
+
+    // sendStr sends bytes to the wormhole.
+    function sendStr(bytes memory str, uint32 nonce) public returns (uint64 sequence) {
+        sequence = _wormhole.publishMessage(nonce, str, 1);
+        return sequence;
+    }
+
+    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+        uint8 i = 0;
+        bytes memory bytesArray = new bytes(64);
+        for (i = 0; i < bytesArray.length; i++) {
+            bytesArray[i] = toByte((_bytes32[i/2] >> 4) & 0x0f);
+            i = i + 1;
+            bytesArray[i] = toByte(_bytes32[i/2] & 0x0f);
+        }
+        return string(bytesArray);
+    }
+
+    function toByte(bytes1 _b1) public pure returns (bytes1) {
+        uint8 _b  = uint8(_b1);
+        return (_b < 10)? bytes1(_b + 48): bytes1(_b + 87);
+    }
+
+    // receiveStr confirms VAA and processes message on the receiving chain.
+    // Returns true when bytes are seen first time.
+    function receiveBytes(bytes memory encodedVm, uint32 /*nonce*/) public {
+        (IWORMHOLE.VM memory vm, bool valid, string memory reason) = _wormhole.parseAndVerifyVM(encodedVm);
+        // 1. check wormhole signatures/
+        require(valid, reason);
+
+        // 2. Check if emtter chain contract is registered.
+        // Print incoming emitter address.
+        // string memory smsg = string(abi.encodePacked(" invalid em ", Strings.toString(vm.emitterChainId), "-", bytes32ToString(vm.emitterAddress)));
+        // Print map entry address.
+        // string memory smsg = string(abi.encodePacked(" invalid_emitter ", Strings.toString(vm.emitterChainId), "+", bytes32ToString(_bridgeContracts[vm.emitterChainId])));
+        
+        require(verifyBridgeVM(vm), "invalid emitter");
+
+        // 3. Drop duplicate VAA.
+        require(!_completedMessages[vm.hash], " message already received");
+        _completedMessages[vm.hash] = true;
+
+        // Action place..
+        // At this point payload is good to be used for what actual contract needs to do. Like transfer(s) etc
+    }
+
+    // Check if receiveBytes emmiter is actually registered chan.
+    function verifyBridgeVM(IWORMHOLE.VM memory vm) internal view returns (bool){
+        return (_bridgeContracts[vm.emitterChainId] == vm.emitterAddress);
+    }
+    // We register chain,bridge in [mpn run register] command.
+    function registerChain(uint16 chainId_, bytes32 bridgeContract_) public isOwner {
+        _bridgeContracts[chainId_] = bridgeContract_;
+    }
+
+    function wormhole() public view returns (IWORMHOLE) {
+        return _wormhole;
+    }
+
+}
+
 
 
 
