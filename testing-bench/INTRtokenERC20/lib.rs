@@ -16,15 +16,23 @@ use ink_lang as ink;
 #[ink::contract]
 mod INTRtokenERC20 {
 
+
+    use ink_lang::utils::initialize_contract;
+    use ink_prelude::string::String;
+    use ink_prelude::string::ToString;
+    use ink_storage::Mapping;
+    use ink_storage::traits::SpreadAllocate;
+
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
 
-    use ink_storage::traits::SpreadAllocate;
     #[ink(storage)]
     #[derive(SpreadAllocate)]
     pub struct IntRtokenErc20 {
         /// Stores a single `bool` value on the storage.
+        name: String,
+        symbol: String,
         decimals: u8,
         total_supply: u32,
         balances: Mapping<AccountId, u32>,
@@ -63,9 +71,9 @@ mod INTRtokenERC20 {
         amount: u32,
     }
 
-    use ink_lang::utils::initialize_contract;
-    use ink_storage::Mapping;
+
     impl IntRtokenErc20 {
+
 
         /// Constructor that initializes the `bool` value to the given `init_value`
         #[ink(constructor)]
@@ -79,8 +87,22 @@ mod INTRtokenERC20 {
                     to: Some(caller),
                     amount: supply,
                 });
+                contract.name = "test".to_string();
+                contract.symbol = "INTR".to_string();
                 contract.decimals = 18;
             })
+        }
+
+        /// token decimal count getter
+        #[ink(message)]
+        pub fn name(&self) -> String {
+            self.name.clone()
+        }
+
+        /// token decimal count getter
+        #[ink(message)]
+        pub fn symbol(&self) -> String {
+            self.symbol.clone()
         }
 
         /// token decimal count getter
