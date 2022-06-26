@@ -10,11 +10,16 @@
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use self::intrtoken::{
+    INTRtoken,
+    INTRtokenRef,
+};
+
 use ink_lang as ink;
 
 
 #[ink::contract]
-mod INTRtokenERC20 {
+pub mod intrtoken {
 
     use ink_lang::utils::initialize_contract;
     use ink_prelude::string::String;
@@ -23,9 +28,9 @@ mod INTRtokenERC20 {
     use ink_storage::traits::SpreadAllocate;
 
     /// defines contract storage
-    #[ink(storage)]
     #[derive(SpreadAllocate)]
-    pub struct INTRTOKENERC20 {
+    #[ink(storage)]
+    pub struct INTRtoken {
         name: String,
         symbol: String,
         decimals: u8,
@@ -68,7 +73,7 @@ mod INTRtokenERC20 {
     }
 
 
-    impl INTRTOKENERC20 {
+    impl INTRtoken {
 
         /// Constructor that initializes the `bool` value to the given `init_value`
         #[ink(constructor)]
@@ -246,13 +251,13 @@ mod INTRtokenERC20 {
         use ink_env::Clear;
         use ink_env::topics::PrefixedValue;
 
-        type Event = <INTRTOKENERC20 as ::ink_lang::reflect::ContractEventBase>::Type;
+        type Event = <INTRtoken as ::ink_lang::reflect::ContractEventBase>::Type;
 
 
         /// test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -274,28 +279,28 @@ mod INTRtokenERC20 {
         /// test if name getter does its job
         #[ink::test]
         fn name_works() {
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
             assert_eq!(INTRtokenERC20.name(), "Interlock Network");
         }
 
         /// test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
             assert_eq!(INTRtokenERC20.symbol(), "INTR");
         }
         
         /// test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
             assert_eq!(INTRtokenERC20.decimals(), 18);
         }
 
         /// test if total supply getter does its job
         #[ink::test]
         fn total_supply_works() {
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
             assert_eq!(INTRtokenERC20.total_supply(), 100_000);
         }
 
@@ -304,7 +309,7 @@ mod INTRtokenERC20 {
         fn balance_of_works() {
 
             // construct contract and initialize accounts
-            let INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let INTRtokenERC20 = INTRtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice owns all the tokens on contract instantiation
@@ -319,7 +324,7 @@ mod INTRtokenERC20 {
         fn allowance_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice has not yet approved Bob
@@ -337,7 +342,7 @@ mod INTRtokenERC20 {
         fn transfer_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice transfers tokens to Bob
@@ -370,7 +375,7 @@ mod INTRtokenERC20 {
         fn approve_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
@@ -397,7 +402,7 @@ mod INTRtokenERC20 {
         fn transfer_from_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRTOKENERC20::new_token(100_000);
+            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // set the contract as callee and Bob as caller
@@ -456,19 +461,19 @@ mod INTRtokenERC20 {
             // define expected topics for Transfer event
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"INTRTOKENERC20::Transfer",
+                    value: b"INTRtoken::Transfer",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Transfer::from",
+                    prefix: b"INTRtoken::Transfer::from",
                     value: &expected_from,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Transfer::to",
+                    prefix: b"INTRtoken::Transfer::to",
                     value: &expected_to,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Transfer::amount",
+                    prefix: b"INTRtoken::Transfer::amount",
                     value: &expected_amount,
                 }),
             ];
@@ -511,19 +516,19 @@ mod INTRtokenERC20 {
             // define expected topics for Approval event
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"INTRTOKENERC20::Approval",
+                    value: b"INTRtoken::Approval",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Approval::owner",
+                    prefix: b"INTRtoken::Approval::owner",
                     value: &expected_owner,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Approval::spender",
+                    prefix: b"INTRtoken::Approval::spender",
                     value: &expected_spender,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRTOKENERC20::Approval::amount",
+                    prefix: b"INTRtoken::Approval::amount",
                     value: &expected_amount,
                 }),
             ];
