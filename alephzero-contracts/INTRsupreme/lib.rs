@@ -10,6 +10,8 @@ mod intrsupreme {
         PackedLayout,
         SpreadLayout,
     };
+    use ink_prelude::string::String;
+
 
     #[ink(storage)]
     pub struct INTRsupreme {
@@ -61,12 +63,51 @@ mod intrsupreme {
             }
         }
 
+        
+        #[ink(message)]
+        pub fn name(&self) -> String {
+            self.intrtoken.name()
+        }
+
+        #[ink(message)]
+        pub fn symbol(&self) -> String {
+            self.intrtoken.symbol()
+        }
+
+        #[ink(message)]
+        pub fn decimals(&self) -> u8 {
+            self.intrtoken.decimals()
+        }
+
         #[ink(message)]
         pub fn total_supply(&self) -> u32 {
             self.intrtoken.total_supply()
         }
 
+        #[ink(message)]
+        pub fn balance_of(&self, account: AccountId) -> u32 {
+            self.intrtoken.balance_of(account)
+        }
 
+        #[ink(message)]
+        pub fn allowance(&self, owner: AccountId, spender: AccountId) -> u32 {
+            self.intrtoken.allowance(owner, spender)
+        }
+
+        #[ink(message)]
+        pub fn transfer(&mut self, to: AccountId, amount: u32) -> bool {
+            self.intrtoken.transfer(to, amount)
+        }
+
+        #[ink(message)]
+        pub fn transfer_from(&mut self, from: AccountId, to: AccountId, amount: u32) -> bool {
+            self.intrtoken.transfer_from(from, to, amount)
+        }
+
+        #[ink(message)]
+        pub fn approve(&mut self, spender: AccountId, amount: u32) -> bool {
+            self.intrtoken.approve(spender, amount)
+        }
 
     }
 
