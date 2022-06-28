@@ -39,19 +39,6 @@ pub mod intrtoken {
         allowances: Mapping<(AccountId, AccountId), u32>,
     }
 
-
-    /// specify ERC-20 error type
-    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum Error {
-
-        /// return if the balance cannot fulfill a request
-        InsufficientBalance,
-    }
-
-    /// specify the ERC-20 result type
-    pub type Result<T> = core::result::Result<T, Error>;
-
     /// specify transfer event
     #[ink(event)]
     pub struct Transfer {
@@ -75,7 +62,7 @@ pub mod intrtoken {
 
     impl INTRtoken {
 
-        /// Constructor that initializes the `bool` value to the given `init_value`
+        /// constructor that initializes contract
         #[ink(constructor)]
         pub fn new_token(supply: u32) -> Self {
 
