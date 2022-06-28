@@ -26,7 +26,7 @@ mod intrsupreme {
     #[ink(storage)]
     pub struct INTRsupreme {
         intrtoken: INTRtokenRef,
-        interstake: INTRstakeRef,
+        intrstake: INTRstakeRef,
         stakedata: StakeDataRef,
     }
 
@@ -51,16 +51,7 @@ mod intrsupreme {
                     panic!(
                         "Failed to instantiate token contract: {:?}", error)
                 });
-            let intrstake = INTRstakeRef::new(intrtoken.clone())
-                .endowment(total_balance/4)
-                .code_hash(stake_code_hash)
-                .salt_bytes(salt)
-                .instantiate()
-                .unwrap_or_else(|error| {
-                    panic!(
-                        "Failed to instantiate stake contract: {:?}", error)
-                });
-            let stakedata = StakeDataRef::new(stakedata.clone())
+            let stakedata = StakeDataRef::new()
                 .endowment(total_balance/4)
                 .code_hash(stakedata_code_hash)
                 .salt_bytes(salt)
@@ -69,6 +60,16 @@ mod intrsupreme {
                     panic!(
                         "Failed to instantiate stakedata contract: {:?}", error)
                 });
+            let intrstake = INTRstakeRef::new(intrtoken.clone(), stakedata.clone())
+                .endowment(total_balance/4)
+                .code_hash(stake_code_hash)
+                .salt_bytes(salt)
+                .instantiate()
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "Failed to instantiate stake contract: {:?}", error)
+                });
+
 
             Self {
                 intrtoken,

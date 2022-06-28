@@ -17,7 +17,7 @@ pub use self::stakedata::{
 use ink_lang as ink;
 
 #[ink::contract]
-mod stakedata {
+pub mod stakedata {
 
     use ink_lang::utils::initialize_contract;
     use ink_storage::Mapping;
@@ -25,6 +25,7 @@ mod stakedata {
 
     /// defines contract storage
 
+    #[derive(SpreadAllocate)]
     #[ink(storage)]
     pub struct StakeData {
         rewards_available: Mapping<AccountId, u32>,
@@ -50,7 +51,12 @@ mod stakedata {
             // create contract
             initialize_contract(|contract: &mut Self| {
 
-                })
+                // define owner as caller
+                let caller = Self::env().caller();
+
+                // mint
+                contract.rewards_available.insert(&caller, &0);
+            })
         }
 
         /// add or change hash account amount info
@@ -70,7 +76,7 @@ mod stakedata {
         /// add or change account's available rewards
         #[ink(message)]
         pub fn update_reward(&mut self, account: AccountId, amount: i32) -> bool {
-            self.rewards_available.insert(&account, (self.rewards_available.get(&account) as i32) + &amount);
+            //self.rewards_available.insert(&account, (self.rewards_available.get(&account) as i32) + &amount);
             true
         }
     }

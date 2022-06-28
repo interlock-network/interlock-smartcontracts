@@ -28,12 +28,6 @@ mod intrstake {
 
     /// defines contract storage
 
-    #[ink(storage)]
-    pub struct stake_data {
-        rewards_available: Mapping<AccountId, u32>,
-        url_hashes: Mapping<(Hash, AccountId), u32>,
-        url_stakes: Mapping<(AccountId, Hash), u32>,
-    }
 
     #[ink(storage)]
     pub struct INTRstake {
