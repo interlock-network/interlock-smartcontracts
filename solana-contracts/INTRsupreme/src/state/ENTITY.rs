@@ -17,53 +17,47 @@ use arrayref::{
     };
 use crate::utils::utils::*;
 
-pub struct ACCOUNT {
+pub struct ENTITY {
     pub flags: u16,
-    pub count: u16,
-    pub owner: Pubkey,
-    pub balance: u64,
+    pub identifier: Pubkey,
+    pub amount: u64,
 }
 
-impl Sealed for ACCOUNT {}
+impl Sealed for ENTITY {}
 
-impl Pack for ACCOUNT {
-    const LEN: usize = SIZE_ACCOUNT as usize;
+impl Pack for ENTITY {
+    const LEN: usize = SIZE_ENTITY as usize;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        let src = array_ref![src, 0, ACCOUNT::LEN];
+        let src = array_ref![src, 0, ENTITY::LEN];
         let (
             flags,
-            count,
-            owner,
+            identifier,
             balance,
-        ) = array_refs![src, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
 
         Ok( ACCOUNT {
             flags: u16::from_le_bytes(*flags),
-            count: u16::from_le_bytes(*count),
-            owner: Pubkey::new_from_array(*owner),
+            identifier: Pubkey::new_from_array(*identifier),
             balance: u64::from_be_bytes(*balance),
         })
     }
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let dst = array_mut_ref![dst, 0, ACCOUNT::LEN];
+        let dst = array_mut_ref![dst, 0, ENTITY::LEN];
         let (
             flags_dst,
-            count_dst,
-            owner_dst,
+            identifier_dst,
             balance_dst,
-        ) = mut_array_refs![dst, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
 
         let ACCOUNT {
             flags,
-            count,
-            owner,
+            identifier,
             balance,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
-        *count_dst = count.to_le_bytes();
-        owner_dst.copy_from_slice(owner.as_ref());
+        identifier_dst.copy_from_slice(identifier.as_ref());
         *balance_dst = balance.to_be_bytes();
     }
 }
