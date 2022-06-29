@@ -51,7 +51,7 @@ pub mod intrstake {
         #[ink(constructor)]
         pub fn new(
             intrtoken: INTRtokenRef,
-            stakedata: StakeDataRef
+            stakedata: StakeDataRef,
         ) -> Self {
 
             Self {

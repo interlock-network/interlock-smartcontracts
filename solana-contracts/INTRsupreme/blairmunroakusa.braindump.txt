@@ -1,0 +1,81 @@
+blairmunroakusa@1822Tue.28Jun22.anch.AK:williwaw
+
+I need to refresh my brain for this context switch from A0 to Solana again.
+
+The issue I bumped into with A0 staking design was per usual: storage is tricky. The problem is that mappings are not indexed, therefore they are not iterable objects. This makes it difficult to track aggregate data. For example in a staking contract we need to track mapping from user acccounts to urls to stake amounts. We wish these mappings to be double linked, ideally (dunno if that makes it not a map anymore). So, I want to be able to take a url and determine the total amount staked across all users. I also want to be able to take all urls and add those individual amounts to derive a total amount. (This is where no iteration makes it troublesome.) The other way aroung, I want to take a single account, and see all urls it stakes to. I likewise want to take all those account's urls and determine the total amount staked by that account. Finally, I want to be able to take all accounts and aggregate the individual totals to determin the total overall token staked. The hash total and the account total should match, obviously.
+
+Ethereum developers have charted out several useful design patterns to address these issues. The common strategy is to create a struct that serves as an index for the mappings.
+
+Pause. Let's talk about Solana for a minute. Solana has  secret pattern weapon which is the program derived address. Instead of storing a hash of every url (the obvious approach to tracking urls on chain, mapping hashes to urls in database for reverse lookups [sic]), we can encode the url into an account address (effectively the url is used as a seed to generate the address). If we add an integer to the seed, we can create an index (0,1,2,...) to associate additional accounts to the original program derived account. What this does is that it gives us the ability to iterate through accounts, needing to store only a single integer (the total number of elements). Each account indexed this way can hold whatever datatype we wish to map to.
+
+So, mapping(string -> mapping(string -> number)) may be represented as accounts on chain holding these values:
+	account(string1, integer N) -> account(number1), account(number2), ... , account(numberN)
+	account(string2, integer M) -> account(number1), account(number2), ... , account(numberM)
+	... etc
+	
+This is ccol in large part because creating new accounts is effectively equivalent to dynamic memory allocation/reallocatoin.
+
+Reallocations however, is a little trickier with this scheme: to reclaim rent for dead mappings, we need to reinstantiate the entire sequence of accounts if we remove one. (This is because the account addresses are derived and referred to according to the url seed and the integer index.    .............. mind wander ............. abort
+
+oh right, the reason I am rampling about any of this is that Solana smart contracts have no map objects. Real buzz kill.
+
+
+So how do we individually track hash and account mappings to stake amounts:
+
+Indivudual has main account (their register).
+
+
+
+
+
+
+...........
+
+
+
+
+How do we treat the SPL token to Eth wormhole bit. It will be easiers to use SLP token with wormhole, period. But, it will be most cost effecetive to just use basic unsigned integers to track token movement through Solana.
+
+So, I imagine this: we just have one Solana SLP token account. This account mints or burns any in/outgoing wormhole transfers between ethereum vault and registers. Each wormhole message inbound to solana will contain additional information about the eth account it comes from (perhaps this is given, on the token bridge). The user register accounts will need to contain the ethereum account address it corresponds to. Likewise, will we need to keep a map of users to solana accounts on the eth side? (probably, without thinking too much on it). 
+
+We could in principle derive solana accounts from eth addresses...that way, all a user has to do is send a transfer to solana without specifying what account it goes to. Yes.
+
+Ok, so each register account has an ethereum address in state.
+
+
+...........
+
+
+So here's a pertinent question... do we simultaneously track accounts -> hash + amount  . and . hash -> accounts + amount
+
+On their own, just tracking accounts -> hash + amount is about 0.1c per instance.
+
+
+
+
+
+
+Recap on account -> hash amount
+account has integer of total stakes [?]
+each account per integer has the hash of the url being staked
+
+we could do somethign like , if a new hash is staked we give it somethign like a register account
+
+
+!!!! so is it even beneficial to track url hashes?? Well what functionwould that serve?
+knowing exactly what hashes have what accounts and stakes would allow us to reward according to hash, in principle.
+..so tracking accounts would allow us to manage stake amounts, where tracking hashes would allow us to manage rewards. The inbetween variable here would be rewards accumulated/claimed.
+
+In the hash case, the hash acount would store an integer representing how many individual accounts are staking on the hash, with each corresponding balanace. This way, server can query single hash account. This would imply that the server contain mapping  from url to hash for each uri. This is already the case for accounts...we need the server to keep a table of url hashes if we don't track hashes on chain, we track hashes on server. Though it is cheaper on server, we have an opportunity to decentralize here for somewhat negligible cost.
+
+This would make it so from client (without querying server, no api calls) query server and determine who exaclty to pay out for a reward.
+
+This would bring the price up to 0.1c*Nstakers + 0.1c*Mhashes (unique)
+
+
+OK ABORT CODE NOW TOO MUCH TALKING
+
+
+
+
+
