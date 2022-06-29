@@ -30,6 +30,7 @@ use crate::{
         state::{
             GLOBAL::*,
             ACCOUNT::*,
+            STAKE::*,
         },
     };
 

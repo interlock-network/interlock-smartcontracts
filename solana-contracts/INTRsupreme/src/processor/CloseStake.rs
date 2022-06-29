@@ -24,13 +24,12 @@ use solana_program::{
 use bit_vec::BitVec;
 
 use crate::{
-        error::error::ContractError::*,
+        //error::error::ContractError::GlobalAlreadyExistsError,
         processor::run::Processor,
         utils::utils::*,
         state::{
             GLOBAL::*,
             ACCOUNT::*,
-            STAKE::*,
         },
     };
 
@@ -43,9 +42,11 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_change_stake(
+    pub fn process_close_stake(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        bumpSTAKE: u8,
+        seedSTAKE: Vec<u8>,
         amount: u64,
     ) -> ProgramResult {
 
@@ -55,7 +56,13 @@ impl Processor {
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaACCOUNT = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
+        let pdaSTAKEend = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?;
+        let rent = next_account_info(account_info_iter)?;
+
+        // calculate rent if we want to create new account
+        let rentSTAKE = Rent::from_account_info(rent)?
+            .minimum_balance(SIZE_STAKE.into());
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -70,12 +77,19 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
         
-        // get unititialized GLOBAL data
+        // get STAKE  data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
+        let mut endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
+
+        // return tokens to ACCOUNT
+        ACCOUNTinfo.balance += STAKEinfo.amount;
         
-        // populate and pack GLOBAL account info
-        STAKEinfo.amount = amount;
+        STAKEinfo.identifier = endSTAKEinfo.identifier;
+        STAKEinfo.amount = endSTAKEinfo.amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+
+        // close last account in index
+        **pdaSTAKEend.try_borrow_mut_lamports()? -= rentSTAKE;
 
         Ok(())
     }

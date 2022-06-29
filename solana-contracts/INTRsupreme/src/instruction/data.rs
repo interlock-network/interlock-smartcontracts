@@ -35,12 +35,12 @@ pub enum ContractInstruction {
         bumpSTAKE: u8,
         seedSTAKE: Vec<u8>,
         amount: u64,
-    }
+    },
 
     ChangeStake {
 
         amount: u64,
-    }
+    },
 }
 
 

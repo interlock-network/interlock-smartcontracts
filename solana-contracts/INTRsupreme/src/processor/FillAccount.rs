@@ -24,7 +24,7 @@ use solana_program::{
 use bit_vec::BitVec;
 
 use crate::{
-        //error::error::ContractError::GlobalAlreadyExistsError,
+        error::error::ContractError::*,
         processor::run::Processor,
         utils::utils::*,
         state::{
@@ -56,7 +56,6 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let rent = next_account_info(account_info_iter)?;
         let pdaACCOUNT = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer

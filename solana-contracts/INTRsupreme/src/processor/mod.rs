@@ -5,4 +5,7 @@
 pub mod run;
 pub mod ProgramInit;
 pub mod UpdateGlobal;
-pub mod CreateRegister;
+pub mod CreateAccount;
+pub mod FillAccount;
+pub mod CreateStake;
+pub mod ChangeStake;

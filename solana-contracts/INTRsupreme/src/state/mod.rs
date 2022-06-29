@@ -3,4 +3,6 @@
  ****************************************************************/
 
 pub mod GLOBAL;
+pub mod ACCOUNT;
+pub mod STAKE;
 
