@@ -9,7 +9,17 @@
 
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 
-
+// NOTES: this contract will need to contain a mapping of all
+// stake accounts to individual accounts. I am not sure however,
+// how one will go about instantiating all the individual stake contracts.
+// The reason we need individual stake contracts is that the Mapping
+// object is not iterable, thus the only way to keep track of all stakes
+// associated with a given account is to map accounts to Vec!s. Every time the staking
+// contract is called however, the entire Vecs are loaded into memory, and this
+// will not work for large maps. We therefore, must isolate the account -> collection
+// of staked hashes maps to individual contracts, so that when a contract is called, it only
+// loads those hashes associated with that account, etc.
+// This is super awkward. I am not sure one can call a separate contract's instance of storage.
 
 
 #![allow(non_snake_case)]

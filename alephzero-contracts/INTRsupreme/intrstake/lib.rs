@@ -6,6 +6,16 @@
 // USING INK! FRAMEWORK
 
 
+
+// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
+
+// NOTES: this contract bridges the data and methods of the token contract and the stake data
+// contract. Again, an obnoxious problem is the event emit issue, hack being to declare events
+// elsewhere and create emit methods. I still need to implmement stake claim and reward functions,
+// but honestly this cannot happen until I figure out the staker contract issue outlined in
+// stakerdata contract NOTES.
+
+
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 

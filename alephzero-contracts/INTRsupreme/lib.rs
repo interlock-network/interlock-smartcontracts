@@ -10,7 +10,10 @@
 
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 
-
+// NOTES: Because I cannot find a way to instantiate a collection of contracts
+// like below, then only call methods from this or that contract without accessing
+// different storage, this contract represents the access point to all methods
+// living within child contracts. Pretty straight forward.
 
 
 #![cfg_attr(not(feature = "std"), no_std)]

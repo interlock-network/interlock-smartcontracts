@@ -11,7 +11,13 @@
 
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 
-
+// NOTES: the emit_event method cannot be used in other contracts,
+// something about it only accepting on impl. I don't know how to get 
+// around this, so the hack from now on (when I get to it) is to
+// create a contract the has all the INTRsupreme events declared,
+// with functions to emit each event. This is ugly and frustrating. 
+// I also need to make sure I implemented transfer_from correctly, because I believe
+// it may be missing an allowance update element.
 
 
 #![allow(non_snake_case)]
