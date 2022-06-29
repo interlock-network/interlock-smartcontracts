@@ -34,6 +34,7 @@ crate-type = [
 default = ["std"]
 std = [
     "ink_metadata/std",
+    "ink_lang/std",
     "ink_env/std",
     "ink_storage/std",
     "ink_primitives/std",

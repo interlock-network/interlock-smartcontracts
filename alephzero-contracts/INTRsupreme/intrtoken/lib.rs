@@ -7,6 +7,13 @@
 // USING INK! FRAMEWORK
 
 
+
+
+// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
+
+
+
+
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -39,6 +46,7 @@ pub mod intrtoken {
         allowances: Mapping<(AccountId, AccountId), u32>,
     }
 
+
     /// specify transfer event
     #[ink(event)]
     pub struct Transfer {
@@ -56,6 +64,16 @@ pub mod intrtoken {
         owner: Option<AccountId>,
         #[ink(topic)]
         spender: Option<AccountId>,
+        amount: u32,
+    }
+
+    /// specify stake event
+    #[ink(event)]
+    pub struct Stake {
+        #[ink(topic)]
+        staker: Option<AccountId>,
+        #[ink(topic)]
+        hash: Option<Hash>,
         amount: u32,
     }
 
@@ -88,6 +106,18 @@ pub mod intrtoken {
                 contract.symbol = "INTR".to_string();
                 contract.decimals = 18;
             })
+        }
+
+        
+        /// emit stake event because .emit_event method can only be impl once >( 
+        #[ink(message)]
+        pub fn emit_stake(&self, staker: AccountId, hash: Hash, amount: u32) -> bool {
+            Self::env().emit_event(Stake {
+                staker: Some(staker),
+                hash: Some(hash),
+                amount: amount,
+            });
+            true
         }
 
         /// token decimal count getter

@@ -6,6 +6,12 @@
 // USING INK! FRAMEWORK
 
 
+
+// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
+
+
+
+
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -32,16 +38,6 @@ pub mod stakedata {
         url_hashes: Mapping<(Hash, AccountId), u32>,
         url_stakes: Mapping<(AccountId, Hash), u32>,
     }
-
-    /// specify stake event
-    #[ink(event)]
-    pub struct Stake {
-        #[ink(topic)]
-        staker: Option<AccountId>,
-        #[ink(topic)]
-        hash: Option<Hash>,
-        amount: u32,
-    }
     
     impl StakeData {
         
@@ -54,9 +50,14 @@ pub mod stakedata {
                 // define owner as caller
                 let caller = Self::env().caller();
 
-                // mint
                 contract.rewards_available.insert(&caller, &0);
             })
+        }
+
+        /// stake getter
+        #[ink(message)]
+        pub fn get_stake(&self, staker: AccountId, hash: Hash) -> u32 {
+            self.url_stakes.get(&staker, &hash)
         }
 
         /// add or change hash account amount info
@@ -73,10 +74,18 @@ pub mod stakedata {
             true
         }
 
-        /// add or change account's available rewards
+        /// add to account's available rewards
         #[ink(message)]
-        pub fn update_reward(&mut self, account: AccountId, amount: i32) -> bool {
-            //self.rewards_available.insert(&account, (self.rewards_available.get(&account) as i32) + &amount);
+        pub fn reward(&mut self, account: AccountId, amount: u32) -> bool {
+            let prior = self.rewards_available.get(&account).unwrap_or(0);
+            self.rewards_available.insert(&account, &(&prior + &amount));
+            true
+        }
+
+        /// claim account's available rewards
+        #[ink(message)]
+        pub fn claim(&mut self, account: AccountId, amount: u32) -> bool {
+            self.rewards_available.insert(&account, &0);
             true
         }
     }

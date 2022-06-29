@@ -17,7 +17,7 @@ pub use self::intrstake::{
 use ink_lang as ink;
 
 #[ink::contract]
-mod intrstake {
+pub mod intrstake {
 
     use intrtoken::INTRtokenRef;
     use stakedata::StakeDataRef;
@@ -35,16 +35,6 @@ mod intrstake {
         stakedata: StakeDataRef,
     }
 
-    /// specify stake event
-    #[ink(event)]
-    pub struct Stake {
-        #[ink(topic)]
-        staker: Option<AccountId>,
-        #[ink(topic)]
-        hash: Option<Hash>,
-        amount: u32,
-    }
-    
     impl INTRstake {
         
         /// Constructor that initializes staking contract
@@ -53,6 +43,7 @@ mod intrstake {
             intrtoken: INTRtokenRef,
             stakedata: StakeDataRef
         ) -> Self {
+
             Self {
                 intrtoken,
                 stakedata,
@@ -60,31 +51,42 @@ mod intrstake {
         }
 
         #[ink(message)]
+        pub fn get_stake(&self, staker: AccountId, hash: Hash) -> u32 {
+            
+            self.stakedata.get_stake(staker, hash)
+        }
+
+        #[ink(message)]
         pub fn stake_url(&mut self, staker: AccountId, hash: Hash, amount: u32) -> bool {
-/*
-            // add account's stake to hash's stake record
-            self.url_hashes.insert((&hash, &staker), &amount);
 
-            // add hash to account's stake record
-            self.url_stakes.insert((&staker, &hash), &amount);
-
-            // add zero award balance for account id
-           /* self.rewards_available.insert(
-                &staker,
-                (self.rewards_available.get(&staker) {
-                    Some(value) => value,
-                    None => 0,
-                } + amount)
-            );*/
-
+            self.stakedata.update_stake(staker, hash, amount);
+            self.stakedata.update_hash(hash, staker, amount);
+            self.intrtoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
 
             // emit Stake event
-            Self::env().emit_event(Stake {
-                staker: Some(staker),
-                hash: Some(hash),
-                amount: amount,
-            });
-*/
+            self.intrtoken.emit_stake(
+                staker,
+                hash,
+                amount,
+                );
+
+            true
+        }
+
+        #[ink(message)]
+        pub fn claim_stake(&mut self, staker: AccountId, hash: Hash, amount: u32) -> bool {
+
+            self.stakedata.update_stake(staker, hash, amount);
+            self.stakedata.update_hash(hash, staker, amount);
+            self.intrtoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
+
+            // emit Stake event
+            self.intrtoken.emit_stake(
+                staker,
+                hash,
+                amount,
+                );
+
             true
         }
     }
