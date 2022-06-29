@@ -52,16 +52,51 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CreateRegister  {
-                bumpREGISTER,
-                seedREGISTER,
+            ContractInstruction::CreateAccount  {
+                bumpACCOUNT,
+                seedACCOUNT,
             } => {
-                msg!("Instruction: CreateRegister");
-                Self::process_program_init(
+                msg!("Instruction: CreateAccount");
+                Self::process_create_account(
                     program_id,
                     accounts,
-                    bumpREGISTER,
-                    seedREGISTER,
+                    bumpACCOUNT,
+                    seedACCOUNT,
+                )
+            },
+
+            ContractInstruction::FillAccount  {
+            } => {
+                msg!("Instruction: FillAccount");
+                Self::process_fill_account(
+                    program_id,
+                    accounts,
+                )
+            },
+
+            ContractInstruction::CreateStake  {
+                bumpSTAKE,
+                seedSTAKE,
+                amount,
+            } => {
+                msg!("Instruction: CreateStake");
+                Self::process_create_stake(
+                    program_id,
+                    accounts,
+                    bumpSTAKE,
+                    seedSTAKE,
+                    amount,
+                )
+            },
+
+            ContractInstruction::ChangeStake  {
+                amount,
+            } => {
+                msg!("Instruction: ChangeStake");
+                Self::process_change_stake(
+                    program_id,
+                    accounts,
+                    amount,
                 )
             },
         }

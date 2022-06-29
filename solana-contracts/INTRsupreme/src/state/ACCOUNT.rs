@@ -21,6 +21,7 @@ pub struct ACCOUNT {
     pub flags: u16,
     pub count: u16,
     pub owner: Pubkey,
+    pub vault: Pubkey,
     pub balance: u64,
 }
 
@@ -34,13 +35,15 @@ impl Pack for ACCOUNT {
             flags,
             count,
             owner,
+            vault,
             balance,
-        ) = array_refs![src, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = array_refs![src, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, PUBKEY_LEN, BALANCE_LEN];
 
         Ok( ACCOUNT {
             flags: u16::from_le_bytes(*flags),
             count: u16::from_le_bytes(*count),
             owner: Pubkey::new_from_array(*owner),
+            vault: Pubkey::new_from_array(*vault),
             balance: u64::from_be_bytes(*balance),
         })
     }
@@ -51,19 +54,22 @@ impl Pack for ACCOUNT {
             flags_dst,
             count_dst,
             owner_dst,
+            vault_dst,
             balance_dst,
-        ) = mut_array_refs![dst, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = mut_array_refs![dst, FLAGS_LEN, COUNT_LEN, PUBKEY_LEN, PUBKEY_LEN, BALANCE_LEN];
 
         let ACCOUNT {
             flags,
             count,
             owner,
+            vault,
             balance,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
         *count_dst = count.to_le_bytes();
         owner_dst.copy_from_slice(owner.as_ref());
+        vault_dst.copy_from_slice(vault.as_ref());
         *balance_dst = balance.to_be_bytes();
     }
 }

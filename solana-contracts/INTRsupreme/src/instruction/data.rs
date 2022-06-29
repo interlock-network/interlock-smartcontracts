@@ -20,11 +20,27 @@ pub enum ContractInstruction {
         values: [u32; VALUES],
     },
     
-    CreateRegister {
+    CreateAccount {
 
-        bumpREGISTER: u32,
-        seedREGISTER: Vec<u8>,
+        bumpACCOUNT: u8,
+        seedACCOUNT: Vec<u8>,
     },
+
+    FillAccount {
+
+    },
+
+    CreateStake {
+
+        bumpSTAKE: u8,
+        seedSTAKE: Vec<u8>,
+        amount: u64,
+    }
+
+    ChangeStake {
+
+        amount: u64,
+    }
 }
 
 

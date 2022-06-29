@@ -42,58 +42,47 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_create_register(
+    pub fn process_fill_account(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bumpREGISTER: u8,
-        seedREGISTER: Vec<u8>,
     ) -> ProgramResult {
+
+
+        // BEFORE SENDING THIS IX, MVP INITIATED ETHEREUM WORMHOLE INTR TRANSFER
+        // AND -- SERVER (OR MVP CLIENT) PUSHED VALIDATED MESSAGE TO SOLANA
+
 
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
-        let pdaREGISTER = next_account_info(account_info_iter)?;
+        let pdaACCOUNT = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // calculate rent if we want to create new account
-        let rentREGISTER = Rent::from_account_info(rent)?
-            .minimum_balance(SIZE_ACCOUNT.into());
+        // get GLOBAL account info
+        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
 
-        // create pdaGLOBAL
-        invoke_signed(
-        &system_instruction::create_account(
-            &owner.key,
-            &pdaREGISTER.key,
-            rentREGISTER,
-            SIZE_ACCOUNT.into(),
-            &program_id
-        ),
-        &[
-            owner.clone(),
-            pdaREGISTER.clone()
-        ],
-        &[&[&seedREGISTER, &[bumpREGISTER]]]
-        )?;
-        msg!("Successfully created pdaREGISTER");
-// need to determine if create_account reverts if account already exists
-        
-        // get unititialized GLOBAL data
-        let mut REGISTERinfo = ACCOUNT::unpack_unchecked(&pdaREGISTER.try_borrow_data()?)?;
-        
-        // init flags
-        let flags = BitVec::from_elem(16, false);
+        // check that owner is *actually* owner
+        if ACCOUNTinfo.owner != *owner.key {
+            return Err(OwnerImposterError.into());
+        }
 
-        // populate and pack GLOBAL account info
-        REGISTERinfo.flags = pack_16_flags(flags);
-        REGISTERinfo.owner = *owner.key;
-        REGISTERinfo.balance = 0;
-        GLOBAL::pack(REGISTERinfo, &mut pdaREGISTER.try_borrow_mut_data()?)?;
+        // HERE, CALL WORMHOLE TOKEN BRIDGE PROGRAM, PERHAPS A TINY INTERLOCK PROGRAM THAT DOES
+        // THIS, TO MINT SLP TOKEN
+        // 
+        // SOMEHOW GET THE AMOUNT BACK TO THIS PROGRAM IX
+        // ( NOT SURE HOW TO DO THIS )
+
+        // HERE, UPDATE ACCOUNT BALANCE AND LET SPL TOKEN JUST SIT THERE 
+        //
+
+        ACCOUNTinfo.balance = 0;
+        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
 
         Ok(())
     }

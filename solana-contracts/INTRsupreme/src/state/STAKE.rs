@@ -17,47 +17,47 @@ use arrayref::{
     };
 use crate::utils::utils::*;
 
-pub struct ENTITY {
+pub struct STAKE {
     pub flags: u16,
     pub identifier: Pubkey,
     pub amount: u64,
 }
 
-impl Sealed for ENTITY {}
+impl Sealed for STAKE {}
 
-impl Pack for ENTITY {
-    const LEN: usize = SIZE_ENTITY as usize;
+impl Pack for STAKE {
+    const LEN: usize = SIZE_STAKE as usize;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        let src = array_ref![src, 0, ENTITY::LEN];
+        let src = array_ref![src, 0, STAKE::LEN];
         let (
             flags,
             identifier,
-            balance,
+            amount,
         ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
 
-        Ok( ACCOUNT {
+        Ok( STAKE {
             flags: u16::from_le_bytes(*flags),
             identifier: Pubkey::new_from_array(*identifier),
-            balance: u64::from_be_bytes(*balance),
+            amount: u64::from_be_bytes(*amount),
         })
     }
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let dst = array_mut_ref![dst, 0, ENTITY::LEN];
+        let dst = array_mut_ref![dst, 0, STAKE::LEN];
         let (
             flags_dst,
             identifier_dst,
-            balance_dst,
+            amount_dst,
         ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
 
-        let ACCOUNT {
+        let STAKE {
             flags,
             identifier,
-            balance,
+            amount,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
         identifier_dst.copy_from_slice(identifier.as_ref());
-        *balance_dst = balance.to_be_bytes();
+        *amount_dst = amount.to_be_bytes();
     }
 }

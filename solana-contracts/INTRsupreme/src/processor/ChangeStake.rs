@@ -42,11 +42,10 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_create_register(
+    pub fn process_change_stake(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bumpREGISTER: u8,
-        seedREGISTER: Vec<u8>,
+        amount: u64,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
@@ -54,46 +53,29 @@ impl Processor {
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
-        let pdaREGISTER = next_account_info(account_info_iter)?;
+        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaSTAKE = next_account_info(account_info_iter)?;
+        let hash = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // calculate rent if we want to create new account
-        let rentREGISTER = Rent::from_account_info(rent)?
-            .minimum_balance(SIZE_ACCOUNT.into());
+        // get ACCOUNT info
+        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
 
-        // create pdaGLOBAL
-        invoke_signed(
-        &system_instruction::create_account(
-            &owner.key,
-            &pdaREGISTER.key,
-            rentREGISTER,
-            SIZE_ACCOUNT.into(),
-            &program_id
-        ),
-        &[
-            owner.clone(),
-            pdaREGISTER.clone()
-        ],
-        &[&[&seedREGISTER, &[bumpREGISTER]]]
-        )?;
-        msg!("Successfully created pdaREGISTER");
-// need to determine if create_account reverts if account already exists
+        // check that owner is *actually* owner
+        if ACCOUNTinfo.owner != *owner.key {
+            return Err(OwnerImposterError.into());
+        }
         
         // get unititialized GLOBAL data
-        let mut REGISTERinfo = ACCOUNT::unpack_unchecked(&pdaREGISTER.try_borrow_data()?)?;
+        let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
         
-        // init flags
-        let flags = BitVec::from_elem(16, false);
-
         // populate and pack GLOBAL account info
-        REGISTERinfo.flags = pack_16_flags(flags);
-        REGISTERinfo.owner = *owner.key;
-        REGISTERinfo.balance = 0;
-        GLOBAL::pack(REGISTERinfo, &mut pdaREGISTER.try_borrow_mut_data()?)?;
+        STAKEinfo.amount = amount;
+        STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         Ok(())
     }

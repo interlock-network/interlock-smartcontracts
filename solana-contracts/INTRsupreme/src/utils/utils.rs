@@ -24,9 +24,11 @@ pub const VALUE_LEN: usize = 4;
 pub const BALANCE_LEN: usize = 8;
 pub const VALUES_LEN: usize = VALUES * VALUE_LEN;
 pub const SIZE_GLOBAL: u16 = (2*FLAGS_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
-pub const SIZE_ACCOUNT: u16 = (FLAGS_LEN + COUNT_LEN + PUBKEY_LEN + BALANCE_LEN) as u16;
-pub const SIZE_ACCOUNT: u16 = (FLAGS_LEN + PUBKEY_LEN + BALANCE_LEN) as u16;
-    // 292 bytes
+    // 292
+pub const SIZE_ACCOUNT: u16 = (FLAGS_LEN + COUNT_LEN + 2*PUBKEY_LEN + BALANCE_LEN) as u16;
+    // 76
+pub const SIZE_STAKE: u16 = (FLAGS_LEN + PUBKEY_LEN + BALANCE_LEN) as u16;
+    // 42
 
 // pack flag values into a single u32
 pub fn pack_32_flags(flags: BitVec) -> u32 {
