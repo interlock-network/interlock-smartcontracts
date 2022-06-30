@@ -99,6 +99,17 @@ impl Processor {
                     amount,
                 )
             },
+
+            ContractInstruction::ResolveEntity  {
+                determination,
+            } => {
+                msg!("Instruction: ResolveEntity");
+                Self::process_resolve_entity(
+                    program_id,
+                    accounts,
+                    determination,
+                )
+            },
         }
     }
 }

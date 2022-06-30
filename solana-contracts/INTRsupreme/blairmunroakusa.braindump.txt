@@ -1,3 +1,18 @@
+blairmunroakusa@1927Wed.29Jun22.anch.AK:williwaw
+
+Realized that under current design, if we try to resolve an entity, then we cannot actually identify the owner's ACCOUNT to reset the staking index. For this reason, ResolveEntity will not close any accounts, rather it will issue rewards and slashes, marking the stake acccounts as 'resolved' (flag). When client polls account's stake accounts, it will automatically run CloseStake or any marked stake accounts
+
+I think I need to track stake amount, reward amount ,and yield amount ... yield and reward portions are determined by global parameters.
+
+Maybe it would help to chart out every instruction with pseudocode...
+
+
+
+
+
+
+
+
 blairmunroakusa@1822Tue.28Jun22.anch.AK:williwaw
 
 I need to refresh my brain for this context switch from A0 to Solana again.

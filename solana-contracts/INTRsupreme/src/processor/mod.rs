@@ -9,3 +9,4 @@ pub mod CreateAccount;
 pub mod FillAccount;
 pub mod CreateStake;
 pub mod ChangeStake;
+pub mod ResolveEntity;

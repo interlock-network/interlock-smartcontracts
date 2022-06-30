@@ -41,6 +41,11 @@ pub enum ContractInstruction {
 
         amount: u64,
     },
+
+    ResolveEntity {
+
+        determination: u8,
+    },
 }
 
 

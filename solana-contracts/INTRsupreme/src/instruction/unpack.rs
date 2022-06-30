@@ -57,6 +57,9 @@ impl ContractInstruction {
                     .map(u64::from_be_bytes)
                     .ok_or(InvalidInstruction)?,
             },
+            6 => Self::ResolveEntity {
+                determination: rest[0],
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }
