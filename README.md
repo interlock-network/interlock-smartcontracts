@@ -4,7 +4,7 @@ Welcome! In this repository, we host development of all smart contracts that act
 
 In addition to one directory per blockchain's contracts, we also host a directory for each that contains resources such as references, docs, plans, etc. Client side scripts and tooling that we use to validate and manipulate these contracts are contained in a `client` directory in each respective contract directory. Finally, we include a directory dedicated to testing/validation results, procedures, difficulties, etc.
 
-Wormhole is the message-passing bridge we are using to pass $INTR tokens between Ethereum and Solana blockchains. There is no directory for Wormhole contracts because Wormhole is a **protocol** (validated by 19 guardian nodes) that bridges smart contracts across chains, and the logic underpinning any Wormhole functionality must be built into the Solana and Ethereum contracts themselves. We will however, maintain a Wormhole resource directory with references, docs, plans, etc.
+Wormhole is the message-passing bridge we are using to pass $ILOCK tokens between Ethereum and Solana blockchains. There is no directory for Wormhole contracts because Wormhole is a **protocol** (validated by 19 guardian nodes) that bridges smart contracts across chains, and the logic underpinning any Wormhole functionality must be built into the Solana and Ethereum contracts themselves. We will however, maintain a Wormhole resource directory with references, docs, plans, etc.
 
 The purpose of all this is to be transparent about our contract development.
 
