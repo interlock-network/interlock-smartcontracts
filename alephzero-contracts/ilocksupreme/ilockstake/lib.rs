@@ -19,17 +19,17 @@
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use self::intrstake::{
-    INTRstake,
-    INTRstakeRef,
+pub use self::ilockstake::{
+    ILOCKstake,
+    ILOCKstakeRef,
 };
 
 use ink_lang as ink;
 
 #[ink::contract]
-pub mod intrstake {
+pub mod ilockstake {
 
-    use intrtoken::INTRtokenRef;
+    use ilocktoken::ILOCKtokenRef;
     use stakedata::StakeDataRef;
 
     use ink_lang::utils::initialize_contract;
@@ -40,22 +40,22 @@ pub mod intrstake {
 
 
     #[ink(storage)]
-    pub struct INTRstake {
-        intrtoken: INTRtokenRef,
+    pub struct ILOCKstake {
+        ilocktoken: ILOCKtokenRef,
         stakedata: StakeDataRef,
     }
 
-    impl INTRstake {
+    impl ILOCKstake {
         
         /// Constructor that initializes staking contract
         #[ink(constructor)]
         pub fn new(
-            intrtoken: INTRtokenRef,
+            ilocktoken: ILOCKtokenRef,
             stakedata: StakeDataRef,
         ) -> Self {
 
             Self {
-                intrtoken,
+                ilocktoken,
                 stakedata,
             }
         }
@@ -71,10 +71,10 @@ pub mod intrstake {
 
             self.stakedata.update_stake(staker, hash, amount);
             self.stakedata.update_hash(hash, staker, amount);
-            self.intrtoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
+            self.ilocktoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
 
             // emit Stake event
-            self.intrtoken.emit_stake(
+            self.ilocktoken.emit_stake(
                 staker,
                 hash,
                 amount,
@@ -88,10 +88,10 @@ pub mod intrstake {
 
             self.stakedata.update_stake(staker, hash, amount);
             self.stakedata.update_hash(hash, staker, amount);
-            self.intrtoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
+            self.ilocktoken.transfer_from(self.env().caller(), self.env().account_id(), amount);
 
             // emit Stake event
-            self.intrtoken.emit_stake(
+            self.ilocktoken.emit_stake(
                 staker,
                 hash,
                 amount,

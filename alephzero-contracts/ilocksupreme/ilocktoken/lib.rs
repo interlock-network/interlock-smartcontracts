@@ -14,7 +14,7 @@
 // NOTES: the emit_event method cannot be used in other contracts,
 // something about it only accepting on impl. I don't know how to get 
 // around this, so the hack from now on (when I get to it) is to
-// create a contract the has all the INTRsupreme events declared,
+// create a contract the has all the ILOCKsupreme events declared,
 // with functions to emit each event. This is ugly and frustrating. 
 // I also need to make sure I implemented transfer_from correctly, because I believe
 // it may be missing an allowance update element.
@@ -23,16 +23,16 @@
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use self::intrtoken::{
-    INTRtoken,
-    INTRtokenRef,
+pub use self::ilocktoken::{
+    ILOCKtoken,
+    ILOCKtokenRef,
 };
 
 use ink_lang as ink;
 
 
 #[ink::contract]
-pub mod intrtoken {
+pub mod ilocktoken {
 
     use ink_lang::utils::initialize_contract;
     use ink_prelude::string::String;
@@ -43,7 +43,7 @@ pub mod intrtoken {
     /// defines contract storage
     #[derive(SpreadAllocate)]
     #[ink(storage)]
-    pub struct INTRtoken {
+    pub struct ILOCKtoken {
         name: String,
         symbol: String,
         decimals: u8,
@@ -84,7 +84,7 @@ pub mod intrtoken {
     }
 
 
-    impl INTRtoken {
+    impl ILOCKtoken {
 
         /// constructor that initializes contract
         #[ink(constructor)]
@@ -109,7 +109,7 @@ pub mod intrtoken {
 
                 // set optional metadata
                 contract.name = "Interlock Network".to_string();
-                contract.symbol = "INTR".to_string();
+                contract.symbol = "ILOCK".to_string();
                 contract.decimals = 18;
             })
         }
@@ -274,13 +274,13 @@ pub mod intrtoken {
         use ink_env::Clear;
         use ink_env::topics::PrefixedValue;
 
-        type Event = <INTRtoken as ::ink_lang::reflect::ContractEventBase>::Type;
+        type Event = <ILOCKtoken as ::ink_lang::reflect::ContractEventBase>::Type;
 
 
         /// test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -292,39 +292,39 @@ pub mod intrtoken {
                 100000,
             );
 
-            assert_eq!(INTRtokenERC20.name(), "Interlock Network");
-            assert_eq!(INTRtokenERC20.symbol(), "INTR");
-            assert_eq!(INTRtokenERC20.decimals(), 18);
-            assert_eq!(INTRtokenERC20.total_supply(), 100_000);
+            assert_eq!(ILOCKtokenERC20.name(), "Interlock Network");
+            assert_eq!(ILOCKtokenERC20.symbol(), "ILOCK");
+            assert_eq!(ILOCKtokenERC20.decimals(), 18);
+            assert_eq!(ILOCKtokenERC20.total_supply(), 100_000);
 
         }
 
         /// test if name getter does its job
         #[ink::test]
         fn name_works() {
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
-            assert_eq!(INTRtokenERC20.name(), "Interlock Network");
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
+            assert_eq!(ILOCKtokenERC20.name(), "Interlock Network");
         }
 
         /// test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
-            assert_eq!(INTRtokenERC20.symbol(), "INTR");
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
+            assert_eq!(ILOCKtokenERC20.symbol(), "ILOCK");
         }
         
         /// test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
-            assert_eq!(INTRtokenERC20.decimals(), 18);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
+            assert_eq!(ILOCKtokenERC20.decimals(), 18);
         }
 
         /// test if total supply getter does its job
         #[ink::test]
         fn total_supply_works() {
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
-            assert_eq!(INTRtokenERC20.total_supply(), 100_000);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
+            assert_eq!(ILOCKtokenERC20.total_supply(), 100_000);
         }
 
         /// test if balance getter does its job
@@ -332,14 +332,14 @@ pub mod intrtoken {
         fn balance_of_works() {
 
             // construct contract and initialize accounts
-            let INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice owns all the tokens on contract instantiation
-            assert_eq!(INTRtokenERC20.balance_of(accounts.alice), 100_000);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), 100_000);
 
             // Bob does not owns tokens
-            assert_eq!(INTRtokenERC20.balance_of(accounts.bob), 0);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.bob), 0);
         }
 
         /// test if allowance getter does its job
@@ -347,17 +347,17 @@ pub mod intrtoken {
         fn allowance_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice has not yet approved Bob
-            assert_eq!(INTRtokenERC20.allowance(accounts.alice, accounts.bob), 0);
+            assert_eq!(ILOCKtokenERC20.allowance(accounts.alice, accounts.bob), 0);
 
             // Alice approves Bob for tokens
-            assert_eq!(INTRtokenERC20.approve(accounts.bob, 10), true);
+            assert_eq!(ILOCKtokenERC20.approve(accounts.bob, 10), true);
 
             // Bob's new allowance reflects this approval
-            assert_eq!(INTRtokenERC20.allowance(accounts.alice, accounts.bob), 10);
+            assert_eq!(ILOCKtokenERC20.allowance(accounts.alice, accounts.bob), 10);
         }
 
         /// test if the transfer doer does its job
@@ -365,20 +365,20 @@ pub mod intrtoken {
         fn transfer_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice transfers tokens to Bob
-            assert_eq!(INTRtokenERC20.transfer(accounts.bob, 10), true);
+            assert_eq!(ILOCKtokenERC20.transfer(accounts.bob, 10), true);
 
             // Alice balance reflects transfer
-            assert_eq!(INTRtokenERC20.balance_of(accounts.alice), 99_990);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), 99_990);
 
             // Bob balance reflects transfer
-            assert_eq!(INTRtokenERC20.balance_of(accounts.bob), 10);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.bob), 10);
 
             // Alice attempts transfer too large
-            assert_eq!(INTRtokenERC20.transfer(accounts.bob, 100_000), false);
+            assert_eq!(ILOCKtokenERC20.transfer(accounts.bob, 100_000), false);
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -398,14 +398,14 @@ pub mod intrtoken {
         fn approve_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
-            assert_eq!(INTRtokenERC20.approve(accounts.bob, 10), true);
+            assert_eq!(ILOCKtokenERC20.approve(accounts.bob, 10), true);
 
             // Bob is approved to spend tokens owned by Alice
-            assert_eq!(INTRtokenERC20.allowance(accounts.alice, accounts.bob), 10);
+            assert_eq!(ILOCKtokenERC20.allowance(accounts.alice, accounts.bob), 10);
 
             // check all events that happened during previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -425,7 +425,7 @@ pub mod intrtoken {
         fn transfer_from_works() {
 
             // construct contract and initialize accounts
-            let mut INTRtokenERC20 = INTRtoken::new_token(100_000);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // set the contract as callee and Bob as caller
@@ -434,16 +434,16 @@ pub mod intrtoken {
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(accounts.bob);
 
             // Alice approves Bob for token transfers on her behalf
-            assert_eq!(INTRtokenERC20.approve(accounts.bob, 10), true);
+            assert_eq!(ILOCKtokenERC20.approve(accounts.bob, 10), true);
 
             // Bob transfers tokens from Alice to Eve
-            assert_eq!(INTRtokenERC20.transfer_from(accounts.alice, accounts.eve, 10), true);
+            assert_eq!(ILOCKtokenERC20.transfer_from(accounts.alice, accounts.eve, 10), true);
 
             // Eve received the tokens
-            assert_eq!(INTRtokenERC20.balance_of(accounts.eve), 10);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.eve), 10);
 
             // Bob attempts a transferfrom too large
-            assert_eq!(INTRtokenERC20.transfer_from(accounts.alice, accounts.eve, 100_000), false);
+            assert_eq!(ILOCKtokenERC20.transfer_from(accounts.alice, accounts.eve, 100_000), false);
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -484,19 +484,19 @@ pub mod intrtoken {
             // define expected topics for Transfer event
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"INTRtoken::Transfer",
+                    value: b"ILOCKtoken::Transfer",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Transfer::from",
+                    prefix: b"ILOCKtoken::Transfer::from",
                     value: &expected_from,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Transfer::to",
+                    prefix: b"ILOCKtoken::Transfer::to",
                     value: &expected_to,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Transfer::amount",
+                    prefix: b"ILOCKtoken::Transfer::amount",
                     value: &expected_amount,
                 }),
             ];
@@ -539,19 +539,19 @@ pub mod intrtoken {
             // define expected topics for Approval event
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"INTRtoken::Approval",
+                    value: b"ILOCKtoken::Approval",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Approval::owner",
+                    prefix: b"ILOCKtoken::Approval::owner",
                     value: &expected_owner,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Approval::spender",
+                    prefix: b"ILOCKtoken::Approval::spender",
                     value: &expected_spender,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"INTRtoken::Approval::amount",
+                    prefix: b"ILOCKtoken::Approval::amount",
                     value: &expected_amount,
                 }),
             ];
