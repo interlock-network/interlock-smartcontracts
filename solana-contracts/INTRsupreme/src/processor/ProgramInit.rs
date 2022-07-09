@@ -86,6 +86,12 @@ impl Processor {
         // init flags
         let flags = BitVec::from_elem(32, false);
 
+            // account type is GLOBAL == 011
+            // flags[0] = false;
+            flags[1] = true;
+            flags[2] = true;
+
+
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_32_flags(flags);
         GLOBALinfo.owner = *owner.key;

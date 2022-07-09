@@ -18,16 +18,18 @@ use crate::error::error::ContractError::InvalidInstruction;
 
 pub const VALUES: usize = 64;
 pub const PUBKEY_LEN: usize = 32;
-pub const FLAGS_LEN: usize = 2;
-pub const COUNT_LEN: usize = 2;
-pub const VALUE_LEN: usize = 4;
-pub const BALANCE_LEN: usize = 8;
-pub const VALUES_LEN: usize = VALUES * VALUE_LEN;
-pub const SIZE_GLOBAL: u16 = (2*FLAGS_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
+pub const U16: usize = 2;
+
+pub const U32_LEN: usize = 4;
+pub const U64_LEN: usize = 8;
+
+pub const U128_LEN: usize = 16;
+pub const VALUES_LEN: usize = VALUES * U32_LEN;
+pub const SIZE_GLOBAL: u16 = (2*U16_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
     // 292
-pub const SIZE_ACCOUNT: u16 = (FLAGS_LEN + COUNT_LEN + 2*PUBKEY_LEN + BALANCE_LEN) as u16;
+pub const SIZE_ACCOUNT: u16 = (4*U16_LEN + PUBKEY_LEN + U128_LEN) as u16;
     // 76
-pub const SIZE_STAKE: u16 = (FLAGS_LEN + PUBKEY_LEN + BALANCE_LEN) as u16;
+pub const SIZE_STAKE: u16 = (U16_LEN + PUBKEY_LEN + U128_LEN) as u16;
     // 42
 
 // pack flag values into a single u32

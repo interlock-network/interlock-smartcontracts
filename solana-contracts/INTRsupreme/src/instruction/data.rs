@@ -37,12 +37,7 @@ pub enum ContractInstruction {
         amount: u64,
     },
 
-    ChangeStake {
-
-        amount: u64,
-    },
-
-    ResolveEntity {
+    SettleEntity {
 
         determination: u8,
     },

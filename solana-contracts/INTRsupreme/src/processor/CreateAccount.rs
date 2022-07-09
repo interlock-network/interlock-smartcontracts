@@ -89,6 +89,15 @@ impl Processor {
         // init flags
         let flags = BitVec::from_elem(16, false);
 
+            // account type is ACCOUNT = 000
+            // flags[0] = false;
+            // flags[1] = false;
+            // flags[2] = false;
+            // is bounty hunter? init false
+            // flags[3] = false;
+            // is connected to Ethereum? init false
+            // flags[4] = false;
+
         // populate and pack ACCOUNT info
         ACCOUNTinfo.flags = pack_16_flags(flags);
         ACCOUNTinfo.owner = *owner.key;

@@ -89,22 +89,11 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::ChangeStake  {
-                amount,
-            } => {
-                msg!("Instruction: ChangeStake");
-                Self::process_change_stake(
-                    program_id,
-                    accounts,
-                    amount,
-                )
-            },
-
-            ContractInstruction::ResolveEntity  {
+            ContractInstruction::SettleEntity  {
                 determination,
             } => {
-                msg!("Instruction: ResolveEntity");
-                Self::process_resolve_entity(
+                msg!("Instruction: SettleEntity");
+                Self::process_settle_entity(
                     program_id,
                     accounts,
                     determination,

@@ -48,16 +48,10 @@ impl ContractInstruction {
                 seedSTAKE: rest[1..(1 + PUBKEY_LEN)].to_vec(),
                 amount: rest.get((1 + PUBKEY_LEN)..(1 + PUBKEY_LEN + BALANCE_LEN))
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u64::from_be_bytes)
+                    .map(u128::from_be_bytes)
                     .ok_or(InvalidInstruction)?,
             },
-            5 => Self::ChangeStake {
-                amount: rest.get(..)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(u64::from_be_bytes)
-                    .ok_or(InvalidInstruction)?,
-            },
-            6 => Self::ResolveEntity {
+            5 => Self::SettleEntity {
                 determination: rest[0],
             },
             _ => return Err(InvalidInstruction.into()),

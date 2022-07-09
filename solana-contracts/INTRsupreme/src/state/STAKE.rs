@@ -19,8 +19,9 @@ use crate::utils::utils::*;
 
 pub struct STAKE {
     pub flags: u16,
-    pub identifier: Pubkey,
-    pub amount: u64,
+    pub time: i64,
+    pub entity: Pubkey,
+    pub amount: u128,
 }
 
 impl Sealed for STAKE {}
@@ -31,14 +32,16 @@ impl Pack for STAKE {
         let src = array_ref![src, 0, STAKE::LEN];
         let (
             flags,
-            identifier,
+            time,
+            entity,
             amount,
-        ) = array_refs![src, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = array_refs![src, U16_LEN, U64_LEN, PUBKEY_LEN, U128_LEN];
 
         Ok( STAKE {
             flags: u16::from_le_bytes(*flags),
-            identifier: Pubkey::new_from_array(*identifier),
-            amount: u64::from_be_bytes(*amount),
+            time: i64::from_be_bytes(*time),
+            entity: Pubkey::new_from_array(*entity),
+            amount: u128::from_be_bytes(*amount),
         })
     }
 
@@ -46,18 +49,21 @@ impl Pack for STAKE {
         let dst = array_mut_ref![dst, 0, STAKE::LEN];
         let (
             flags_dst,
+            time_dst
             identifier_dst,
             amount_dst,
-        ) = mut_array_refs![dst, FLAGS_LEN, PUBKEY_LEN, BALANCE_LEN];
+        ) = mut_array_refs![dst, U16_LEN, U64_LEN, PUBKEY_LEN, U128_LEN];
 
         let STAKE {
             flags,
-            identifier,
+            time,
+            entity,
             amount,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
-        identifier_dst.copy_from_slice(identifier.as_ref());
+        *time_dst = time.to_be_bytes();
+        entity_dst.copy_from_slice(entity.as_ref());
         *amount_dst = amount.to_be_bytes();
     }
 }
