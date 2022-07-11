@@ -53,8 +53,8 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let rent = next_account_info(account_info_iter)?;
         let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let rent = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -65,17 +65,20 @@ impl Processor {
         let rentACCOUNT = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_ACCOUNT.into());
 
+        // get GLOBAL data
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
         // create pdaACCOUNT
         invoke_signed(
         &system_instruction::create_account(
-            &owner.key,
+            &GLOBALinfo.owner.key,
             &pdaACCOUNT.key,
             rentACCOUNT,
             SIZE_ACCOUNT.into(),
             &program_id
         ),
         &[
-            owner.clone(),
+            GLOBALinfo.owner.clone(),
             pdaACCOUNT.clone()
         ],
         &[&[&seedACCOUNT, &[bumpACCOUNT]]]
