@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 INTR Token Mint Platform
+// Interlock ERC-20 ILOCK Token Mint Platform
 // 	   contract manipulation 
 //
 // Contributors:
@@ -28,9 +28,9 @@ const ENDPOINT		=	'http://localhost:8545';
 
 const web3 = new Web3(ENDPOINT);
 
-const abi = JSON.parse(fs.readFileSync('claimmethod_ERC20INTR_sol_ERC20INTR.abi').toString());
-const ERC20INTR = new web3.eth.Contract(abi);
-ERC20INTR.options.address = CONTRACT;
+const abi = JSON.parse(fs.readFileSync('claimmethod_ERC20ILOCK_sol_ERC20ILOCK.abi').toString());
+const ERC20ILOCK = new web3.eth.Contract(abi);
+ERC20ILOCK.options.address = CONTRACT;
 
 
 async function validate() {
@@ -87,7 +87,7 @@ async function validate() {
 
 		console.log(validation);
 
-		await ERC20INTR
+		await ERC20ILOCK
 			.methods.setValidationKey('0x' + str)
 			.send({
 				from: WALLET,
@@ -98,7 +98,7 @@ async function validate() {
 		//signature = signature['r'].concat(signature['s'], signature['v']);
 		console.log(signature.r);
 
-		await ERC20INTR
+		await ERC20ILOCK
 			.methods.validate(validation, signature.v, signature.r, signature.s)
 			.send({
 				from: WALLET,
@@ -108,7 +108,7 @@ async function validate() {
 
 		console.log('chirp');
 /*
-		let Validate = await ERC20INTR.methods.validate(validation, signature).encodeABI();
+		let Validate = await ERC20ILOCK.methods.validate(validation, signature).encodeABI();
 		var ValidateTX = {
 			to: CONTRACT,
 			from: ADDRESS,

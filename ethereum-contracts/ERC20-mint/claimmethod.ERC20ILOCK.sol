@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 INTR Token Mint Platform
+// Interlock ERC-20 ILOCK Token Mint Platform
 //
 // Contributors:
 // blairmunroakusa
@@ -23,7 +23,7 @@ import "./POOL.sol";
  * Nonstandard lifetime allowances and total token transfers implemented
  * to protect against multiple withdrawal attacks.
 
-contract ERC20INTR is IERC20 {
+contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 	/**
@@ -102,7 +102,7 @@ contract ERC20INTR is IERC20 {
 
 		// basic token data
 	string private _name = "Interlock Network";
-	string private _symbol = "INTR";
+	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
 
@@ -390,7 +390,7 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 
-		// gets token symbol (INTR)
+		// gets token symbol (ILOCK)
 	function symbol(
 	) public view override returns (string memory) {
 		return _symbol;

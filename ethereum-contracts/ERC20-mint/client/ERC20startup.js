@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 INTR Token Mint Platform
+// Interlock ERC-20 ILOCK Token Mint Platform
 // 	   testing startup script
 //
 // Contributors:
@@ -26,8 +26,8 @@ const constructor	= [
 				members ];
 
 
-const bytecode = fs.readFileSync('claimmethod_ERC20INTR_sol_ERC20INTR.bin').toString();
-const abi = JSON.parse(fs.readFileSync('claimmethod_ERC20INTR_sol_ERC20INTR.abi').toString());
+const bytecode = fs.readFileSync('claimmethod_ERC20ILOCK_sol_ERC20ILOCK.bin').toString();
+const abi = JSON.parse(fs.readFileSync('claimmethod_ERC20ILOCK_sol_ERC20ILOCK.abi').toString());
 
 
 
@@ -35,15 +35,15 @@ async function startup() {
 
 	try {
 
-		ERC20INTR = new web3.eth.Contract(abi);
-		await ERC20INTR
+		ERC20ILOCK = new web3.eth.Contract(abi);
+		await ERC20ILOCK
 			.deploy({data: bytecode, arguments: constructor})
 			.send({
 				from: from,
 				gas: 5000000,
 				gasPrice:web3.utils.toWei(gasprice, 'ether')})
 			.then((newContractInstance) =>
-				{ERC20INTR.options.address = newContractInstance.options.address});
+				{ERC20ILOCK.options.address = newContractInstance.options.address});
 
 	} catch(error) {
 		console.log('Error: ' + error);

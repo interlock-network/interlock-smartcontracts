@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 INTR Token Mint Platform
+// Interlock ERC-20 ILOCK Token Mint Platform
 // 		(containing)
 // excerpts from OpenZeppelin v4.6.0 contract (token/ERC20/IERC20.sol)
 //
@@ -39,7 +39,7 @@ interface IERC20 {
 	function name() external view returns (string memory);
 
 
-		// gets token symbol (INTR)
+		// gets token symbol (ILOCK)
     	function symbol() external view returns (string memory);
 
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 INTR Token Mint Platform
+// Interlock ERC-20 ILOCK Token Mint Platform
 // 		(containing)
 // components from OpenZeppelin v4.6.0 contract (token/ERC20/ERC20.sol)
 //
@@ -29,7 +29,7 @@ import "./utils/ECDSA.sol";
  * allowances.
  **/
 
-contract ERC20INTR is IERC20 {
+contract ERC20ILOCK is IERC20 {
 
 	/** @dev **/
 
@@ -110,7 +110,7 @@ contract ERC20INTR is IERC20 {
 
 		// basic token data
 	string private _name = "Interlock Network";
-	string private _symbol = "INTR";
+	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
 	// decimals = 18 by default
@@ -392,7 +392,7 @@ contract ERC20INTR is IERC20 {
 
 /*************************************************/
 
-		// gets token symbol (INTR)
+		// gets token symbol (ILOCK)
 	function symbol(
 	) public view override returns (string memory) {
 		return _symbol; }
