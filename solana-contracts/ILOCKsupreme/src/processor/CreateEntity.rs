@@ -70,6 +70,11 @@ impl Processor {
         // get ACCOUNT data
         let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
 
+        // check that owner is *actually* owner
+        if ACCOUNTinfo.owner != *owner.key {
+            return Err(OwnerImposterError.into());
+        }
+
         let ACCOUNTflags = unpack_16_flags(ACCOUNTinfo);
 
         // calculate rent if we want to create new account
@@ -168,6 +173,9 @@ impl Processor {
         STAKEinfo.identifier = *hash.key;
         STAKEinfo.amount = amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+
+        // credit account for stake amount
+        ACCOUNTinfo.balance -= amount;
 
         ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
 

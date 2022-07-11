@@ -56,13 +56,22 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let rent = next_account_info(account_info_iter)?;
+        let pdaACCOUNT = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
+        let rent = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
+        }
+
+        // get user account info
+        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+
+        // check that owner is *actually* owner
+        if ACCOUNTinfo.owner != *owner.key {
+            return Err(OwnerImposterError.into());
         }
 
         // calculate rent if we want to create new account
@@ -84,7 +93,7 @@ impl Processor {
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
-        msg!("Successfully created pdaSTAKE");
+        msg!("Successfully created pdaSTAKE account");
 // need to determine if create_account reverts if account already exists
         
         // get unititialized GLOBAL data
@@ -105,6 +114,10 @@ impl Processor {
         STAKEinfo.identifier = *hash.key;
         STAKEinfo.amount = amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+
+        // credit ACCOUNT
+        ACCOUNTinfo.balance -= amount;
+        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
 
         Ok(())
     }
