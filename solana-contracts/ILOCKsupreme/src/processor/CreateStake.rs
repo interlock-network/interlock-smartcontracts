@@ -59,7 +59,6 @@ impl Processor {
         let pdaACCOUNT = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
-        let hash = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -78,17 +77,20 @@ impl Processor {
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());
 
+        // get user account info
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
         // create pdaGLOBAL
         invoke_signed(
         &system_instruction::create_account(
-            &owner.key,
+            &GLOBALinfo.owner.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            owner.clone(),
+            GLOBALinfo.owner.clone(),
             pdaSTAKE.clone()
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
