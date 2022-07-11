@@ -33,12 +33,7 @@ use crate::{
         },
     };
 
-// for this instruction, the expected accounts are
-//
-// 0, owner pubkey, is signer
-// 1, GLOBAL pda
-// 2, system rent account
-// 3, register ACCOUNT pda
+// for this instruction, the expected accounts are:
 
 impl Processor {
 
@@ -52,8 +47,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaSTAKE = next_account_info(account_info_iter)?;
-        let hash = next_account_info(account_info_iter)?;
+        let pdaENTITY = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -62,27 +56,30 @@ impl Processor {
 
         // get GLOBAL data
         let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-        // unpack flags here
-        // unpack values here, get yield % and reward % and slash %
-        
+
+        // check that owner is *actually* GLOBAL owner
+        // only Interlock Network owner can settle entity
+        if GLOBALinfo.owner != *owner.key {
+            return Err(OwnerImposterError.into());
+        }
 
         // get STAKE  data
-        let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
+        let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
         
         // unpack flags here 
-        let mut flags = unpack_16_flags(STAKEinfo.flags);
+        let mut flags = unpack_16_flags(ENTITYinfo.flags);
 
         // entity is officially determined as of this ix running
-        flags[3] = true;
+        flags[6] = true;
 
         // entity is of determination provided by caller
-        flags[4] = determination as bool;
+        flags[9] = determination as bool;
 
         // repack new flag states
-        STAKEinfo.flags = pack_16_flags(flags);
+        ENTITYinfo.flags = pack_16_flags(flags);
 
         // store flag state
-        STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+        ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
 
         Ok(())
     }

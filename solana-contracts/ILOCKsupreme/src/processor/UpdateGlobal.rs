@@ -24,11 +24,7 @@ use crate::{
         },
     };
 
-// for this instruction, the expected accounts are
-//
-// 0, owner pubkey, is signer
-// 1, GLOBAL pda
-// 2, owner pubkey, or newowner if changing ownership
+// for this instruction, the expected accounts are:
 
 impl Processor {
 
