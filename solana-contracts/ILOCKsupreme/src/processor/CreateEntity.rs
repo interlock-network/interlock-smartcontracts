@@ -81,17 +81,20 @@ impl Processor {
         let rentENTITY = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_ENTITY.into());
 
+        // get GLOBAL data
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
         // create pdaENTITY
         invoke_signed(
         &system_instruction::create_account(
-            &owner.key,
+            &GLOBALinfo.owner.key,
             &pdaENTITY.key,
             rentSTAKE,
             SIZE_ENTITY.into(),
             &program_id
         ),
         &[
-            owner.clone(),
+            GLOBALinfo.owner.clone(),
             pdaENTITY.clone()
         ],
         &[&[&seedENTITY, &[bumpENTITY]]]
@@ -99,12 +102,8 @@ impl Processor {
         msg!("Successfully created pdaENTITY");
 // need to determine if create_account reverts if account already exists
 
-
         // get unititialized ENTITY data
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
-
-        // get GLOBAL data
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // if entity creator is a bounty hunter, declare them the owner
         // if entity created just from regulare security staker, entity is owned by global
@@ -140,14 +139,14 @@ impl Processor {
         // create pdaSTAKE
         invoke_signed(
         &system_instruction::create_account(
-            &program_id
-            &owner.key,
+            &GLOBALinfo.owner.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
+            &program_id
         ),
         &[
-            owner.clone(),
+            GLOBALinfo.owner.clone(),
             pdaSTAKE.clone()
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
@@ -178,7 +177,6 @@ impl Processor {
         ACCOUNTinfo.balance -= amount;
 
         ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
-
 
         Ok(())
     }
