@@ -27,7 +27,7 @@ f0 = 0 = account type, bit 2	account type = 001
 f1 = 0 = account type, bit 1
 f2 = 1 = account type, bit 0
 f3 = stake valence, bool, high = good, low = bad
-f4 = 
+f4 = stake resolved status, bool
 f5 = 
 f6 = 
 f7 = 

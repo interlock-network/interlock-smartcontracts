@@ -67,8 +67,11 @@ impl Processor {
         // get ACCOUNT info
         let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
 
+        // get GLOBAL data
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
         // check that owner is *actually* owner
-        if ACCOUNTinfo.owner != *owner.key {
+        if ACCOUNTinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
         
@@ -76,15 +79,19 @@ impl Processor {
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
         let mut endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
 
-        // return tokens to ACCOUNT
-        ACCOUNTinfo.balance += STAKEinfo.amount;
-        
+        // rearrange stake accounts to make index sequential
         STAKEinfo.identifier = endSTAKEinfo.identifier;
         STAKEinfo.amount = endSTAKEinfo.amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
-        // close last account in index
-        **pdaSTAKEend.try_borrow_mut_lamports()? -= rentSTAKE;
+        let pdaGLOBALlamp = pdaGLOBAL.lamports();
+        **pdaGLOBAL.lamports.borrow_mut() = pdaGLOBALlamp
+            .checked_add(pdaSTAKEend.lamports())
+            .unwrap();
+        **pdaSTAKEend.lamports.borrow_mut() = 0;
+
+        let mut pdaSTAKEdata = pdaSTAKEend.data.borrow_mut();
+        pdaSTAKEdata.fill(0);
 
         Ok(())
     }
