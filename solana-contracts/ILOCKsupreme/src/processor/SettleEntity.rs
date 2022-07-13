@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
         },
     };
 
@@ -47,7 +47,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer

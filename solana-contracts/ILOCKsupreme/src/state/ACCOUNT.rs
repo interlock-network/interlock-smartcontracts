@@ -17,7 +17,7 @@ use arrayref::{
     };
 use crate::utils::utils::*;
 
-pub struct ACCOUNT {
+pub struct USER {
     pub flags: u16,
     pub count: u16,
     pub success: u16,
@@ -28,12 +28,12 @@ pub struct ACCOUNT {
     pub rewards: u128,
 }
 
-impl Sealed for ACCOUNT {}
+impl Sealed for USER {}
 
-impl Pack for ACCOUNT {
-    const LEN: usize = SIZE_ACCOUNT as usize;
+impl Pack for USER {
+    const LEN: usize = SIZE_USER as usize;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        let src = array_ref![src, 0, ACCOUNT::LEN];
+        let src = array_ref![src, 0, USER::LEN];
         let (
             flags,
             count,
@@ -45,7 +45,7 @@ impl Pack for ACCOUNT {
             rewards,
         ) = array_refs![src, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN, U128_LEN];
 
-        Ok( ACCOUNT {
+        Ok( USER {
             flags: u16::from_le_bytes(*flags),
             count: u16::from_be_bytes(*count),
             success: u16::from_be_bytes(*success),
@@ -58,7 +58,7 @@ impl Pack for ACCOUNT {
     }
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let dst = array_mut_ref![dst, 0, ACCOUNT::LEN];
+        let dst = array_mut_ref![dst, 0, USER::LEN];
         let (
             flags_dst,
             count_dst,
@@ -70,7 +70,7 @@ impl Pack for ACCOUNT {
             rewards_dst,
         ) = mut_array_refs![dst, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN, U128_LEN];
 
-        let ACCOUNT {
+        let USER {
             flags,
             count,
             success,

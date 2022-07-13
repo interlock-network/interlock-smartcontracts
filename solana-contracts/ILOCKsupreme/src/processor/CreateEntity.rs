@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
             STAKE::*,
         },
     };
@@ -51,7 +51,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?; // delete.. baked into PDA. [?]
@@ -62,15 +62,15 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // get ACCOUNT data
-        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+        // get USER data
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
-        if ACCOUNTinfo.owner != *owner.key {
+        if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
 
-        let ACCOUNTflags = unpack_16_flags(ACCOUNTinfo.flags);
+        let USERflags = unpack_16_flags(USERinfo.flags);
 
         // calculate rent if we want to create new account
         let rentENTITY = Rent::from_account_info(rent)?
@@ -102,8 +102,8 @@ impl Processor {
 
         // if entity creator is a bounty hunter, declare them the owner
         // if entity created just from regulare security staker, entity is owned by global
-        if ACCOUNTflags[3] == true && ACCOUNTinfo.owner == *owner.key {
-            ENTITYinfo.hunter = ACCOUNTinfo.owner;
+        if USERflags[3] == true && USERinfo.owner == *owner.key {
+            ENTITYinfo.hunter = USERinfo.owner;
         } else {
             ENTITYinfo.hunter = GLOBALinfo.owner;
         }
@@ -169,9 +169,9 @@ impl Processor {
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         // credit account for stake amount
-        ACCOUNTinfo.balance -= amount;
+        USERinfo.balance -= amount;
 
-        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
+        USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
     }

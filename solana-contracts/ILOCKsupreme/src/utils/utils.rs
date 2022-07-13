@@ -27,7 +27,7 @@ pub const U128_LEN: usize = 16;
 pub const VALUES_LEN: usize = VALUES * U32_LEN;
 pub const SIZE_GLOBAL: u16 = (2*U16_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
     // 292
-pub const SIZE_ACCOUNT: u16 = (4*U16_LEN + PUBKEY_LEN + 2*U128_LEN) as u16;
+pub const SIZE_USER: u16 = (4*U16_LEN + PUBKEY_LEN + 2*U128_LEN) as u16;
     // 72
 pub const SIZE_STAKE: u16 = (U16_LEN + U64_LEN + PUBKEY_LEN + U128_LEN) as u16;
     // 58

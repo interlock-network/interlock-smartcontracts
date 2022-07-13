@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
         },
     };
 
@@ -40,15 +40,15 @@ impl Processor {
     pub fn process_create_account(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bumpACCOUNT: u8,
-        seedACCOUNT: Vec<u8>,
+        bumpUSER: u8,
+        seedUSER: Vec<u8>,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
@@ -57,37 +57,37 @@ impl Processor {
         }
 
         // calculate rent if we want to create new account
-        let rentACCOUNT = Rent::from_account_info(rent)?
-            .minimum_balance(SIZE_ACCOUNT.into());
+        let rentUSER = Rent::from_account_info(rent)?
+            .minimum_balance(SIZE_USER.into());
 
         // get GLOBAL data
         let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
-        // create pdaACCOUNT
+        // create pdaUSER
         invoke_signed(
         &system_instruction::create_account(
             &GLOBALinfo.owner.key,
-            &pdaACCOUNT.key,
-            rentACCOUNT,
-            SIZE_ACCOUNT.into(),
+            &pdaUSER.key,
+            rentUSER,
+            SIZE_USER.into(),
             &program_id
         ),
         &[
             GLOBALinfo.owner.clone(),
-            pdaACCOUNT.clone()
+            pdaUSER.clone()
         ],
-        &[&[&seedACCOUNT, &[bumpACCOUNT]]]
+        &[&[&seedUSER, &[bumpUSER]]]
         )?;
-        msg!("Successfully created pdaACCOUNT");
+        msg!("Successfully created pdaUSER");
 // need to determine if create_account reverts if account already exists
         
-        // get unititialized ACCOUNT data
-        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+        // get unititialized USER data
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
         
         // init flags
         let flags = BitVec::from_elem(16, false);
 
-            // account type is ACCOUNT = 000
+            // account type is USER = 000
             // flags[0] = false;
             // flags[1] = false;
             // flags[2] = false;
@@ -96,11 +96,11 @@ impl Processor {
             // is connected to Ethereum? init false
             // flags[4] = false;
 
-        // populate and pack ACCOUNT info
-        ACCOUNTinfo.flags = pack_16_flags(flags);
-        ACCOUNTinfo.owner = *owner.key;
-        ACCOUNTinfo.balance = 0;
-        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
+        // populate and pack USER info
+        USERinfo.flags = pack_16_flags(flags);
+        USERinfo.owner = *owner.key;
+        USERinfo.balance = 0;
+        USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
     }

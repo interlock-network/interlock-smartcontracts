@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
         },
     };
 
@@ -38,7 +38,7 @@ use crate::{
 // 0, owner pubkey, is signer
 // 1, GLOBAL pda
 // 2, system rent account
-// 3, register ACCOUNT pda
+// 3, register USER pda
 
 impl Processor {
 
@@ -56,7 +56,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -64,10 +64,10 @@ impl Processor {
         }
 
         // get GLOBAL account info
-        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
-        if ACCOUNTinfo.owner != *owner.key {
+        if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
 
@@ -77,11 +77,11 @@ impl Processor {
         // SOMEHOW GET THE AMOUNT BACK TO THIS PROGRAM IX
         // ( NOT SURE HOW TO DO THIS )
 
-        // HERE, UPDATE ACCOUNT BALANCE AND LET SPL TOKEN JUST SIT THERE 
+        // HERE, UPDATE USER BALANCE AND LET SPL TOKEN JUST SIT THERE 
         //
 
-        ACCOUNTinfo.balance = 0;
-        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
+        USERinfo.balance = 0;
+        USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
     }

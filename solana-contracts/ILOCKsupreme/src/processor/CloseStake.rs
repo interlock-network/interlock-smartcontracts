@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
         },
     };
 
@@ -46,7 +46,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let pdaSTAKEend = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
@@ -62,11 +62,11 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // get ACCOUNT info
-        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+        // get USER info
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
-        // unpack ACCOUNT flags
-        let ACCOUNTflags = unpack_16_flags(ACCOUNTinfo.flags);
+        // unpack USER flags
+        let USERflags = unpack_16_flags(USERinfo.flags);
 
         // get ENTITY info
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
@@ -79,7 +79,7 @@ impl Processor {
         let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
-        if ACCOUNTinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
+        if USERinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
         
@@ -100,10 +100,10 @@ impl Processor {
             let reward = GLOBALinfo.values[0] * GLOBALinfo.values[1];
                 // values[0] is entity total stake threshold
                 // values[1] is bounty hunter reward threshold percentage
-            ACCOUNTinfo.rewards += reward;
-            ACCOUNTinfo.balance += reward;
+            USERinfo.rewards += reward;
+            USERinfo.balance += reward;
             GLOBALinfo.rewards -= reward;
-            ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
+            USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
             GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
         }
 

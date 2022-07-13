@@ -29,7 +29,7 @@ use crate::{
         utils::utils::*,
         state::{
             GLOBAL::*,
-            ACCOUNT::*,
+            USER::*,
             STAKE::*,
         },
     };
@@ -51,7 +51,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaACCOUNT = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
 
@@ -61,10 +61,10 @@ impl Processor {
         }
 
         // get user account info
-        let mut ACCOUNTinfo = ACCOUNT::unpack_unchecked(&pdaACCOUNT.try_borrow_data()?)?;
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
-        if ACCOUNTinfo.owner != *owner.key {
+        if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
 
@@ -112,9 +112,9 @@ impl Processor {
         STAKEinfo.amount = amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
-        // credit ACCOUNT
-        ACCOUNTinfo.balance -= amount;
-        ACCOUNT::pack(ACCOUNTinfo, &mut pdaACCOUNT.try_borrow_mut_data()?)?;
+        // credit USER
+        USERinfo.balance -= amount;
+        USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
     }
