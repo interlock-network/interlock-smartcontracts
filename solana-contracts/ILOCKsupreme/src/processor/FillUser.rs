@@ -9,26 +9,15 @@ use solana_program::{
             AccountInfo
         },
         entrypoint::ProgramResult,
-        program::invoke_signed,
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
-        sysvar::{
-            rent::Rent,
-            Sysvar,
-        },
-        msg,
-        system_instruction,
     };
-
-use bit_vec::BitVec;
 
 use crate::{
         error::error::ContractError::*,
         processor::run::Processor,
-        utils::utils::*,
         state::{
-            GLOBAL::*,
             USER::*,
         },
     };
@@ -43,7 +32,7 @@ use crate::{
 impl Processor {
 
     pub fn process_fill_account(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
 
@@ -55,7 +44,6 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer

@@ -52,16 +52,16 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CreateAccount  {
-                bumpACCOUNT,
-                seedACCOUNT,
+            ContractInstruction::CreateUser  {
+                bumpUSER,
+                seedUSER,
             } => {
                 msg!("Instruction: CreateAccount");
                 Self::process_create_account(
                     program_id,
                     accounts,
-                    bumpACCOUNT,
-                    seedACCOUNT,
+                    bumpUSER,
+                    seedUSER,
                 )
             },
 
@@ -78,6 +78,7 @@ impl Processor {
                 bumpSTAKE,
                 seedSTAKE,
                 amount,
+                valence,
             } => {
                 msg!("Instruction: CreateStake");
                 Self::process_create_stake(
@@ -86,6 +87,7 @@ impl Processor {
                     bumpSTAKE,
                     seedSTAKE,
                     amount,
+                    valence,
                 )
             },
 
@@ -106,6 +108,27 @@ impl Processor {
                 Self::process_close_stake(
                     program_id,
                     accounts,
+                )
+            },
+
+            ContractInstruction::CreateEntity  {
+                bumpSTAKE,
+                seedSTAKE,
+                bumpENTITY,
+                seedENTITY,
+                amount,
+                valence,
+            } => {
+                msg!("Instruction: CreateEntity");
+                Self::process_create_entity(
+                    program_id,
+                    accounts,
+                    bumpSTAKE,
+                    seedSTAKE,
+                    bumpENTITY,
+                    seedENTITY,
+                    amount,
+                    valence,
                 )
             },
         }

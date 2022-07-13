@@ -20,10 +20,10 @@ pub enum ContractInstruction {
         values: [u32; VALUES],
     },
     
-    CreateAccount {
+    CreateUser {
 
-        bumpACCOUNT: u8,
-        seedACCOUNT: Vec<u8>,
+        bumpUSER: u8,
+        seedUSER: Vec<u8>,
     },
 
     FillAccount {
@@ -34,7 +34,8 @@ pub enum ContractInstruction {
 
         bumpSTAKE: u8,
         seedSTAKE: Vec<u8>,
-        amount: u64,
+        amount: u128,
+        valence: u8,
     },
 
     SettleEntity {
@@ -44,6 +45,16 @@ pub enum ContractInstruction {
     
     CloseStake {
 
+    },
+
+    CreateEntity {
+
+        bumpSTAKE: u8,
+        seedSTAKE: Vec<u8>,
+        bumpENTITY: u8,
+        seedENTITY: Vec<u8>,
+        amount: u128,
+        valence: u8,
     },
 }
 

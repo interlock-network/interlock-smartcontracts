@@ -436,6 +436,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ilocksupreme"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "bit-vec",
+ "solana-program",
+ "thiserror",
+]
+
+[[package]]
 name = "im"
 version = "15.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -963,16 +973,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
-]
-
-[[package]]
-name = "template"
-version = "0.1.0"
-dependencies = [
- "arrayref",
- "bit-vec",
- "solana-program",
- "thiserror",
 ]
 
 [[package]]

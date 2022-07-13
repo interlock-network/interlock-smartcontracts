@@ -5,8 +5,8 @@
 pub mod run;
 pub mod ProgramInit;
 pub mod UpdateGlobal;
-pub mod CreateAccount;
-pub mod FillAccount;
+pub mod CreateUser;
+pub mod FillUser;
 pub mod CreateStake;
 pub mod CreateEntity;
 pub mod SettleEntity;

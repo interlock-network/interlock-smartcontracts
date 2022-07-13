@@ -80,12 +80,12 @@ impl Processor {
         let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
         
         // init flags
-        let flags = BitVec::from_elem(32, false);
+        let mut flags = BitVec::from_elem(32, false);
 
             // account type is GLOBAL == 011
             // flags[0] = false;
-            flags[1] = true;
-            flags[2] = true;
+            flags.set(1, true);
+            flags.set(2, true);
 
 
         // populate and pack GLOBAL account info

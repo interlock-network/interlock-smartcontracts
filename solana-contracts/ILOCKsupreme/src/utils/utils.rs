@@ -18,14 +18,14 @@ use crate::error::error::ContractError::InvalidInstruction;
 
 pub const VALUES: usize = 64;
 pub const PUBKEY_LEN: usize = 32;
-pub const U16: usize = 2;
+pub const U16_LEN: usize = 2;
 
 pub const U32_LEN: usize = 4;
 pub const U64_LEN: usize = 8;
 
 pub const U128_LEN: usize = 16;
 pub const VALUES_LEN: usize = VALUES * U32_LEN;
-pub const SIZE_GLOBAL: u16 = (2*U16_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
+pub const SIZE_GLOBAL: u16 = (U128_LEN + 2*U16_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
     // 292
 pub const SIZE_USER: u16 = (4*U16_LEN + 2*PUBKEY_LEN + 2*U128_LEN) as u16;
     // 104

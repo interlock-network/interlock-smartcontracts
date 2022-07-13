@@ -46,13 +46,13 @@ impl Pack for GLOBAL {
         ) = array_refs![src, U128_LEN, 2*U16_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let mut valuesNumbers: [u32; VALUES] = [0; VALUES];
-        let valuesBytes = &src[(U128_LEN + 2*FLAGS_LEN + PUBKEY_LEN)..]; 
+        let valuesBytes = &src[(U128_LEN + 2*U16_LEN + PUBKEY_LEN)..]; 
         let mut i = 0;
         let mut j = 0;
         for _ in valuesNumbers {
-            valuesNumbers[i] = u32::from_le_bytes(array_4u8(&valuesBytes[j..(j + VALUE_LEN)]));
+            valuesNumbers[i] = u32::from_le_bytes(array_4u8(&valuesBytes[j..(j + U32_LEN)]));
             i += 1;
-            j += 4;
+            j += U32_LEN;
         }
 
         Ok( GLOBAL {
@@ -75,7 +75,7 @@ impl Pack for GLOBAL {
         ) = mut_array_refs![dst, U128_LEN, 2*U16_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let GLOBAL {
-            rewards
+            rewards,
             flags,
             owner,
             values,

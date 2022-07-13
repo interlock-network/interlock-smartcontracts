@@ -27,10 +27,12 @@ use crate::{
         //error::error::ContractError::GlobalAlreadyExistsError,
         processor::run::Processor,
         utils::utils::*,
+        error::error::ContractError::*,
         state::{
             GLOBAL::*,
             USER::*,
             STAKE::*,
+            ENTITY::*,
         },
     };
 
@@ -43,6 +45,8 @@ impl Processor {
         accounts: &[AccountInfo],
         bumpSTAKE: u8,
         seedSTAKE: Vec<u8>,
+        bumpENTITY: u8,
+        seedENTITY: Vec<u8>,
         amount: u128,
         valence: u8,
     ) -> ProgramResult {
@@ -50,6 +54,7 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
+        let ownerGLOBAL = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
@@ -77,20 +82,20 @@ impl Processor {
             .minimum_balance(SIZE_ENTITY.into());
 
         // get GLOBAL data
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // create pdaENTITY
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBALinfo.owner.key,
+            &ownerGLOBAL.key,
             &pdaENTITY.key,
-            rentSTAKE,
+            rentENTITY,
             SIZE_ENTITY.into(),
-            &program_id
+            &program_id,
         ),
         &[
-            GLOBALinfo.owner.clone(),
-            pdaENTITY.clone()
+            ownerGLOBAL.clone(),
+            pdaENTITY.clone(),
         ],
         &[&[&seedENTITY, &[bumpENTITY]]]
         )?;
@@ -109,11 +114,11 @@ impl Processor {
         }
 
         // init flags
-        let ENTITYflags = BitVec::from_elem(16, false);
+        let mut ENTITYflags = BitVec::from_elem(16, false);
 
             // account type is ENTITY == 010
             // ENTITYflags[0] = false;
-            ENTITYflags[1] = true;
+            ENTITYflags.set(1, true);
             // ENTITYflags[2] = false;
             
             // stake total minimum threshold triggered
@@ -131,18 +136,23 @@ impl Processor {
             // entity determination
             // ENTITYflags[9] = false;
 
+        // calculate rent if we want to create new account
+        let rentSTAKE = Rent::from_account_info(rent)?
+            .minimum_balance(SIZE_STAKE.into());
+
+
         // create pdaSTAKE
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBALinfo.owner.key,
+            &ownerGLOBAL.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            GLOBALinfo.owner.clone(),
-            pdaSTAKE.clone()
+            ownerGLOBAL.clone(),
+            pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
@@ -152,19 +162,27 @@ impl Processor {
         // get unititialized GLOBAL data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
         
+        // convert serialized valence from u8 into boolean
+        let valence_bool: bool;
+        if valence == 0 {
+            valence_bool = false;
+        } else {
+            valence_bool = true;
+        }
+
         // init flags
-        let flags = BitVec::from_elem(16, false);
+        let mut flags = BitVec::from_elem(16, false);
     
             // account type is STAKE == 001
             // flags[0] = false;
             // flags[1] = false;
-            flags[2] = true;
+            flags.set(2, true);
             // stake valence
-            flags[3] = valence as bool;
+            flags.set(3, valence_bool);
 
         // populate and pack GLOBAL account info
         STAKEinfo.flags = pack_16_flags(flags);
-        STAKEinfo.identifier = *hash.key;
+        STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 

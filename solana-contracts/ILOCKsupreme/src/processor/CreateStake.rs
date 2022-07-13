@@ -24,11 +24,10 @@ use solana_program::{
 use bit_vec::BitVec;
 
 use crate::{
-        //error::error::ContractError::GlobalAlreadyExistsError,
         processor::run::Processor,
         utils::utils::*,
+        error::error::ContractError::*,
         state::{
-            GLOBAL::*,
             USER::*,
             STAKE::*,
         },
@@ -50,10 +49,11 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let pdaGLOBAL = next_account_info(account_info_iter)?;
+        let ownerGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
+        let hash = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -72,21 +72,18 @@ impl Processor {
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());
 
-        // get user account info
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-
         // create pdaGLOBAL
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBALinfo.owner.key,
+            &ownerGLOBAL.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            GLOBALinfo.owner.clone(),
-            pdaSTAKE.clone()
+            ownerGLOBAL.clone(),
+            pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
@@ -96,19 +93,27 @@ impl Processor {
         // get unititialized GLOBAL data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
         
+        // convert serialized valence from u8 into boolean
+        let valence_bool: bool;
+        if valence == 0 {
+            valence_bool = false;
+        } else {
+            valence_bool = true;
+        }
+
         // init flags
-        let flags = BitVec::from_elem(16, false);
+        let mut flags = BitVec::from_elem(16, false);
         
             // account type is STAKE == 001
             // flags[0] = false;
             // flags[1] = false;
-            flags[2] = true;
+            flags.set(2, true);
             // stake valence
-            flags[3] = valence as bool;
+            flags.set(3, valence_bool);
 
         // populate and pack GLOBAL account info
         STAKEinfo.flags = pack_16_flags(flags);
-        STAKEinfo.identifier = *hash.key;
+        STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 

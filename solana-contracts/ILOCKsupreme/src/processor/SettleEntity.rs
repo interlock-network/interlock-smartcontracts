@@ -9,27 +9,18 @@ use solana_program::{
             AccountInfo
         },
         entrypoint::ProgramResult,
-        program::invoke_signed,
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
-        sysvar::{
-            rent::Rent,
-            Sysvar,
-        },
-        msg,
-        system_instruction,
     };
 
-use bit_vec::BitVec;
-
 use crate::{
-        //error::error::ContractError::GlobalAlreadyExistsError,
+        error::error::ContractError::*,
         processor::run::Processor,
         utils::utils::*,
         state::{
             GLOBAL::*,
-            USER::*,
+            ENTITY::*,
         },
     };
 
@@ -38,7 +29,7 @@ use crate::{
 impl Processor {
 
     pub fn process_settle_entity(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
         determination: u8,
     ) -> ProgramResult {
@@ -47,7 +38,6 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
-        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
@@ -56,7 +46,7 @@ impl Processor {
         }
 
         // get GLOBAL data
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // check that owner is *actually* GLOBAL owner
         // only Interlock Network owner can settle entity
@@ -71,10 +61,18 @@ impl Processor {
         let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
 
         // entity is officially determined as of this ix running
-        ENTITYflags[6] = true;
+        ENTITYflags.set(6, true);
+
+        // convert serialized determination from u8 into boolean
+        let determination_bool: bool;
+        if determination == 0 {
+            determination_bool = false;
+        } else {
+            determination_bool = true;
+        }
 
         // entity is of determination provided by caller
-        ENTITYflags[9] = determination as bool;
+        ENTITYflags.set(9, determination_bool);
 
         // repack new flag states
         ENTITYinfo.flags = pack_16_flags(ENTITYflags);

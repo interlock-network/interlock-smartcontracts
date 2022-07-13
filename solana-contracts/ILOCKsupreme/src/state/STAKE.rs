@@ -49,8 +49,8 @@ impl Pack for STAKE {
         let dst = array_mut_ref![dst, 0, STAKE::LEN];
         let (
             flags_dst,
-            time_dst
-            identifier_dst,
+            time_dst,
+            entity_dst,
             amount_dst,
         ) = mut_array_refs![dst, U16_LEN, U64_LEN, PUBKEY_LEN, U128_LEN];
 

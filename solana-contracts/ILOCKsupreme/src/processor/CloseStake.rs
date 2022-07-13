@@ -9,26 +9,19 @@ use solana_program::{
             AccountInfo
         },
         entrypoint::ProgramResult,
-        program::invoke_signed,
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
-        sysvar::{
-            rent::Rent,
-            Sysvar,
-        },
-        msg,
-        system_instruction,
     };
 
-use bit_vec::BitVec;
-
 use crate::{
-        //error::error::ContractError::GlobalAlreadyExistsError,
+        error::error::ContractError::*,
         processor::run::Processor,
         utils::utils::*,
         state::{
             GLOBAL::*,
+            STAKE::*,
+            ENTITY::*,
             USER::*,
         },
     };
@@ -38,7 +31,7 @@ use crate::{
 impl Processor {
 
     pub fn process_close_stake(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
 
@@ -50,12 +43,6 @@ impl Processor {
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let pdaSTAKEend = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
-        let hash = next_account_info(account_info_iter)?;
-        let rent = next_account_info(account_info_iter)?;
-
-        // calculate rent if we want to create new account
-        let rentSTAKE = Rent::from_account_info(rent)?
-            .minimum_balance(SIZE_STAKE.into());
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -65,11 +52,8 @@ impl Processor {
         // get USER info
         let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
-        // unpack USER flags
-        let USERflags = unpack_16_flags(USERinfo.flags);
-
         // get ENTITY info
-        let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
+        let ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
 
         // unpack ENTITY flags
         let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
@@ -89,7 +73,7 @@ impl Processor {
         // unpack STAKE flags
         let STAKEflags = unpack_16_flags(STAKEinfo.flags);
         
-        let mut endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
+        let endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
 
         // check if STAKE is also bounty hunter claim
         if ENTITYinfo.hunter != GLOBALinfo.owner &&     // entity is claimed by bounty hunter 
@@ -100,15 +84,15 @@ impl Processor {
             let reward = GLOBALinfo.values[0] * GLOBALinfo.values[1];
                 // values[0] is entity total stake threshold
                 // values[1] is bounty hunter reward threshold percentage
-            USERinfo.rewards += reward;
-            USERinfo.balance += reward;
-            GLOBALinfo.rewards -= reward;
+            USERinfo.rewards += reward as u128;
+            USERinfo.balance += reward as u128;
+            GLOBALinfo.rewards -= reward as u128;
             USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
             GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
         }
 
         // rearrange stake accounts to make index sequential
-        STAKEinfo.identifier = endSTAKEinfo.identifier;
+        STAKEinfo.entity = endSTAKEinfo.entity;
         STAKEinfo.amount = endSTAKEinfo.amount;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 

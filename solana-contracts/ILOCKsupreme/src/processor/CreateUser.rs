@@ -28,7 +28,6 @@ use crate::{
         processor::run::Processor,
         utils::utils::*,
         state::{
-            GLOBAL::*,
             USER::*,
         },
     };
@@ -47,7 +46,7 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let pdaGLOBAL = next_account_info(account_info_iter)?;
+        let ownerGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
 
@@ -60,21 +59,18 @@ impl Processor {
         let rentUSER = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_USER.into());
 
-        // get GLOBAL data
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-
         // create pdaUSER
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBALinfo.owner.key,
+            &ownerGLOBAL.key,
             &pdaUSER.key,
             rentUSER,
             SIZE_USER.into(),
-            &program_id
+            &program_id,
         ),
         &[
-            GLOBALinfo.owner.clone(),
-            pdaUSER.clone()
+            ownerGLOBAL.clone(),
+            pdaUSER.clone(),
         ],
         &[&[&seedUSER, &[bumpUSER]]]
         )?;
