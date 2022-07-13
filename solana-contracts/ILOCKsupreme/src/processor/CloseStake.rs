@@ -40,9 +40,6 @@ impl Processor {
     pub fn process_close_stake(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bumpSTAKE: u8,
-        seedSTAKE: Vec<u8>,
-        amount: u64,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so

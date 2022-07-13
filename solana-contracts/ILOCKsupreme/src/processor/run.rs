@@ -99,6 +99,15 @@ impl Processor {
                     determination,
                 )
             },
+
+            ContractInstruction::CloseStake  {
+            } => {
+                msg!("Instruction: CloseStake");
+                Self::process_close_stake(
+                    program_id,
+                    accounts,
+                )
+            },
         }
     }
 }

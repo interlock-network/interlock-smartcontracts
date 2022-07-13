@@ -25,6 +25,7 @@ pub struct ACCOUNT {
     pub owner: Pubkey,
     pub vault: Pubkey,
     pub balance: u128,
+    pub rewards: u128,
 }
 
 impl Sealed for ACCOUNT {}
@@ -41,7 +42,8 @@ impl Pack for ACCOUNT {
             owner,
             vault,
             balance,
-        ) = array_refs![src, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN];
+            rewards,
+        ) = array_refs![src, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN, U128_LEN];
 
         Ok( ACCOUNT {
             flags: u16::from_le_bytes(*flags),
@@ -51,6 +53,7 @@ impl Pack for ACCOUNT {
             owner: Pubkey::new_from_array(*owner),
             vault: Pubkey::new_from_array(*vault),
             balance: u128::from_be_bytes(*balance),
+            rewards: u128::from_be_bytes(*rewards),
         })
     }
 
@@ -64,7 +67,8 @@ impl Pack for ACCOUNT {
             owner_dst,
             vault_dst,
             balance_dst,
-        ) = mut_array_refs![dst, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN];
+            rewards_dst,
+        ) = mut_array_refs![dst, U16_LEN, U16_LEN, U16_LEN, U16_LEN, PUBKEY_LEN, PUBKEY_LEN, U128_LEN, U128_LEN];
 
         let ACCOUNT {
             flags,
@@ -74,6 +78,7 @@ impl Pack for ACCOUNT {
             owner,
             vault,
             balance,
+            rewards,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
@@ -83,5 +88,6 @@ impl Pack for ACCOUNT {
         owner_dst.copy_from_slice(owner.as_ref());
         vault_dst.copy_from_slice(vault.as_ref());
         *balance_dst = balance.to_be_bytes();
+        *rewards_dst = rewards.to_be_bytes();
     }
 }

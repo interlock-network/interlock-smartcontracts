@@ -54,6 +54,8 @@ impl ContractInstruction {
             5 => Self::SettleEntity {
                 determination: rest[0],
             },
+            6 => Self::CloseStake {
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }

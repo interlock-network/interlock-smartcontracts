@@ -41,6 +41,10 @@ pub enum ContractInstruction {
 
         determination: u8,
     },
+    
+    CloseStake {
+
+    },
 }
 
 

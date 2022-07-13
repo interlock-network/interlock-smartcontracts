@@ -1,5 +1,5 @@
 /****************************************************************
- * ILOCKsupreme Solana Contract
+ * INTR Solana Contract
  ****************************************************************/
 
 #![allow(non_snake_case)]
@@ -27,10 +27,12 @@ pub const U128_LEN: usize = 16;
 pub const VALUES_LEN: usize = VALUES * U32_LEN;
 pub const SIZE_GLOBAL: u16 = (2*U16_LEN + PUBKEY_LEN + VALUES_LEN) as u16;
     // 292
-pub const SIZE_ACCOUNT: u16 = (4*U16_LEN + PUBKEY_LEN + U128_LEN) as u16;
+pub const SIZE_ACCOUNT: u16 = (4*U16_LEN + PUBKEY_LEN + 2*U128_LEN) as u16;
+    // 72
+pub const SIZE_STAKE: u16 = (U16_LEN + U64_LEN + PUBKEY_LEN + U128_LEN) as u16;
+    // 58
+pub const SIZE_ENTITY: u16 = (2*U16_LEN + PUBKEY_LEN + 2*U128_LEN + U64_LEN) as u16;
     // 76
-pub const SIZE_STAKE: u16 = (U16_LEN + PUBKEY_LEN + U128_LEN) as u16;
-    // 42
 
 // pack flag values into a single u32
 pub fn pack_32_flags(flags: BitVec) -> u32 {
