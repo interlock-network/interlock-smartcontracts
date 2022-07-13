@@ -95,9 +95,9 @@ f30 =
 f31 = 
 ```
 ```
-GLOBAL VALUES
-f0 = 
-f1 = 
+GLOBAL VALUES (all u32)
+f0 = entity total stake threshold
+f1 = bounty hunter reward threshold percentage for entity settlement
 f2 = 
 f3 = 
 f4 = 

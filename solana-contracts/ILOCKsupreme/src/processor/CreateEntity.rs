@@ -70,7 +70,7 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
 
-        let ACCOUNTflags = unpack_16_flags(ACCOUNTinfo);
+        let ACCOUNTflags = unpack_16_flags(ACCOUNTinfo.flags);
 
         // calculate rent if we want to create new account
         let rentENTITY = Rent::from_account_info(rent)?

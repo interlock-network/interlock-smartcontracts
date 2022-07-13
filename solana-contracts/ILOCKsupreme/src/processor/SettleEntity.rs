@@ -47,6 +47,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
+        let pdaACCOUNT = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
@@ -63,23 +64,24 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
 
-        // get STAKE  data
+        // get ENTITY  data
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
         
         // unpack flags here 
-        let mut flags = unpack_16_flags(ENTITYinfo.flags);
+        let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
 
         // entity is officially determined as of this ix running
-        flags[6] = true;
+        ENTITYflags[6] = true;
 
         // entity is of determination provided by caller
-        flags[9] = determination as bool;
+        ENTITYflags[9] = determination as bool;
 
         // repack new flag states
-        ENTITYinfo.flags = pack_16_flags(flags);
+        ENTITYinfo.flags = pack_16_flags(ENTITYflags);
 
         // store flag state
         ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
+
 
         Ok(())
     }
