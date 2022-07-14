@@ -68,6 +68,9 @@ impl ContractInstruction {
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
                 valence: rest[2 + 2*PUBKEY_LEN + U128_LEN],
             },
+            8 => Self::SetHunter {
+                status: rest[0],
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }

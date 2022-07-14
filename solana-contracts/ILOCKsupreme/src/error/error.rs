@@ -35,6 +35,8 @@ pub enum ContractError {
     GlobalAlreadyExistsError,
     #[error("'Owner' is an imposter!")]
     OwnerImposterError,
+    #[error("Hunter is already set to given status")]
+    HunterAlreadySetError,
 }
 
 impl From<ContractError> for ProgramError {

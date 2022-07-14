@@ -131,6 +131,18 @@ impl Processor {
                     valence,
                 )
             },
+
+            ContractInstruction::SetHunter  {
+                status,
+            } => {
+                msg!("Instruction: SetHunter");
+                Self::process_set_hunter(
+                    program_id,
+                    accounts,
+                    status,
+                )
+            },
+
         }
     }
 }

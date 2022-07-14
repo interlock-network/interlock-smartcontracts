@@ -56,6 +56,11 @@ pub enum ContractInstruction {
         amount: u128,
         valence: u8,
     },
+
+    SetHunter {
+
+        status: u8,
+    },
 }
 
 

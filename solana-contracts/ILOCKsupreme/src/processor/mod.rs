@@ -11,3 +11,4 @@ pub mod CreateStake;
 pub mod CreateEntity;
 pub mod SettleEntity;
 pub mod CloseStake;
+pub mod SetHunter;
