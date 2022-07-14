@@ -16,27 +16,41 @@ use solana_program::{
 
 #[derive(Error, Debug, Copy, Clone)]
 pub enum ContractError {
+
     /// Invalid instruction
     #[error("Invalid Instruction")]
     InvalidInstruction,
+
     /// Not Rent Exempt
     #[error("Not Rent Exempt")]
     NotRentExempt,
+
     /// Amount Overflow
     #[error("Amount Overflow")]
     AmountOverflow,
+
     /// Try From Slice
     #[error("Try From Slice Fail")]
     TryFromSliceError,
+
     /// Instruction One Attempt Fail
     #[error("Instruction One Attempt Fail")]
     InstructionOneAttemptError,
+
     #[error("Global Account Already Exists")]
     GlobalAlreadyExistsError,
+
     #[error("'Owner' is an imposter!")]
     OwnerImposterError,
-    #[error("Hunter is already set to given status")]
-    HunterAlreadySetError,
+
+    #[error("Stake not yet resolved")]
+    StakeNotResolvedError,
+
+    #[error("Entity not yet settled")]
+    EntityNotSettledError,
+
+    #[error("Entity not yet settling")]
+    EntityNotSettlingError,
 }
 
 impl From<ContractError> for ProgramError {

@@ -60,8 +60,13 @@ impl Processor {
         // unpack flags here 
         let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
 
-        // entity is officially determined as of this ix running
-        ENTITYflags.set(6, true);
+        // make sure thresholds have been passed and entity is settling
+        if ENTITYflags[6] == false {
+            return Err(EntityNotYetSettlingError.into());
+        }
+
+        // entity is officially settled as of this ix running
+        ENTITYflags.set(7, true);
 
         // convert serialized determination from u8 into boolean
         let determination_bool: bool;

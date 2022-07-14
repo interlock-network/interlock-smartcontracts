@@ -8,6 +8,7 @@ use solana_program::{
             next_account_info,
             AccountInfo
         },
+        clock::Clock,
         entrypoint::ProgramResult,
         program::invoke_signed,
         program_error::ProgramError,
@@ -54,6 +55,7 @@ impl Processor {
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?;
+        let clock = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -119,6 +121,11 @@ impl Processor {
 
         // credit USER
         USERinfo.balance -= amount;
+
+        // increment USER STAKE account count
+        USERinfo.count += 1;
+
+        // pack USER info
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
