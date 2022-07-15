@@ -12,6 +12,8 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
+        clock::Clock,
+        sysvar::Sysvar,
     };
 
 use crate::{
@@ -39,6 +41,8 @@ impl Processor {
         let owner = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
+        let clock = next_account_info(account_info_iter)?;
+
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -79,8 +83,15 @@ impl Processor {
         // entity is of determination provided by caller
         ENTITYflags.set(9, determination_bool);
 
+        // entity is settled
+        ENTITYflags.set(6, true);
+
         // repack new flag states
         ENTITYinfo.flags = pack_16_flags(ENTITYflags);
+
+        // reset ENTITY timestamp variable
+        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
+        ENTITYinfo.timestamp = timestamp;
 
         // store flag state
         ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;

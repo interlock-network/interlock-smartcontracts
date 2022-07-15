@@ -31,8 +31,9 @@ use crate::{
 impl Processor {
 
     pub fn process_close_stake(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
+        seedENTITY:    Vec<u8>,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
@@ -85,7 +86,7 @@ impl Processor {
         }
 
         // verify ref seed comes from piece
-        let pdaPIECEstring = pdaPIECE.key.to_string();
+        let pdaUSERstring = pdaUSER.key.to_string();
         let (pdaENTITYcheck, _) = Pubkey::find_program_address(&[&seedENTITY], &program_id);
 
         // check if STAKE is also bounty hunter claim
@@ -101,7 +102,6 @@ impl Processor {
             USERinfo.rewards += reward as u128;
             USERinfo.balance += reward as u128;
             GLOBALinfo.rewards -= reward as u128;
-            USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
             GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
         }
 

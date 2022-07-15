@@ -8,6 +8,7 @@ use solana_program::{
             next_account_info,
             AccountInfo
         },
+        clock::Clock,
         entrypoint::ProgramResult,
         program::invoke_signed,
         program_error::ProgramError,
@@ -46,7 +47,7 @@ impl Processor {
         bumpSTAKE: u8,
         seedSTAKE: Vec<u8>,
         bumpENTITY: u8,
-        seedENTITY: Vec<u8>,
+        seedENTITY: Vec<u8>, //ENTITY seed will be derived from 
         amount: u128,
         valence: u8,
     ) -> ProgramResult {
@@ -61,6 +62,7 @@ impl Processor {
         let pdaENTITY = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?; // delete.. baked into PDA. [?]
         let rent = next_account_info(account_info_iter)?;
+        let clock = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -107,7 +109,7 @@ impl Processor {
 
         // if entity creator is a bounty hunter, declare them the owner
         // if entity created just from regulare security staker, entity is owned by global
-        if USERflags[3] == true && USERinfo.owner == *owner.key {
+        if USERflags[3] && USERinfo.owner == *owner.key {
             ENTITYinfo.hunter = USERinfo.owner;
         } else {
             ENTITYinfo.hunter = GLOBALinfo.owner;
@@ -170,6 +172,13 @@ impl Processor {
             valence_bool = true;
         }
 
+        // get current time
+        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
+
+        // set ENTITY valence and time
+        ENTITYflags.set(8, valence_bool);
+        ENTITYinfo.timestamp = timestamp;
+
         // init flags
         let mut flags = BitVec::from_elem(16, false);
     
@@ -180,10 +189,12 @@ impl Processor {
             // stake valence
             flags.set(3, valence_bool);
 
+
         // populate and pack GLOBAL account info
         STAKEinfo.flags = pack_16_flags(flags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
+        STAKEinfo.timestamp = timestamp;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         // credit account for stake amount

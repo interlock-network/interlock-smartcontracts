@@ -23,7 +23,7 @@ pub struct ENTITY {
     pub stakepos: u128,
     pub stakeneg: u128,
     pub stakers: u16,
-    pub time: i64,
+    pub timestamp: i64,
 }
 
 impl Sealed for ENTITY {}
@@ -38,7 +38,7 @@ impl Pack for ENTITY {
             stakepos,
             stakeneg,
             stakers,
-            time,
+            timestamp,
         ) = array_refs![src, U16_LEN, PUBKEY_LEN, U128_LEN, U128_LEN, U16_LEN, U64_LEN];
 
         Ok( ENTITY {
@@ -47,7 +47,7 @@ impl Pack for ENTITY {
             stakepos: u128::from_be_bytes(*stakepos),
             stakeneg: u128::from_be_bytes(*stakeneg),
             stakers: u16::from_be_bytes(*stakers),
-            time: i64::from_be_bytes(*time),
+            timestamp: i64::from_be_bytes(*timestamp),
         })
     }
 
@@ -59,7 +59,7 @@ impl Pack for ENTITY {
             stakepos_dst,
             stakeneg_dst,
             stakers_dst,
-            time_dst,
+            timestamp_dst,
         ) = mut_array_refs![dst, U16_LEN, PUBKEY_LEN, U128_LEN, U128_LEN, U16_LEN, U64_LEN];
 
         let ENTITY {
@@ -68,7 +68,7 @@ impl Pack for ENTITY {
             stakepos,
             stakeneg,
             stakers,
-            time,
+            timestamp,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
@@ -76,7 +76,7 @@ impl Pack for ENTITY {
         *stakepos_dst = stakepos.to_be_bytes();
         *stakeneg_dst = stakeneg.to_be_bytes();
         *stakers_dst = stakers.to_be_bytes();
-        *time_dst = time.to_be_bytes();
+        *timestamp_dst = timestamp.to_be_bytes();
 
     }
 }

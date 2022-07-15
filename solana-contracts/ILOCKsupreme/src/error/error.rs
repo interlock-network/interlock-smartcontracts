@@ -54,6 +54,13 @@ pub enum ContractError {
 
     #[error("Hunter already set")]
     HunterAlreadySetError,
+
+    #[error("Entity settling")]
+    EntitySettlingError,
+
+    #[error("Time threshold passed")]
+    TimeThresholdPassedError,
+
 }
 
 impl From<ContractError> for ProgramError {

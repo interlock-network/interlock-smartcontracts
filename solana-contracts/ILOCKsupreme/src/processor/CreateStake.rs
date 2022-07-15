@@ -31,6 +31,8 @@ use crate::{
         state::{
             USER::*,
             STAKE::*,
+            GLOBAL::*,
+            ENTITY::*,
         },
     };
 
@@ -51,8 +53,10 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
         let ownerGLOBAL = next_account_info(account_info_iter)?;
+        let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
+        let pdaENTITY = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
         let hash = next_account_info(account_info_iter)?;
         let clock = next_account_info(account_info_iter)?;
@@ -68,6 +72,31 @@ impl Processor {
         // check that owner is *actually* owner
         if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
+        }
+
+        // get user account info
+        let ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
+
+        // unpack ENTITY flags
+        let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
+
+        // make sure ENTITY is not settling
+        if ENTITYflags[7] {
+            return Err(EntitySettlingError.into());
+        }
+
+        // get current time
+        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
+        
+        // computer time delta
+        let timedelta = timestamp - ENTITYinfo.timestamp;
+
+        // get GLOBAL data
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // is delta over threshold?
+        if timedelta as u32 > GLOBALinfo.values[2] {
+            return Err(TimeThresholdPassedError.into());
         }
 
         // calculate rent if we want to create new account
@@ -117,7 +146,7 @@ impl Processor {
         STAKEinfo.flags = pack_16_flags(flags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
-        STAKEinfo.time = Clock::from_account_info(&clock)?.unix_timestamp;
+        STAKEinfo.timestamp = timestamp;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         // credit USER

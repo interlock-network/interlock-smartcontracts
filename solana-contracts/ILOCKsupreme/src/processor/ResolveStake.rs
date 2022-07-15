@@ -12,6 +12,7 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
+        clock::Clock,
     };
 
 use crate::{
@@ -42,6 +43,7 @@ impl Processor {
         let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
+        let clock = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
@@ -55,7 +57,7 @@ impl Processor {
         let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
 
         // make sure entity is settled
-        if ENTITYflags[6] == false {
+        if !ENTITYflags[6] {
             return Err(EntityNotSettledError.into());
         }
 
@@ -66,7 +68,7 @@ impl Processor {
         let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
-        if USERinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
+        if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
 
@@ -76,6 +78,8 @@ impl Processor {
         // unpack STAKE flags
         let mut STAKEflags = unpack_16_flags(STAKEinfo.flags);
         
+        // computer time delta
+        let timedelta = ENTITYinfo.timestamp - STAKEinfo.timestamp;
 
         // set STAKE to 'resolved'
         STAKEflags.set(4, true);

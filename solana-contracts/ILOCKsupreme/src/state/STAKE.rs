@@ -19,7 +19,7 @@ use crate::utils::utils::*;
 
 pub struct STAKE {
     pub flags: u16,
-    pub time: i64,
+    pub timestamp: i64,
     pub entity: Pubkey,
     pub amount: u128,
 }
@@ -32,14 +32,14 @@ impl Pack for STAKE {
         let src = array_ref![src, 0, STAKE::LEN];
         let (
             flags,
-            time,
+            timestamp,
             entity,
             amount,
         ) = array_refs![src, U16_LEN, U64_LEN, PUBKEY_LEN, U128_LEN];
 
         Ok( STAKE {
             flags: u16::from_le_bytes(*flags),
-            time: i64::from_be_bytes(*time),
+            timestamp: i64::from_be_bytes(*timestamp),
             entity: Pubkey::new_from_array(*entity),
             amount: u128::from_be_bytes(*amount),
         })
@@ -49,20 +49,20 @@ impl Pack for STAKE {
         let dst = array_mut_ref![dst, 0, STAKE::LEN];
         let (
             flags_dst,
-            time_dst,
+            timestamp_dst,
             entity_dst,
             amount_dst,
         ) = mut_array_refs![dst, U16_LEN, U64_LEN, PUBKEY_LEN, U128_LEN];
 
         let STAKE {
             flags,
-            time,
+            timestamp,
             entity,
             amount,
         } = self;
 
         *flags_dst = flags.to_le_bytes();
-        *time_dst = time.to_be_bytes();
+        *timestamp_dst = timestamp.to_be_bytes();
         entity_dst.copy_from_slice(entity.as_ref());
         *amount_dst = amount.to_be_bytes();
     }

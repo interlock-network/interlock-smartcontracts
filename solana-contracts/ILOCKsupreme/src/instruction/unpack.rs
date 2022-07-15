@@ -56,6 +56,7 @@ impl ContractInstruction {
                 determination: rest[0],
             },
             6 => Self::CloseStake {
+                seedENTITY: rest[0..PUBKEY_LEN].to_vec(),
             },
             7 => Self::CreateEntity {
                 bumpSTAKE: rest[0],

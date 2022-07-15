@@ -45,6 +45,7 @@ pub enum ContractInstruction {
     
     CloseStake {
 
+        seedENTITY: Vec<u8>,
     },
 
     CreateEntity {
