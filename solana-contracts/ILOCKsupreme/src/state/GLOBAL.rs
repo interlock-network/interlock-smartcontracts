@@ -25,7 +25,7 @@ use crate::utils::utils::*;
 // pack/unpack implementation for GLOBAL state account
 
 pub struct GLOBAL {
-    pub rewards: u128,
+    pub pool: u128,
     pub flags: u32,
     pub owner: Pubkey,
     pub values: [u32; VALUES],
@@ -39,7 +39,7 @@ impl Pack for GLOBAL {
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, GLOBAL::LEN];
         let (
-            rewards,
+            pool,
             flags,
             owner,
             _values,
@@ -56,7 +56,7 @@ impl Pack for GLOBAL {
         }
 
         Ok( GLOBAL {
-            rewards: u128::from_be_bytes(*rewards),
+            pool: u128::from_be_bytes(*pool),
             flags: u32::from_le_bytes(*flags),
             owner: Pubkey::new_from_array(*owner),
             values: valuesNumbers, 
@@ -68,14 +68,14 @@ impl Pack for GLOBAL {
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dst = array_mut_ref![dst, 0, GLOBAL::LEN];
         let (
-            rewards_dst,
+            pool_dst,
             flags_dst,
             owner_dst,
             values_dst,
         ) = mut_array_refs![dst, U128_LEN, 2*U16_LEN, PUBKEY_LEN, VALUES_LEN];
 
         let GLOBAL {
-            rewards,
+            pool,
             flags,
             owner,
             values,
@@ -86,7 +86,7 @@ impl Pack for GLOBAL {
             valuesBytes.extend(&value.to_le_bytes()[..]);
         }
             
-        *rewards_dst = rewards.to_be_bytes();
+        *pool_dst = pool.to_be_bytes();
         *flags_dst = flags.to_le_bytes();
         owner_dst.copy_from_slice(owner.as_ref());
         *values_dst = pack_values(valuesBytes);

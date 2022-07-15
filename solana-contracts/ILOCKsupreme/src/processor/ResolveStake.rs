@@ -78,8 +78,43 @@ impl Processor {
         // unpack STAKE flags
         let mut STAKEflags = unpack_16_flags(STAKEinfo.flags);
         
-        // computer time delta
+        // compute time delta
         let timedelta = ENTITYinfo.timestamp - STAKEinfo.timestamp;
+
+        // compute continuous exponential return
+        //
+        // FORMULA: Return(t) = Stake * exp(rate * t)
+        //
+        // We approximate this by taking the first
+        // four terms of the Taylor Series, where,
+        //
+        // exp(x) = (x^0/0!) + (x^1/1!) + (x^2/2!) + (x^3/3!) + ...
+        //        = 1 + x + x^2/2 + x^3/6 + ...
+        //
+        let rate = GLOBALinfo.values[3];
+        let exponent = rate * timedelta;
+        let payout = STAKEinfo.amount * (1 + exponent + (exponent*exponent)/2 + (exponent*exponent*exponent)/6);
+        let yield = payout - STAKEinfo.amount;
+
+        // pay reward and return stake principal
+        let reward = STAKEinfo.amount * GLOBALinfo.values[9];
+
+        // if stake matches determination
+        if STAKEflags[3] == ENTITYflags[9] {
+
+            // transfer reward stake and yield to USER
+            USERinfo.balance += reward + STAKEinfo.amount + yield;
+            USERinfo.rewards += reward;
+            GLOBALinfo.pool -= reward + yield;
+            STAKEinfo.amount = 0;
+
+        } else {
+
+            // transfer yield only to USER
+            USERinfo.balance += yield;
+            GLOBALinfo.pool += STAKEinfo.amount - yield;
+            STAKEinfo.amount = 0;
+        }
 
         // set STAKE to 'resolved'
         STAKEflags.set(4, true);

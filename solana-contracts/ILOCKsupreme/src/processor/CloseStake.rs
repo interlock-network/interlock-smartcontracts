@@ -101,7 +101,7 @@ impl Processor {
                 // values[1] is bounty hunter reward threshold percentage
             USERinfo.rewards += reward as u128;
             USERinfo.balance += reward as u128;
-            GLOBALinfo.rewards -= reward as u128;
+            GLOBALinfo.pool -= reward as u128;
             GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
         }
 

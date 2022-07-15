@@ -98,10 +98,10 @@ f31 =
 GLOBAL VALUES (all u32)
 f0 = entity total stake threshold
 f1 = bounty hunter reward threshold percentage for entity settlement
-f2 = 
-f3 = 
-f4 = 
-f5 = 
+f2 = entity total time threshold
+f3 = security stake yield compounding rate (eg, for 3.5%, rate = 0.035)
+f4 = entity total time elapsed threshold
+f5 = minimum stake (to be slashed if stake is wrong)
 f6 = 
 f7 = 
 f8 = 
