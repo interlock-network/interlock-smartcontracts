@@ -117,6 +117,7 @@ impl Processor {
         STAKEinfo.flags = pack_16_flags(flags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
+        STAKEinfo.time = Clock::from_account_info(&clock)?.unix_timestamp;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         // credit USER

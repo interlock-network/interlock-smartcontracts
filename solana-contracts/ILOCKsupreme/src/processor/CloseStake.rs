@@ -81,12 +81,17 @@ impl Processor {
         // make sure stake is resolved first
         // ...before closing, yields or penalitizies must be processed
         if STAKEflags[4] == false {
-            return Err(StakeNotResolvedError).into());
+            return Err(StakeNotResolvedError.into());
         }
+
+        // verify ref seed comes from piece
+        let pdaPIECEstring = pdaPIECE.key.to_string();
+        let (pdaENTITYcheck, _) = Pubkey::find_program_address(&[&seedENTITY], &program_id);
 
         // check if STAKE is also bounty hunter claim
         if ENTITYinfo.hunter != GLOBALinfo.owner &&     // entity is claimed by bounty hunter 
-            ENTITYinfo.hunter == STAKEinfo.owner &&    // this stake is the entity claim stake
+            &seedENTITY[0..(PUBKEY_LEN - U16_LEN)] == pdaUSERstring[0..(PUBKEY_LEN - U16_LEN)].as_bytes() &&
+            pdaENTITYcheck == *pdaENTITY.key &&
             STAKEflags[3] == ENTITYflags[9] {           // entity determination matches stake valence
 
             // reward and pay out bounty hunter

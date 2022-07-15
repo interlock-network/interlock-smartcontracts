@@ -51,6 +51,9 @@ pub enum ContractError {
 
     #[error("Entity not yet settling")]
     EntityNotSettlingError,
+
+    #[error("Hunter already set")]
+    HunterAlreadySetError,
 }
 
 impl From<ContractError> for ProgramError {
