@@ -62,6 +62,10 @@ pub enum ContractInstruction {
 
         status: u8,
     },
+
+    CheckEntity {
+
+    },
 }
 
 

@@ -26,7 +26,7 @@ impl Processor {
 
         match instruction {
 
-            ContractInstruction::ProgramInit  {
+            ContractInstruction::ProgramInit {
                 bumpGLOBAL,
                 seedGLOBAL,
             } => {
@@ -52,7 +52,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CreateUser  {
+            ContractInstruction::CreateUser {
                 bumpUSER,
                 seedUSER,
             } => {
@@ -65,7 +65,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::FillAccount  {
+            ContractInstruction::FillAccount {
             } => {
                 msg!("Instruction: FillAccount");
                 Self::process_fill_account(
@@ -74,7 +74,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CreateStake  {
+            ContractInstruction::CreateStake {
                 bumpSTAKE,
                 seedSTAKE,
                 amount,
@@ -91,7 +91,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::SettleEntity  {
+            ContractInstruction::SettleEntity {
                 determination,
             } => {
                 msg!("Instruction: SettleEntity");
@@ -102,7 +102,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CloseStake  {
+            ContractInstruction::CloseStake {
                 seedENTITY,
 
             } => {
@@ -114,7 +114,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::CreateEntity  {
+            ContractInstruction::CreateEntity {
                 bumpSTAKE,
                 seedSTAKE,
                 bumpENTITY,
@@ -135,7 +135,7 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::SetHunter  {
+            ContractInstruction::SetHunter {
                 status,
             } => {
                 msg!("Instruction: SetHunter");
@@ -143,6 +143,15 @@ impl Processor {
                     program_id,
                     accounts,
                     status,
+                )
+            },
+            
+            ContractInstruction::CheckEntity {
+            } => {
+                msg!("Instruction: CheckEntity");
+                Self::process_check_entity(
+                    program_id,
+                    accounts,
                 )
             },
 

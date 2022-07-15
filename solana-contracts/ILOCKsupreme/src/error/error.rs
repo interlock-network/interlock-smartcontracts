@@ -58,6 +58,9 @@ pub enum ContractError {
     #[error("Entity settling")]
     EntitySettlingError,
 
+    #[error("Entity settled")]
+    EntitySettledError,
+
     #[error("Time threshold passed")]
     TimeThresholdPassedError,
 

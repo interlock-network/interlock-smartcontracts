@@ -72,6 +72,8 @@ impl ContractInstruction {
             8 => Self::SetHunter {
                 status: rest[0],
             },
+            9 => Self::CheckEntity {
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }
