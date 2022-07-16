@@ -154,6 +154,15 @@ impl Processor {
                     accounts,
                 )
             },
+            
+            ContractInstruction::CloseEntity {
+            } => {
+                msg!("Instruction: CloseEntity");
+                Self::process_close_entity(
+                    program_id,
+                    accounts,
+                )
+            },
 
         }
     }

@@ -66,6 +66,10 @@ pub enum ContractInstruction {
     CheckEntity {
 
     },
+    
+    CloseEntity {
+
+    },
 }
 
 

@@ -74,6 +74,8 @@ impl ContractInstruction {
             },
             9 => Self::CheckEntity {
             },
+            10 => Self::CloseEntity {
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }
