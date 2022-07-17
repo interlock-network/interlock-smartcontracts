@@ -305,7 +305,6 @@ export interface ENTITYlayout {
 
 
 
-
 /**
 * check flag template
 **/
