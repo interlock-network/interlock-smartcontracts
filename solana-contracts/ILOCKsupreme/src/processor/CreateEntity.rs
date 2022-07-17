@@ -137,6 +137,9 @@ impl Processor {
             // ENTITYflags[8] = false;
             // entity determination
             // ENTITYflags[9] = false;
+            if USERflags[3] {
+                ENTITYflags.set(10, true);
+            }
 
         // calculate rent if we want to create new account
         let rentSTAKE = Rent::from_account_info(rent)?

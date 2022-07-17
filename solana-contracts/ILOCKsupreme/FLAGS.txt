@@ -3,7 +3,7 @@
 This Solana program makes extensive use of flags and constants for tracking state and managing control. These flags are listed below, by state account:
 
 ```
-ACCOUNT FLAGS
+USER FLAGS
 f0 = 0 = account type, bit 2	account type = 000
 f1 = 0 = account type, bit 1
 f2 = 0 = account type, bit 0
@@ -52,7 +52,7 @@ f6 = entity settled status, bool
 f7 = entity settling status, bool
 f8 = entity valence, bool, high = good, low = bad
 f9 = entity determination, bool, high = good, low = bad
-f10 = 
+f10 = entity claimed, bool
 f11 = 
 f12 = 
 f13 = 
@@ -102,7 +102,7 @@ f2 = entity total time threshold
 f3 = security stake yield compounding rate (eg, for 3.5%, rate = 0.035)
 f4 = entity total time elapsed threshold
 f5 = minimum stake (to be slashed if stake is wrong)
-f6 = 
+f6 = percent of security stake rewarded to staker (u32 value in 100000)
 f7 = 
 f8 = 
 f9 = 
