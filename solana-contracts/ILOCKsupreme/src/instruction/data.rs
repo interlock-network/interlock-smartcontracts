@@ -26,8 +26,9 @@ pub enum ContractInstruction {
         seedUSER: Vec<u8>,
     },
 
-    FillAccount {
-
+    FillUser {
+        
+        amount: u128,
     },
 
     CreateStake {

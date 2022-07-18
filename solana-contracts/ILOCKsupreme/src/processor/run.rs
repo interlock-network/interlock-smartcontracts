@@ -65,12 +65,14 @@ impl Processor {
                 )
             },
 
-            ContractInstruction::FillAccount {
+            ContractInstruction::FillUser {
+                amount,
             } => {
-                msg!("Instruction: FillAccount");
-                Self::process_fill_account(
+                msg!("Instruction: FillUser");
+                Self::process_fill_user(
                     program_id,
                     accounts,
+                    amount,
                 )
             },
 

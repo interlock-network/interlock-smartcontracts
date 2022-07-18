@@ -41,7 +41,11 @@ impl ContractInstruction {
                 bumpUSER: rest[0],
                 seedUSER: rest[1..].to_vec(),
             },
-            3 => Self::FillAccount {
+            3 => Self::FillUser {
+                amount: rest.get(0..U128_LEN)
+                    .and_then(|slice| slice.try_into().ok())
+                    .map(u128::from_be_bytes)
+                    .ok_or(InvalidInstruction)?.try_into().unwrap(),
             },
             4 => Self::CreateStake {
                 bumpSTAKE: rest[0],

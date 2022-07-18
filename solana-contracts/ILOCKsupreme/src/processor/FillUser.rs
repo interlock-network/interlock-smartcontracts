@@ -31,9 +31,10 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_fill_account(
+    pub fn process_fill_user(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
+        amount: u128,
     ) -> ProgramResult {
 
 
@@ -59,6 +60,8 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
 
+        USERinfo.balance += amount;
+
         // HERE, CALL WORMHOLE TOKEN BRIDGE PROGRAM, PERHAPS A TINY INTERLOCK PROGRAM THAT DOES
         // THIS, TO MINT SLP TOKEN
         // 
@@ -68,7 +71,6 @@ impl Processor {
         // HERE, UPDATE USER BALANCE AND LET SPL TOKEN JUST SIT THERE 
         //
 
-        USERinfo.balance = 0;
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
