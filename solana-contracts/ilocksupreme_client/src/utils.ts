@@ -22,7 +22,7 @@ import * as os from "os";
 import * as fs from "mz/fs";
 import * as path from "path";
 import * as yaml from "yaml";
-import * as BufferLayout from "buffer-layout";
+const BufferLayout = require("buffer-layout");
 const BigNumber = require("bignumber.js");
 const BN = require("bn.js");
 const bs58 = require("bs58");
@@ -77,9 +77,9 @@ export let connection: Connection;
 export let ownerKEY: Keypair;
 export let ilocksupremeID: PublicKey;
 export let operatorKEY: Keypair;
-export const PROGRAM_KEYFILE = "fracpay_server-keypair.json";
+export const PROGRAM_KEYFILE = "ILOCKsupreme-keypair.json";
 export const PROGRAM_PATH = path.resolve(
-	"/Users/blairmunroakusa/_ROOT/___LEAF/fracpay/fracpay_server/target/deploy"
+	"../../ilocksupreme/target/deploy"
 );
 export const PROGRAM_KEYPAIR_PATH = path.join(PROGRAM_PATH, PROGRAM_KEYFILE);
 
@@ -103,7 +103,8 @@ export async function getGLOBALdata(pdaGLOBAL: PublicKey) {
 	const decodedGLOBALstate = GLOBAL_DATA_LAYOUT.decode(encodedGLOBALstate) as GLOBALlayout;
 	return {
 		pool: new BigNumber("0x" + decodedGLOBALstate.pool.toString("hex")),
-		flags: decodedGLOBALstate.flags,
+		flags1: decodedGLOBALstate.flags1,
+		flags2: decodedGLOBALstate.flags2,
 		owner: new PublicKey(decodedGLOBALstate.owner),
 		values: decodedGLOBALstate.values,
 	}
@@ -174,11 +175,11 @@ export async function getENTITYdata(pdaENTITY: PublicKey) {
 	const decodedENTITYstate = ENTITY_DATA_LAYOUT.decode(encodedENTITYstate) as ENTITYlayout;
 	return {
 		flags: decodedENTITYstate.flags,
-		hunter: new PublicKey(decodedSTAKEstate.hunter),
-		stakepos: new BigNumber("0x" + decodedSTAKEstate.stakepos.toString("hex")),
-		stakeneg: new BigNumber("0x" + decodedSTAKEstate.stakeneg.toString("hex")),
+		hunter: new PublicKey(decodedENTITYstate.hunter),
+		stakepos: new BigNumber("0x" + decodedENTITYstate.stakepos.toString("hex")),
+		stakeneg: new BigNumber("0x" + decodedENTITYstate.stakeneg.toString("hex")),
 		stakers: decodedENTITYstate.stakers,
-		timestamp: new BigNumber("0x" + decodedSTAKEstate.timestamp.toString("hex")),
+		timestamp: new BigNumber("0x" + decodedENTITYstate.timestamp.toString("hex")),
 
 	}
 }
@@ -311,24 +312,14 @@ export interface ENTITYlayout {
 
 export function templateFlagCheck(flags: number) {
 	const flagarray = unpackFlags(flags);
-	return flagarray[<<flagnumberhere>>] === 1;
+	return flagarray[0] === 1;
 }
 
-
-
-
-
-
-
-
-
-
-
 /**
-* general link transaction
-**/
+* transaction template
+**
 
-export function linkTX(
+export function templateTX(
 	pdaMAIN: PublicKey,
 	pdaPIECE: PublicKey,
 	pdaREF: PublicKey,
@@ -346,46 +337,16 @@ export function linkTX(
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
 			data: Buffer.from(new Uint8Array(ixDATA)),
-			programId: fracpayID,
+			programId: ilocksupremeID,
 		})
 	);
 }
 
 /**
-* general init transaction
-**/
+* extra compute tx
+***
 
-export function initTX(
-	pdaMAIN: PublicKey,
-	pdaPIECE: PublicKey,
-	pdaREF: PublicKey,
-	pdaselfREF: PublicKey,
-	invitarget: PublicKey,
-	ixDATA: any[]) {
-
-	// setup transaction
-	return new Transaction().add(
-		new TransactionInstruction({
-			keys: [
-				{ pubkey: operatorKEY.publicKey, isSigner: true, isWritable: true, },
-				{ pubkey: invitarget, isSigner: false, isWritable: true, },
-				{ pubkey: pdaMAIN, isSigner: false, isWritable: true, },
-				{ pubkey: pdaPIECE, isSigner: false, isWritable: true, },
-				{ pubkey: pdaREF, isSigner: false, isWritable: true, },
-				{ pubkey: pdaselfREF, isSigner: false, isWritable: true, },
-				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
-			],
-			data: Buffer.from(new Uint8Array(ixDATA)),
-			programId: fracpayID,
-		})
-	);
-}
-
-/**
-* pay transaction
-**/
-
-export function payTX(
+export function extracomputeTX(
 	pdaselfTARGET: PublicKey,
 	pdaTARGET: PublicKey,
 	pdaPIECE: PublicKey,
@@ -417,197 +378,12 @@ export function payTX(
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
 			data: Buffer.from(new Uint8Array(ixDATA)),
-			programId: fracpayID,
+			programId: ilocksupremeID,
 		})
 	);
 }
 
-/**
-* general create transaction
-**/
-
-export function createTX(
-	pdaMAIN: PublicKey,
-	pdaPIECE: PublicKey,
-	pdaREF: PublicKey,
-	extra: PublicKey,
-	ixDATA: any[]) {
-
-
-	// setup transaction
-	return new Transaction().add(
-		new TransactionInstruction({
-			keys: [
-				{ pubkey: operatorKEY.publicKey, isSigner: true, isWritable: true, },
-				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
-				{ pubkey: pdaMAIN, isSigner: false, isWritable: true, },
-				{ pubkey: pdaPIECE, isSigner: false, isWritable: true, },
-				{ pubkey: pdaREF, isSigner: false, isWritable: true, },
-				{ pubkey: extra, isSigner: false, isWritable: true, },
-				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
-			],
-			data: Buffer.from(new Uint8Array(ixDATA)),
-			programId: fracpayID,
-		})
-	);
-}
-
-/**
-* print verbose REF list, no flags
-**/
-export async function verboseREFlist(pdaPIECE: PublicKey, count: number) {
-
-	// initialize piece counter
-	var countREF = new Uint16Array(1);
-	countREF[0] = 0;
-
-	// find self REF address
-	var pdaREFseed = createSeed(pdaPIECE, countREF);
-	var [pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
-
-	// get self PIECE data
-	var REF = await getREFdata(pdaREF);
-
-	// get flags
-	var flags = unpackFlags(REF.flags);
-
-	// print self PIECE data
-	console.log(`\t. 0\t| SELF: --------> ${REF.refslug}`);
-	console.log(`\t\t| ADDRESS: -----> ${pdaREF.toBase58()}`);
-	console.log(`\t\t| TARGET: ------> ${REF.target.toBase58()}`);
-	console.log(`\t\t| FRACTION: ----> ${REF.fract}`);
-	console.log(`\t\t| NETSUM: ------> ${REF.netsum}`);
-	process.stdout.write(`\t\t| FLAGS: -------> `);
-	process.stdout.write(`[ `);
-	for (var index = 0; index < 4; index++) {
-		process.stdout.write(`${flags[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 4; index < 8; index++) {
-		process.stdout.write(`${flags[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 8; index < 12; index++) {
-		process.stdout.write(`${flags[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 12; index < 16; index++) {
-		process.stdout.write(`${flags[index]} `);
-	}
-	process.stdout.write(`]`);
-		process.stdout.write(`\n\n`);
-
-	// cycle through all pieces
-	for (countREF[0] = 1; countREF[0] <= count; countREF[0]++) {
-
-		// find PIECE address
-		pdaREFseed = createSeed(pdaPIECE, countREF);
-		[pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
-
-		// get PIECE data
-		REF = await getREFdata(pdaREF);
-
-		// get flags
-		flags = unpackFlags(REF.flags);
-
-		// print PIECE data
-		console.log(`\t. ${countREF[0]}\t| REF ID: ------> ${REF.refslug}`);
-		console.log(`\t\t| ADDRESS: -----> ${pdaREF.toBase58()}`);
-		console.log(`\t\t| TARGET: ------> ${REF.target.toBase58()}`);
-		console.log(`\t\t| FRACTION: ----> ${REF.fract}`);
-		console.log(`\t\t| NETSUM: ------> ${REF.netsum}`);
-		process.stdout.write(`\t\t| FLAGS: -------> `);
-		process.stdout.write(`[ `);
-		for (var index = 0; index < 4; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 4; index < 8; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 8; index < 12; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 12; index < 16; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`]`);
-		process.stdout.write(`\n\n`);
-	}	
-}
-
-/**
-* print REF list
-**/
-export async function printREFlist(pdaPIECE: PublicKey, count: number) {
-
-	// initialize piece counter
-	var countREF = new Uint16Array(1);
-	countREF[0] = 0;
-
-	// find self REF address
-	var pdaREFseed = createSeed(pdaPIECE, countREF);
-	var [pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
-
-	// get self PIECE data
-	var REF = await getREFdata(pdaREF);
-
-	// print self PIECE data
-	console.log(`\t. 0\tSELF:\t${REF.refslug}`);
-
-	// cycle through all pieces
-	for (countREF[0] = 1; countREF[0] <= count; countREF[0]++) {
-
-		// find PIECE address
-		pdaREFseed = createSeed(pdaPIECE, countREF);
-		[pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
-
-		// get PIECE data
-		REF = await getREFdata(pdaREF);
-
-		// print PIECE data
-		console.log(`\t. ${countREF[0]}\tREF ID:\t${REF.refslug}`);
-	}	
-	console.log("");
-}
-
-/**
-* get PIECE list
-**/
-export async function printPIECElist(pdaMAIN: PublicKey, count: number) {
-
-	// initialize piece counter
-	var countPIECE = new Uint16Array(1);
-	countPIECE[0] = 0;
-
-	// find self PIECE address
-	var pdaPIECEseed = createSeed(pdaMAIN, countPIECE);
-	var [pdaPIECE, bumpPIECE] = await deriveAddress(pdaPIECEseed);
-
-	// get self PIECE data
-	var PIECE = await getPIECEdata(pdaPIECE);
-
-	// print self PIECE data
-	console.log(`# 0\tOPERATOR:\t${PIECE.pieceslug}`);
-
-	// cycle through all pieces
-	for (countPIECE[0] = 1; countPIECE[0] <= count; countPIECE[0]++) {
-
-		// find PIECE address
-		pdaPIECEseed = createSeed(pdaMAIN, countPIECE);
-		[pdaPIECE, bumpPIECE] = await deriveAddress(pdaPIECEseed);
-
-		// get PIECE data
-		PIECE = await getPIECEdata(pdaPIECE);
-
-		// print PIECE data
-		console.log(`# ${countPIECE[0]}\tPIECE ID:\t${PIECE.pieceslug}`);
-	}	
-}
-
-
+*/
 
 /**
 * unpack flags
@@ -633,7 +409,7 @@ export function createSeed(pda: PublicKey, count: Uint16Array) {
 	let countHigh = (count[0] >> 8) & 0xFF; 	// shift and mask for high order count byte
 	return toUTF8Array(pda
 			   .toString()
-			   .slice(0,PUBKEY_SIZE - COUNT_SIZE))
+			   .slice(0,PUBKEY_SIZE - U16_SIZE))
 			   .concat(countHigh, countLow);
 }
 
@@ -655,15 +431,15 @@ export function u32toBytes(number: Uint32Array) {
 **/
 export async function deriveAddress(seed: any[]) {
 	return await PublicKey.findProgramAddress(
-		[new Uint8Array(seed)], fracpayID);
+		[new Uint8Array(seed)], ilocksupremeID);
 }
 
 /**
 * find invitation hash
-**/
+**
 export async function findHash(inviteHASH: string) {
 	return  await connection.getParsedProgramAccounts(
-		fracpayID,
+		ilocksupremeID,
 		{
 			filters: [
 				{
@@ -682,10 +458,10 @@ export async function findHash(inviteHASH: string) {
 
 /**
 * check to make sure operator ID isn't already taken
-**/
+**
 export async function availableIDcheck(operatorID: string): Promise<void> {
 	const operatorIDaccount = await connection.getParsedProgramAccounts(
-		fracpayID,
+		ilocksupremeID,
 		{
 			filters: [
 				{
@@ -710,11 +486,11 @@ export async function availableIDcheck(operatorID: string): Promise<void> {
 
 /**
 * get all PIECEs with specific MAIN operator account
-***/
+***
 export async function getPIECEs(operator: PublicKey) {
 	console.log("chirp");
 	return await connection.getParsedProgramAccounts(
-		fracpayID,
+		ilocksupremeID,
 		{
 			filters: [
 				{
@@ -731,6 +507,10 @@ export async function getPIECEs(operator: PublicKey) {
 	);
 }
 
+*/
+
+
+
 /**
 * Check if the hello world BPF program has been deployed
 **/
@@ -738,8 +518,8 @@ export async function checkProgram(): Promise<void> {
 	// Read program id from keypair file
 	try {
 		const programKeypair = await createKeypairFromFile(PROGRAM_KEYPAIR_PATH);
-		fracpayID = programKeypair.publicKey;
-		console.log(`. Fracpay found at:\t${fracpayID.toBase58()}`);
+		ilocksupremeID = programKeypair.publicKey;
+		console.log(`. ILOCKsupreme found at:\t${ilocksupremeID.toBase58()}`);
 	} catch (err) {
 		const errMsg = (err as Error).message;
 		throw new Error(
@@ -798,7 +578,7 @@ export async function establishOperator(): Promise<void> {
     		const {feeCalculator} = await connection.getRecentBlockhash();
 
  		// Calculate the cost to fund the greeter account
-    		fees += await connection.getMinimumBalanceForRentExemption(MAIN_SIZE + PIECE_SIZE + REF_SIZE);
+    		fees += await connection.getMinimumBalanceForRentExemption(GLOBAL_SIZE);
 
     		// Calculate the cost of sending transactions
     		fees += feeCalculator.lamportsPerSignature * 100; // wag
@@ -889,7 +669,7 @@ export const getKeypair = (name: string) =>
  **/
 export const getProgramID = () => {
 	try {
-		return getPublicKey("fracpay");
+		return getPublicKey("ILOCKsupreme");
 	} catch (error) {
 		console.log("Given programId is missing or incorrect");
 	process.exit(1);
@@ -991,3 +771,162 @@ export function newKeyhash() {
 	keyhash = new PublicKey(keyhash);
 	return [newkey.publicKey, keyhash];
 }
+
+
+
+/**
+* print verbose REF list, no flags
+**
+export async function verboseREFlist(pdaPIECE: PublicKey, count: number) {
+
+	// initialize piece counter
+	var countREF = new Uint16Array(1);
+	countREF[0] = 0;
+
+	// find self REF address
+	var pdaREFseed = createSeed(pdaPIECE, countREF);
+	var [pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
+
+	// get self PIECE data
+	var REF = await getREFdata(pdaREF);
+
+	// get flags
+	var flags = unpackFlags(REF.flags);
+
+	// print self PIECE data
+	console.log(`\t. 0\t| SELF: --------> ${REF.refslug}`);
+	console.log(`\t\t| ADDRESS: -----> ${pdaREF.toBase58()}`);
+	console.log(`\t\t| TARGET: ------> ${REF.target.toBase58()}`);
+	console.log(`\t\t| FRACTION: ----> ${REF.fract}`);
+	console.log(`\t\t| NETSUM: ------> ${REF.netsum}`);
+	process.stdout.write(`\t\t| FLAGS: -------> `);
+	process.stdout.write(`[ `);
+	for (var index = 0; index < 4; index++) {
+		process.stdout.write(`${flags[index]} `);
+	}
+	process.stdout.write(`| `);
+	for (var index = 4; index < 8; index++) {
+		process.stdout.write(`${flags[index]} `);
+	}
+	process.stdout.write(`| `);
+	for (var index = 8; index < 12; index++) {
+		process.stdout.write(`${flags[index]} `);
+	}
+	process.stdout.write(`| `);
+	for (var index = 12; index < 16; index++) {
+		process.stdout.write(`${flags[index]} `);
+	}
+	process.stdout.write(`]`);
+		process.stdout.write(`\n\n`);
+
+	// cycle through all pieces
+	for (countREF[0] = 1; countREF[0] <= count; countREF[0]++) {
+
+		// find PIECE address
+		pdaREFseed = createSeed(pdaPIECE, countREF);
+		[pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
+
+		// get PIECE data
+		REF = await getREFdata(pdaREF);
+
+		// get flags
+		flags = unpackFlags(REF.flags);
+
+		// print PIECE data
+		console.log(`\t. ${countREF[0]}\t| REF ID: ------> ${REF.refslug}`);
+		console.log(`\t\t| ADDRESS: -----> ${pdaREF.toBase58()}`);
+		console.log(`\t\t| TARGET: ------> ${REF.target.toBase58()}`);
+		console.log(`\t\t| FRACTION: ----> ${REF.fract}`);
+		console.log(`\t\t| NETSUM: ------> ${REF.netsum}`);
+		process.stdout.write(`\t\t| FLAGS: -------> `);
+		process.stdout.write(`[ `);
+		for (var index = 0; index < 4; index++) {
+			process.stdout.write(`${flags[index]} `);
+		}
+		process.stdout.write(`| `);
+		for (var index = 4; index < 8; index++) {
+			process.stdout.write(`${flags[index]} `);
+		}
+		process.stdout.write(`| `);
+		for (var index = 8; index < 12; index++) {
+			process.stdout.write(`${flags[index]} `);
+		}
+		process.stdout.write(`| `);
+		for (var index = 12; index < 16; index++) {
+			process.stdout.write(`${flags[index]} `);
+		}
+		process.stdout.write(`]`);
+		process.stdout.write(`\n\n`);
+	}	
+}
+
+/**
+* print REF list
+**
+export async function printREFlist(pdaPIECE: PublicKey, count: number) {
+
+	// initialize piece counter
+	var countREF = new Uint16Array(1);
+	countREF[0] = 0;
+
+	// find self REF address
+	var pdaREFseed = createSeed(pdaPIECE, countREF);
+	var [pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
+
+	// get self PIECE data
+	var REF = await getREFdata(pdaREF);
+
+	// print self PIECE data
+	console.log(`\t. 0\tSELF:\t${REF.refslug}`);
+
+	// cycle through all pieces
+	for (countREF[0] = 1; countREF[0] <= count; countREF[0]++) {
+
+		// find PIECE address
+		pdaREFseed = createSeed(pdaPIECE, countREF);
+		[pdaREF, bumpREF] = await deriveAddress(pdaREFseed);
+
+		// get PIECE data
+		REF = await getREFdata(pdaREF);
+
+		// print PIECE data
+		console.log(`\t. ${countREF[0]}\tREF ID:\t${REF.refslug}`);
+	}	
+	console.log("");
+}
+
+/**
+* get PIECE list
+**
+export async function printPIECElist(pdaMAIN: PublicKey, count: number) {
+
+	// initialize piece counter
+	var countPIECE = new Uint16Array(1);
+	countPIECE[0] = 0;
+
+	// find self PIECE address
+	var pdaPIECEseed = createSeed(pdaMAIN, countPIECE);
+	var [pdaPIECE, bumpPIECE] = await deriveAddress(pdaPIECEseed);
+
+	// get self PIECE data
+	var PIECE = await getPIECEdata(pdaPIECE);
+
+	// print self PIECE data
+	console.log(`# 0\tOPERATOR:\t${PIECE.pieceslug}`);
+
+	// cycle through all pieces
+	for (countPIECE[0] = 1; countPIECE[0] <= count; countPIECE[0]++) {
+
+		// find PIECE address
+		pdaPIECEseed = createSeed(pdaMAIN, countPIECE);
+		[pdaPIECE, bumpPIECE] = await deriveAddress(pdaPIECEseed);
+
+		// get PIECE data
+		PIECE = await getPIECEdata(pdaPIECE);
+
+		// print PIECE data
+		console.log(`# ${countPIECE[0]}\tPIECE ID:\t${PIECE.pieceslug}`);
+	}	
+}
+*/
+
