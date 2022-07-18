@@ -60,9 +60,15 @@ pub enum ContractError {
 
     #[error("Entity settled")]
     EntitySettledError,
+    
+    #[error("Entity claimed")]
+    EntityClaimedError,
 
     #[error("Time threshold passed")]
     TimeThresholdPassedError,
+    
+    #[error("User not a hunter")]
+    UserNotHunterError,
 
 }
 

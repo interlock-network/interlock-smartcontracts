@@ -76,6 +76,8 @@ impl ContractInstruction {
             },
             10 => Self::CloseEntity {
             },
+            11 => Self::ClaimEntity {
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }

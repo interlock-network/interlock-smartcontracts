@@ -164,6 +164,15 @@ impl Processor {
                 )
             },
 
+            ContractInstruction::ClaimEntity {
+            } => {
+                msg!("Instruction: ClaimEntity");
+                Self::process_claim_entity(
+                    program_id,
+                    accounts,
+                )
+            },
+
         }
     }
 }

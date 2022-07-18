@@ -70,6 +70,10 @@ pub enum ContractInstruction {
     CloseEntity {
 
     },
+
+    ClaimEntity {
+
+    },
 }
 
 
