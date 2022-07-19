@@ -78,7 +78,7 @@ const ProgramInit = async () => {
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateGLOBALtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully created new GLOBAL account for operator '${programID}'!\n`);
+	console.log(`\n* Successfully created new GLOBAL account for '${programID}'!\n`);
 
 	} catch {
 

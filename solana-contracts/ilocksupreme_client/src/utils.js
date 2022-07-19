@@ -39,7 +39,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.newKeyhash = exports.toUTF8Array = exports.fromUTF8Array = exports.getProgramID = exports.getKeypair = exports.establishOperator = exports.establishConnection = exports.checkProgram = exports.deriveAddress = exports.u32toBytes = exports.createSeed = exports.unpackFlags = exports.templateFlagCheck = exports.ENTITY_DATA_LAYOUT = exports.STAKE_DATA_LAYOUT = exports.USER_DATA_LAYOUT = exports.GLOBAL_DATA_LAYOUT = exports.getENTITYdata = exports.getSTAKEdata = exports.getUSERdata = exports.getGLOBALdata = exports.PROGRAM_KEYPAIR_PATH = exports.PROGRAM_PATH = exports.PROGRAM_KEYFILE = exports.operatorKEY = exports.ilocksupremeID = exports.ownerKEY = exports.connection = exports.ENTITY_SIZE = exports.STAKE_SIZE = exports.USER_SIZE = exports.GLOBAL_SIZE = exports.VALUES_SIZE = exports.VALUE_NUMBER = exports.PUBKEY_SIZE = exports.U128_SIZE = exports.U64_SIZE = exports.U32_SIZE = exports.U16_SIZE = void 0;
+exports.newKeyhash = exports.toUTF8Array = exports.fromUTF8Array = exports.getProgramID = exports.getKeypair = exports.establishOperator = exports.establishConnection = exports.checkProgram = exports.deriveAddress = exports.u32toBytes = exports.createSeed = exports.packFlags32 = exports.unpackFlags32 = exports.unpackFlags = exports.templateFlagCheck = exports.ENTITY_DATA_LAYOUT = exports.STAKE_DATA_LAYOUT = exports.USER_DATA_LAYOUT = exports.GLOBAL_DATA_LAYOUT = exports.getENTITYdata = exports.getSTAKEdata = exports.getUSERdata = exports.getGLOBALdata = exports.PROGRAM_KEYPAIR_PATH = exports.PROGRAM_PATH = exports.PROGRAM_KEYFILE = exports.operatorKEY = exports.ilocksupremeID = exports.ownerKEY = exports.connection = exports.ENTITY_SIZE = exports.STAKE_SIZE = exports.USER_SIZE = exports.GLOBAL_SIZE = exports.VALUES_SIZE = exports.VALUE_NUMBER = exports.PUBKEY_SIZE = exports.U128_SIZE = exports.U64_SIZE = exports.U32_SIZE = exports.U16_SIZE = void 0;
 /****************************************************************
  * imports							*
  ****************************************************************/
@@ -389,6 +389,69 @@ function unpackFlags(flags) {
 }
 exports.unpackFlags = unpackFlags;
 /**
+* unpack flags 32
+**/
+function unpackFlags32(flags) {
+    var flags1 = (flags >> 24) & 0xFF;
+    var flags2 = (flags >> 16) & 0xFF;
+    var flags3 = (flags >> 8) & 0xFF;
+    var flags4 = flags & 0xFF;
+    var bitarray = new Uint8Array(32);
+    for (var index = 0; index < 8; index++) {
+        bitarray[index] = (flags1 >> (7 - index)) & 0x01;
+    }
+    for (index = 0; index < 8; index++) {
+        bitarray[8 + index] = (flags2 >> (7 - index)) & 0x01;
+    }
+    for (index = 0; index < 8; index++) {
+        bitarray[16 + index] = (flags3 >> (7 - index)) & 0x01;
+    }
+    for (index = 0; index < 8; index++) {
+        bitarray[24 + index] = (flags4 >> (7 - index)) & 0x01;
+    }
+    return bitarray;
+}
+exports.unpackFlags32 = unpackFlags32;
+/**
+* pack flags 32
+**/
+function packFlags32(flags) {
+    var byte1 = flags[0] |
+        flags[1] << 1 |
+        flags[2] << 2 |
+        flags[3] << 3 |
+        flags[4] << 4 |
+        flags[5] << 5 |
+        flags[6] << 6 |
+        flags[7] << 7;
+    var byte2 = flags[8] |
+        flags[9] << 1 |
+        flags[10] << 2 |
+        flags[11] << 3 |
+        flags[12] << 4 |
+        flags[13] << 5 |
+        flags[14] << 6 |
+        flags[15] << 7;
+    var byte3 = flags[16] |
+        flags[17] << 1 |
+        flags[18] << 2 |
+        flags[19] << 3 |
+        flags[20] << 4 |
+        flags[21] << 5 |
+        flags[22] << 6 |
+        flags[23] << 7;
+    var byte4 = flags[24] |
+        flags[25] << 1 |
+        flags[26] << 2 |
+        flags[27] << 3 |
+        flags[28] << 4 |
+        flags[29] << 5 |
+        flags[30] << 6 |
+        flags[31] << 7;
+    return [byte4, byte3, byte2, byte1];
+}
+exports.packFlags32 = packFlags32;
+/**
 * create pda seed
 **/
 function createSeed(pda, count) {
@@ -404,10 +467,10 @@ exports.createSeed = createSeed;
 * u32 to bytes
 **/
 function u32toBytes(number) {
-    var byte1 = number[0] & 0xFF; // mask for lowest order number byte
-    var byte2 = (number[0] >> 8) & 0xFF; // shift and mask for next lowest order number byte
-    var byte3 = (number[0] >> 16) & 0xFF; // shift and mask for high order number byte
-    var byte4 = (number[0] >> 24) & 0xFF; // shift and mask for highest order number byte
+    var byte1 = number & 0xFF; // mask for lowest order number byte
+    var byte2 = (number >> 8) & 0xFF; // shift and mask for next lowest order number byte
+    var byte3 = (number >> 16) & 0xFF; // shift and mask for high order number byte
+    var byte4 = (number >> 24) & 0xFF; // shift and mask for highest order number byte
     return [byte4, byte3, byte2, byte1];
 }
 exports.u32toBytes = u32toBytes;

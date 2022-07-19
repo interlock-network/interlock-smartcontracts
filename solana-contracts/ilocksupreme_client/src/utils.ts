@@ -13,7 +13,6 @@ import {
   LAMPORTS_PER_SOL,
   SYSVAR_RENT_PUBKEY,
   SystemProgram,
-  TransactionInstruction,
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
@@ -402,6 +401,73 @@ export function unpackFlags(flags: number) {
 }
 
 /**
+* unpack flags 32
+**/
+export function unpackFlags32(flags: number) {
+	const flags1 = (flags >> 24) & 0xFF;
+	const flags2 = (flags >> 16) & 0xFF;
+	const flags3 = (flags >> 8) & 0xFF;
+	const flags4 = flags & 0xFF;
+	var bitarray = new Uint8Array(32);
+	for (var index = 0; index < 8; index++) {
+		bitarray[index] = (flags1 >> (7 - index)) & 0x01;
+	}
+	for (index = 0; index < 8; index++) {
+		bitarray[8 + index] = (flags2 >> (7 - index)) & 0x01;
+	}
+	for (index = 0; index < 8; index++) {
+		bitarray[16 + index] = (flags3 >> (7 - index)) & 0x01;
+	}
+	for (index = 0; index < 8; index++) {
+		bitarray[24 + index] = (flags4 >> (7 - index)) & 0x01;
+	}
+	return bitarray
+}
+
+/**
+* pack flags 32
+**/
+export function packFlags32(flags: Uint8Array) {
+	
+	var byte1 = flags[0] |
+		flags[1] << 1 |
+		flags[2] << 2 |
+		flags[3] << 3 |
+		flags[4] << 4 |
+		flags[5] << 5 |
+		flags[6] << 6 |
+		flags[7] << 7;
+	var byte2 = flags[8] |
+		flags[9] << 1 |
+		flags[10] << 2 |
+		flags[11] << 3 |
+		flags[12] << 4 |
+		flags[13] << 5 |
+		flags[14] << 6 |
+		flags[15] << 7;
+	var byte3 = flags[16] |
+		flags[17] << 1 |
+		flags[18] << 2 |
+		flags[19] << 3 |
+		flags[20] << 4 |
+		flags[21] << 5 |
+		flags[22] << 6 |
+		flags[23] << 7;
+
+	var byte4 = flags[24] |
+		flags[25] << 1 |
+		flags[26] << 2 |
+		flags[27] << 3 |
+		flags[28] << 4 |
+		flags[29] << 5 |
+		flags[30] << 6 |
+		flags[31] << 7;
+
+	return [byte4, byte3, byte2, byte1]
+}
+
+
+/**
 * create pda seed
 **/
 export function createSeed(pda: PublicKey, count: Uint16Array) {
@@ -416,13 +482,15 @@ export function createSeed(pda: PublicKey, count: Uint16Array) {
 /**
 * u32 to bytes
 **/
-export function u32toBytes(number: Uint32Array) {
-	let byte1 = number[0] & 0xFF; 		// mask for lowest order number byte
-	let byte2 = (number[0] >> 8) & 0xFF; 	// shift and mask for next lowest order number byte
-	let byte3 = (number[0] >> 16) & 0xFF; 	// shift and mask for high order number byte
-	let byte4 = (number[0] >> 24) & 0xFF; 	// shift and mask for highest order number byte
+export function u32toBytes(number: number) {
+	let byte1 = number & 0xFF; 		// mask for lowest order number byte
+	let byte2 = (number >> 8) & 0xFF; 	// shift and mask for next lowest order number byte
+	let byte3 = (number >> 16) & 0xFF; 	// shift and mask for high order number byte
+	let byte4 = (number >> 24) & 0xFF; 	// shift and mask for highest order number byte
 	return [byte4, byte3, byte2, byte1];
 }
+
+
 
 
 
