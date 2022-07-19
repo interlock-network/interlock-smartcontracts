@@ -31,7 +31,8 @@ impl Processor {
     pub fn process_update_global(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
-        updateFlags: u32,
+        updateFlags1: u32,
+        updateFlags2: u32,
         values: [u32; VALUES],
     ) -> ProgramResult {
 
@@ -63,19 +64,25 @@ impl Processor {
         }
         
         // unpack ix data flags specifying which global variable to update
-        let flags = unpack_32_flags(updateFlags);
+        let flags1 = unpack_32_flags(updateFlags1);
+        let flags2 = unpack_32_flags(updateFlags2);
 
 
         // . check for values that need to be updated
         // . flag high => value is to be changed
         let mut i = 0;
-        for flag in &flags {
+        for flag in &flags1 {
+            if flag {GLOBALinfo.values[i] = values[i]}
+            i += 1;
+        }
+
+        let mut i = 32;
+        for flag in &flags2 {
             if flag {GLOBALinfo.values[i] = values[i]}
             i += 1;
         }
 
         // populate and pack GLOBAL account info
-        GLOBALinfo.flags = pack_32_flags(flags);
         GLOBALinfo.owner = *owner.key;
         GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
 

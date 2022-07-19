@@ -34,8 +34,9 @@ impl ContractInstruction {
                 seedGLOBAL: rest[1..].to_vec(),
             },
             1 => Self::UpdateGlobal {
-                updateFlags: unpack_number_u32(&rest[0..U16_LEN])?,
-                values: unpack_array_u32(&rest[U16_LEN..])?,
+                updateFlags1: unpack_number_u32(&rest[0..U32_LEN])?,
+                updateFlags2: unpack_number_u32(&rest[U32_LEN..2*U32_LEN])?,
+                values: unpack_array_u32(&rest[2*U32_LEN..])?,
             },
             2 => Self::CreateUser {
                 bumpUSER: rest[0],
