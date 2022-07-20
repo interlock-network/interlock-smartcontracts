@@ -86,7 +86,7 @@ const CreateUser = async () => {
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateUSERtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully created new USER account for '${programID}'!\n`);
+	console.log(`\n* Successfully created new USER account for '${pdaUSER.toBase58()}'!\n`);
 
 	} catch {
 

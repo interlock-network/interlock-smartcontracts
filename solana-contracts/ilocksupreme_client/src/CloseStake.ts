@@ -1,5 +1,5 @@
 /****************************************************************
- * ILOCKsupreme client CreateStake				*	
+ * ILOCKsupreme client CloseStake				*	
  ****************************************************************/
 
 /****************************************************************
@@ -43,7 +43,7 @@ const BN = require("bn.js");
  * main								*
  ****************************************************************/
 
-const CreateStake = async () => {
+const CloseStake = async () => {
 	
 	try {
 	
@@ -66,11 +66,11 @@ const CreateStake = async () => {
 	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find ENTITY address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// find USER address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ownerVault));
+	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// set new STAKE count
@@ -88,27 +88,30 @@ const CreateStake = async () => {
 	const [pdaSTAKE, bumpSTAKE] = await deriveAddress(pdaSTAKEseed);
 	console.log(`. New STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
 
+	// get final STAKE address
+	var endSTAKE = new Uint16Array(1);
+	endSTAKE[0] = USER.count;
+	const pdaSTAKEendseed = createSeed(pdaUSER, endSTAKE);
+	const [pdaSTAKEend, bumpSTAKEend] = await deriveAddress(pdaSTAKEendseed);
+	console.log(`. New STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
+
 	// get fill amount
 	const amount = prompt("Please enter the amount you wish to stake: ");
 	
 	// setup instruction data
-	const ixDATA = [4, bumpSTAKE]
-		.concat(pdaSTAKEseed)
-		.concat(new BN(amount).toArray("le", 16))
-		.concat([valence[0]]);
+	const ixDATA = [6]
+		.concat(toUTF8Array(ENTITYhash));
 
 	// prepare transaction
-	const CreateUSERtx = new Transaction().add(
+	const CloseSTAKEtx = new Transaction().add(
 		new TransactionInstruction({
 			keys: [
 				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
 				{ pubkey: pdaGLOBAL, isSigner: false, isWritable: true, },
 				{ pubkey: pdaUSER, isSigner: false, isWritable: true, },
 				{ pubkey: pdaSTAKE, isSigner: false, isWritable: true, },
+				{ pubkey: pdaSTAKEend, isSigner: false, isWritable: true, },
 				{ pubkey: pdaENTITY, isSigner: false, isWritable: true, },
-				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
-				{ pubkey: new PublicKey(ENTITYhash), isSigner: false, isWritable: false, },
-				{ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
 			data: Buffer.from(new Uint8Array(ixDATA)),
@@ -117,10 +120,10 @@ const CreateStake = async () => {
 	);
 		
 	// send transaction
-	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateUSERtx, [ownerKEY], )}`);
+	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CloseSTAKEtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully created new STAKE account '${pdaSTAKE.toBase58()}'!\n`);
+	console.log(`\n* Successfully closed STAKE account for '${pdaSTAKE.toBase58()}'!\n`);
 
 	} catch {
 
@@ -129,5 +132,5 @@ const CreateStake = async () => {
 	}
 };
 
-CreateStake();
+CloseStake();
 
