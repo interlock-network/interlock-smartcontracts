@@ -52,7 +52,6 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let ownerGLOBAL = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
         let pdaSTAKE = next_account_info(account_info_iter)?;
@@ -106,14 +105,14 @@ impl Processor {
         // create pdaGLOBAL
         invoke_signed(
         &system_instruction::create_account(
-            &ownerGLOBAL.key,
+            &GLOBAL.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            ownerGLOBAL.clone(),
+            GLOBAL.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
