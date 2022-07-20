@@ -60,11 +60,11 @@ const SettleEntity = async () => {
 	const ENTITYhash = prompt("Please enter the ENTITY hash: ");
 
 	// find GLOBAL address
-	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
 	console.log(`. New GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ownerVault));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// get valence
@@ -72,7 +72,7 @@ const SettleEntity = async () => {
 	determination = prompt("Please enter '1' if you determined this entity is good, or '0' if it is bad: ");
 
 	// setup instruction data
-	const ixDATA = [5, determination]
+	const ixDATA = [5, determination[0]]
 
 	// prepare transaction
 	const SettleENTITYtx = new Transaction().add(
