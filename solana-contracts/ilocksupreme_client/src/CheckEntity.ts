@@ -1,5 +1,5 @@
 /****************************************************************
- * ILOCKsupreme client SettleEntity				*	
+ * ILOCKsupreme client CheckEntity				*	
  ****************************************************************/
 
 /****************************************************************
@@ -44,7 +44,7 @@ const BN = require("bn.js");
  * main								*
  ****************************************************************/
 
-const SettleEntity = async () => {
+const CheckEntity = async () => {
 	
 	try {
 	
@@ -67,15 +67,11 @@ const SettleEntity = async () => {
 	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
-	// get valence
-	var determination = new Uint8Array(1);
-	determination = prompt("Please enter '1' if you determined this entity is good, or '0' if it is bad: ");
-
 	// setup instruction data
-	const ixDATA = [5, determination[0]]
+	const ixDATA = [9];
 
 	// prepare transaction
-	const SettleENTITYtx = new Transaction().add(
+	const CheckENTITYtx = new Transaction().add(
 		new TransactionInstruction({
 			keys: [
 				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
@@ -90,10 +86,10 @@ const SettleEntity = async () => {
 	);
 		
 	// send transaction
-	console.log(`txhash: ${await sendAndConfirmTransaction(connection, SettleENTITYtx, [ownerKEY], )}`);
+	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CheckENTITYtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully settled ENTITY '${ENTITYhash}'!\n`);
+	console.log(`\n* Successfully checked ENTITY '${ENTITYhash}'!\n`);
 
 	} catch {
 
@@ -102,5 +98,5 @@ const SettleEntity = async () => {
 	}
 };
 
-SettleEntity();
+CheckEntity();
 
