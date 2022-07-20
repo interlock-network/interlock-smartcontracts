@@ -1,5 +1,5 @@
 /****************************************************************
- * ILOCKsupreme client CreateStake				*	
+ * ILOCKsupreme client CreateEntity				*	
  ****************************************************************/
 
 /****************************************************************
@@ -45,7 +45,7 @@ const BN = require("bn.js");
  * main								*
  ****************************************************************/
 
-const CreateStake = async () => {
+const CreateEntity = async () => {
 	
 	try {
 	
@@ -94,13 +94,14 @@ const CreateStake = async () => {
 	const amount = prompt("Please enter the amount you wish to stake: ");
 	
 	// setup instruction data
-	const ixDATA = [4, bumpSTAKE]
+	const ixDATA = [7, bumpSTAKE, bumpENTITY]
 		.concat(pdaSTAKEseed)
+		.concat(toUTF8Array(ENTITYhash))
 		.concat(new BN(amount).toArray("le", 16))
 		.concat([valence[0]]);
 
 	// prepare transaction
-	const CreateUSERtx = new Transaction().add(
+	const CreateENTITYtx = new Transaction().add(
 		new TransactionInstruction({
 			keys: [
 				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
@@ -108,8 +109,8 @@ const CreateStake = async () => {
 				{ pubkey: pdaUSER, isSigner: false, isWritable: true, },
 				{ pubkey: pdaSTAKE, isSigner: false, isWritable: true, },
 				{ pubkey: pdaENTITY, isSigner: false, isWritable: true, },
-				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: new PublicKey(ENTITYhash), isSigner: false, isWritable: false, },
+				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
@@ -119,9 +120,10 @@ const CreateStake = async () => {
 	);
 		
 	// send transaction
-	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateUSERtx, [ownerKEY], )}`);
+	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateENTITYtx, [ownerKEY], )}`);
 	
 	// confirmation
+	console.log(`\n* Successfully created new ENTITY account '${pdaENTITY.toBase58()}'!\n`);
 	console.log(`\n* Successfully created new STAKE account '${pdaSTAKE.toBase58()}'!\n`);
 
 	} catch {
@@ -131,5 +133,5 @@ const CreateStake = async () => {
 	}
 };
 
-CreateStake();
+CreateEntity();
 
