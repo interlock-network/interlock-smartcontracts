@@ -185,6 +185,14 @@ impl Processor {
                 )
             },
 
+            ContractInstruction::ResolveStake {
+            } => {
+                msg!("Instruction: ResolveStake");
+                Self::process_resolve_stake(
+                    program_id,
+                    accounts,
+                )
+            },
         }
     }
 }

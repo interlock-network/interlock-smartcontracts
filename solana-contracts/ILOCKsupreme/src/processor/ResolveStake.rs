@@ -13,6 +13,7 @@ use solana_program::{
         program_pack::Pack,
         pubkey::Pubkey,
         clock::Clock,
+        sysvar::Sysvar,
     };
 
 use crate::{
@@ -31,7 +32,7 @@ use crate::{
 
 impl Processor {
 
-    pub fn process_close_stake(
+    pub fn process_resolve_stake(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
@@ -79,7 +80,7 @@ impl Processor {
         let mut STAKEflags = unpack_16_flags(STAKEinfo.flags);
         
         // compute time delta
-        let timedelta = ENTITYinfo.timestamp - STAKEinfo.timestamp;
+        let timedelta = Clock::from_account_info(&clock)?.unix_timestamp - STAKEinfo.timestamp;
 
         // compute continuous exponential return
         //
@@ -92,27 +93,27 @@ impl Processor {
         //        = 1 + x + x^2/2 + x^3/6 + ...
         //
         let rate = GLOBALinfo.values[3];
-        let exponent = rate * timedelta;
-        let payout = STAKEinfo.amount * (1 + exponent + (exponent*exponent)/2 + (exponent*exponent*exponent)/6);
-        let yield = payout - STAKEinfo.amount;
+        let exponent = rate * timedelta as u32;
+        let stake_payout = STAKEinfo.amount * (1 + exponent + (exponent*exponent)/2 + (exponent*exponent*exponent)/6) as u128;
+        let stake_yield = stake_payout - STAKEinfo.amount;
 
         // pay reward and return stake principal
-        let reward = STAKEinfo.amount * GLOBALinfo.values[9];
+        let reward = STAKEinfo.amount * GLOBALinfo.values[9] as u128;
 
         // if stake matches determination
         if STAKEflags[3] == ENTITYflags[9] {
 
-            // transfer reward stake and yield to USER
-            USERinfo.balance += reward + STAKEinfo.amount + yield;
+            // transfer reward stake and stake_yield to USER
+            USERinfo.balance += reward + STAKEinfo.amount + stake_yield;
             USERinfo.rewards += reward;
-            GLOBALinfo.pool -= reward + yield;
+            GLOBALinfo.pool -= reward + stake_yield;
             STAKEinfo.amount = 0;
 
         } else {
 
-            // transfer yield only to USER
-            USERinfo.balance += yield;
-            GLOBALinfo.pool += STAKEinfo.amount - yield;
+            // transfer stake_yield only to USER
+            USERinfo.balance += stake_yield;
+            GLOBALinfo.pool += STAKEinfo.amount - stake_yield;
             STAKEinfo.amount = 0;
         }
 

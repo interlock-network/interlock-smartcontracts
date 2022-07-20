@@ -15,3 +15,4 @@ pub mod SetHunter;
 pub mod CheckEntity;
 pub mod CloseEntity;
 pub mod ClaimEntity;
+pub mod ResolveStake;

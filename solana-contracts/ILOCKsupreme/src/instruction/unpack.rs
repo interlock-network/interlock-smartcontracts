@@ -90,6 +90,8 @@ impl ContractInstruction {
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
                 valence: rest[1 + PUBKEY_LEN + U128_LEN],
             },
+            12 => Self::ResolveStake {
+            },
             _ => return Err(InvalidInstruction.into()),
         })
     }
