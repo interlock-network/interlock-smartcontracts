@@ -88,14 +88,14 @@ impl Processor {
         // create pdaENTITY
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBAL.key,
+            &pdaGLOBAL.key,
             &pdaENTITY.key,
             rentENTITY,
             SIZE_ENTITY.into(),
             &program_id,
         ),
         &[
-            ownerGLOBAL.clone(),
+            pdaGLOBAL.clone(),
             pdaENTITY.clone(),
         ],
         &[&[&seedENTITY, &[bumpENTITY]]]
@@ -148,14 +148,14 @@ impl Processor {
         // create pdaSTAKE
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBAL.key,
+            &pdaGLOBAL.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            ownerGLOBAL.clone(),
+            pdaGLOBAL.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
@@ -163,7 +163,7 @@ impl Processor {
         msg!("Successfully created pdaSTAKE");
 // need to determine if create_account reverts if account already exists
         
-        // get unititialized GLOBAL data
+        // get unititialized STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
         
         // convert serialized valence from u8 into boolean
@@ -192,7 +192,7 @@ impl Processor {
             flags.set(3, valence_bool);
 
 
-        // populate and pack GLOBAL account info
+        // populate and pack STAKE account info
         STAKEinfo.flags = pack_16_flags(flags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;

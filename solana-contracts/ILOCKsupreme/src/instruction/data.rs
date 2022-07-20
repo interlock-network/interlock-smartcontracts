@@ -75,6 +75,10 @@ pub enum ContractInstruction {
 
     ClaimEntity {
 
+        bumpSTAKE: u8,
+        seedSTAKE: Vec<u8>,
+        amount: u128,
+        valence: u8,
     },
 }
 

@@ -105,14 +105,14 @@ impl Processor {
         // create pdaGLOBAL
         invoke_signed(
         &system_instruction::create_account(
-            &GLOBAL.key,
+            &pdaGLOBAL.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            GLOBAL.clone(),
+            pdaGLOBAL.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]

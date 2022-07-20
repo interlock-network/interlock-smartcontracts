@@ -169,11 +169,19 @@ impl Processor {
             },
 
             ContractInstruction::ClaimEntity {
+                bumpSTAKE,
+                seedSTAKE,
+                amount,
+                valence,
             } => {
                 msg!("Instruction: ClaimEntity");
                 Self::process_claim_entity(
                     program_id,
                     accounts,
+                    bumpSTAKE,
+                    seedSTAKE,
+                    amount,
+                    valence,
                 )
             },
 

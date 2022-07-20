@@ -82,6 +82,13 @@ impl ContractInstruction {
             10 => Self::CloseEntity {
             },
             11 => Self::ClaimEntity {
+                bumpSTAKE: rest[0],
+                seedSTAKE: rest[1..(1 + PUBKEY_LEN)].to_vec(),
+                amount: rest.get((1 + PUBKEY_LEN)..(1 + PUBKEY_LEN + U128_LEN))
+                    .and_then(|slice| slice.try_into().ok())
+                    .map(u128::from_be_bytes)
+                    .ok_or(InvalidInstruction)?.try_into().unwrap(),
+                valence: rest[1 + PUBKEY_LEN + U128_LEN],
             },
             _ => return Err(InvalidInstruction.into()),
         })
