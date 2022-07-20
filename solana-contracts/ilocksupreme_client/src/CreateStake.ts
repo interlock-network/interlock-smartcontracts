@@ -27,6 +27,7 @@ import {
 	checkProgram,
 	toUTF8Array,
 	createSeed,
+	getUSERdata,
 } from "./utils";
 
 // utility constants
@@ -35,6 +36,8 @@ import {
 	ownerKEY,
 	ilocksupremeID,
 } from "./utils";
+
+const BN = require("bn.js");
 
 /****************************************************************
  * main								*
@@ -62,10 +65,29 @@ const CreateUser = async () => {
 	// find USER address
 	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
 	console.log(`. New USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
+
+	// set new STAKE count
+	var USER = await getUSERdata(pdaUSER);
+	var countSTAKE = new Uint16Array(1);
+	countSTAKE[0] = USER.count + 1;
+	console.log(`. This will be STAKE number ${countSTAKE[0]}.`);
+
+	// get valence
+	var valence = new Uint8Array(1);
+	valence = prompt("Please enter '1' if this entity is good, or '0' if it is bad: ");
+
+	// get STAKE address
+	const pdaSTAKEseed = createSeed(pdaUSER, countSTAKE);
+	const [pdaSTAKE, bumpSTAKE] = await deriveAddress(pdaSTAKEseed);
+
+	// get fill amount
+	const amount = prompt("Please enter the amount you wish to stake: ");
 	
 	// setup instruction data
-	const ixDATA = [2, bumpUSER]
-		.concat(toUTF8Array(ownerVault));
+	const ixDATA = [4, bumpSTAKE]
+		.concat(pdaSTAKEseed)
+		.concat(new BN(amount).toArray("le", 16))
+		.concat([valence[0]]);
 
 	// prepare transaction
 	const CreateUSERtx = new Transaction().add(
@@ -86,7 +108,7 @@ const CreateUser = async () => {
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateUSERtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully created new USER account for '${programID}'!\n`);
+	console.log(`\n* Successfully created new GLOBAL account for '${programID}'!\n`);
 
 	} catch {
 
