@@ -37,8 +37,8 @@ impl Processor {
         // it is customary to iterate through accounts like so
         let account_info_iter = &mut accounts.iter();
         let owner = next_account_info(account_info_iter)?;
-        let pdaUSER = next_account_info(account_info_iter)?;
         let pdaGLOBAL = next_account_info(account_info_iter)?;
+        let pdaUSER = next_account_info(account_info_iter)?;
 
         // check to make sure tx sender is signer
         if !owner.is_signer {
