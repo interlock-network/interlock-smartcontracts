@@ -551,23 +551,22 @@ export async function availableIDcheck(operatorID: string): Promise<void> {
 		process.exit(1);
 	}
 }
-
+*/
 /**
 * get all PIECEs with specific MAIN operator account
-***
-export async function getPIECEs(operator: PublicKey) {
-	console.log("chirp");
+***/
+export async function getSTAKEs(hash: string) {
 	return await connection.getParsedProgramAccounts(
 		ilocksupremeID,
 		{
 			filters: [
 				{
-					dataSize: PIECE_SIZE,
+					dataSize: STAKE_SIZE,
 				},
 				{
 					memcmp: {
-						offset: FLAGS_SIZE,
-						bytes: operator.toString(),
+						offset: U16_SIZE + U64_SIZE,
+						bytes: hash.toString(),
 					},
 				},
 			],
@@ -575,7 +574,7 @@ export async function getPIECEs(operator: PublicKey) {
 	);
 }
 
-*/
+
 
 
 
