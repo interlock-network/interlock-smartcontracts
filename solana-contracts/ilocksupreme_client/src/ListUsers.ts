@@ -35,9 +35,6 @@ const ListUsers = async () => {
 	await establishOperator();
 	await checkProgram();
 
-	// state intention
-	console.log(`\nUSERs:\n`);
-	
 	// get USER flags
 	var USERflags = unpackFlags(USER.flags);
 

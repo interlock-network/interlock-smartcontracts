@@ -105,7 +105,70 @@ export async function getGLOBALdata(pdaGLOBAL: PublicKey) {
 		flags1: decodedGLOBALstate.flags1,
 		flags2: decodedGLOBALstate.flags2,
 		owner: new PublicKey(decodedGLOBALstate.owner),
-		values: decodedGLOBALstate.values,
+		value0: decodedGLOBALstate.value0,
+		value1: decodedGLOBALstate.value1,
+		value2: decodedGLOBALstate.value2,
+		value3: decodedGLOBALstate.value3,
+		value4: decodedGLOBALstate.value4,
+		value5: decodedGLOBALstate.value5,
+		value6: decodedGLOBALstate.value6,
+		value7: decodedGLOBALstate.value7,
+		value8: decodedGLOBALstate.value8,
+		value9: decodedGLOBALstate.value9,
+		value10: decodedGLOBALstate.value10,
+		value11: decodedGLOBALstate.value11,
+		value12: decodedGLOBALstate.value12,
+		value13: decodedGLOBALstate.value13,
+		value14: decodedGLOBALstate.value14,
+		value15: decodedGLOBALstate.value15,
+		value16: decodedGLOBALstate.value16,
+		value17: decodedGLOBALstate.value17,
+		value18: decodedGLOBALstate.value18,
+		value19: decodedGLOBALstate.value19,
+		value20: decodedGLOBALstate.value20,
+		value21: decodedGLOBALstate.value21,
+		value22: decodedGLOBALstate.value22,
+		value23: decodedGLOBALstate.value23,
+		value24: decodedGLOBALstate.value24,
+		value25: decodedGLOBALstate.value25,
+		value26: decodedGLOBALstate.value26,
+		value27: decodedGLOBALstate.value27,
+		value28: decodedGLOBALstate.value28,
+		value29: decodedGLOBALstate.value29,
+		value30: decodedGLOBALstate.value30,
+		value31: decodedGLOBALstate.value31,
+		value32: decodedGLOBALstate.value32,
+		value33: decodedGLOBALstate.value33,
+		value34: decodedGLOBALstate.value34,
+		value35: decodedGLOBALstate.value35,
+		value36: decodedGLOBALstate.value36,
+		value37: decodedGLOBALstate.value37,
+		value38: decodedGLOBALstate.value38,
+		value39: decodedGLOBALstate.value39,
+		value40: decodedGLOBALstate.value40,
+		value41: decodedGLOBALstate.value41,
+		value42: decodedGLOBALstate.value42,
+		value43: decodedGLOBALstate.value43,
+		value44: decodedGLOBALstate.value44,
+		value45: decodedGLOBALstate.value45,
+		value46: decodedGLOBALstate.value46,
+		value47: decodedGLOBALstate.value47,
+		value48: decodedGLOBALstate.value48,
+		value49: decodedGLOBALstate.value49,
+		value50: decodedGLOBALstate.value50,
+		value51: decodedGLOBALstate.value51,
+		value52: decodedGLOBALstate.value52,
+		value53: decodedGLOBALstate.value53,
+		value54: decodedGLOBALstate.value54,
+		value55: decodedGLOBALstate.value55,
+		value56: decodedGLOBALstate.value56,
+		value57: decodedGLOBALstate.value57,
+		value58: decodedGLOBALstate.value58,
+		value59: decodedGLOBALstate.value59,
+		value60: decodedGLOBALstate.value60,
+		value61: decodedGLOBALstate.value61,
+		value62: decodedGLOBALstate.value62,
+		value63: decodedGLOBALstate.value63,
 	}
 }
 
@@ -202,13 +265,6 @@ const publicKey = (property = "publicKey") => {
 };
 
 /**
- * values layout
- **/
-const values = (property = "values") => {
-	return BufferLayout.blob(256, property);
-};
-
-/**
  * u64 layout
  **/
 const uint64 = (property = "uint64") => {
@@ -230,14 +286,140 @@ export const GLOBAL_DATA_LAYOUT = BufferLayout.struct([
 	BufferLayout.u16("flags1"),
 	BufferLayout.u16("flags2"),
 	publicKey("owner"),
-	values("values"),
+	BufferLayout.u32("value0"),
+	BufferLayout.u32("value1"),
+	BufferLayout.u32("value2"),
+	BufferLayout.u32("value3"),
+	BufferLayout.u32("value4"),
+	BufferLayout.u32("value5"),
+	BufferLayout.u32("value6"),
+	BufferLayout.u32("value7"),
+	BufferLayout.u32("value8"),
+	BufferLayout.u32("value9"),
+	BufferLayout.u32("value10"),
+	BufferLayout.u32("value11"),
+	BufferLayout.u32("value12"),
+	BufferLayout.u32("value13"),
+	BufferLayout.u32("value14"),
+	BufferLayout.u32("value15"),
+	BufferLayout.u32("value16"),
+	BufferLayout.u32("value17"),
+	BufferLayout.u32("value18"),
+	BufferLayout.u32("value19"),
+	BufferLayout.u32("value20"),
+	BufferLayout.u32("value21"),
+	BufferLayout.u32("value22"),
+	BufferLayout.u32("value23"),
+	BufferLayout.u32("value24"),
+	BufferLayout.u32("value25"),
+	BufferLayout.u32("value26"),
+	BufferLayout.u32("value27"),
+	BufferLayout.u32("value28"),
+	BufferLayout.u32("value29"),
+	BufferLayout.u32("value30"),
+	BufferLayout.u32("value31"),
+	BufferLayout.u32("value32"),
+	BufferLayout.u32("value33"),
+	BufferLayout.u32("value34"),
+	BufferLayout.u32("value35"),
+	BufferLayout.u32("value36"),
+	BufferLayout.u32("value37"),
+	BufferLayout.u32("value38"),
+	BufferLayout.u32("value39"),
+	BufferLayout.u32("value40"),
+	BufferLayout.u32("value41"),
+	BufferLayout.u32("value42"),
+	BufferLayout.u32("value43"),
+	BufferLayout.u32("value44"),
+	BufferLayout.u32("value45"),
+	BufferLayout.u32("value46"),
+	BufferLayout.u32("value47"),
+	BufferLayout.u32("value48"),
+	BufferLayout.u32("value49"),
+	BufferLayout.u32("value50"),
+	BufferLayout.u32("value51"),
+	BufferLayout.u32("value52"),
+	BufferLayout.u32("value53"),
+	BufferLayout.u32("value54"),
+	BufferLayout.u32("value55"),
+	BufferLayout.u32("value56"),
+	BufferLayout.u32("value57"),
+	BufferLayout.u32("value58"),
+	BufferLayout.u32("value59"),
+	BufferLayout.u32("value60"),
+	BufferLayout.u32("value61"),
+	BufferLayout.u32("value62"),
+	BufferLayout.u32("value63"),
 ]);	
 export interface GLOBALlayout {
 	pool: Buffer;
 	flags1: number;
 	flags2: number;
 	owner: Uint8Array;
-	values: Buffer;
+	value0: number;
+	value1: number;
+	value2: number;
+	value3: number;
+	value4: number;
+	value5: number;
+	value6: number;
+	value7: number;
+	value8: number;
+	value9: number;
+	value10: number;
+	value11: number;
+	value12: number;
+	value13: number;
+	value14: number;
+	value15: number;
+	value16: number;
+	value17: number;
+	value18: number;
+	value19: number;
+	value20: number;
+	value21: number;
+	value22: number;
+	value23: number;
+	value24: number;
+	value25: number;
+	value26: number;
+	value27: number;
+	value28: number;
+	value29: number;
+	value30: number;
+	value31: number;
+	value32: number;
+	value33: number;
+	value34: number;
+	value35: number;
+	value36: number;
+	value37: number;
+	value38: number;
+	value39: number;
+	value40: number;
+	value41: number;
+	value42: number;
+	value43: number;
+	value44: number;
+	value45: number;
+	value46: number;
+	value47: number;
+	value48: number;
+	value49: number;
+	value50: number;
+	value51: number;
+	value52: number;
+	value53: number;
+	value54: number;
+	value55: number;
+	value56: number;
+	value57: number;
+	value58: number;
+	value59: number;
+	value60: number;
+	value61: number;
+	value62: number;
+	value63: number;
 }
 
 /**
@@ -619,7 +801,27 @@ export async function getUSERs() {
 	);
 }
 
-
+/**
+* get GLOBAL
+***/
+export async function getGLOBAL() {
+	return await connection.getParsedProgramAccounts(
+		ilocksupremeID,
+		{
+			filters: [
+				{
+					dataSize: GLOBAL_SIZE,
+				},
+				{
+					memcmp: {
+						offset: 0,
+						bytes: "",
+					},
+				},
+			],
+		},
+	);
+}
 
 
 /**
