@@ -47,11 +47,11 @@ const ListEntityStakes = async () => {
 	// state intention
 	console.log(`\nENTITY STAKEs:\n`);
 	
-	// get USER flags
+	// get ENTITY flags
 	var ENTITYflags = unpackFlags(ENTITY.flags);
 
-	// print USER data
-	console.log(`| USER`)
+	// print ENTITY data
+	console.log(`| ENTITY`)
 	console.log(`| ADDRESS: ----- ${pdaENTITY.toBase58()}`);
 	console.log(`| HUNTER: ------ ${ENTITY.hunter}`);
 	console.log(`| STAKEPOS: ---- ${ENTITY.stakepos}`);
@@ -78,7 +78,7 @@ const ListEntityStakes = async () => {
 	process.stdout.write(`]`);
 		process.stdout.write(`\n\n`);
 
-	// get PIECE accounts with operator Key in operator field
+	// get STAKE accounts with operator Key in operator field
 	const STAKEs = await getSTAKEs(ENTITYhash);
 
 	// state intention

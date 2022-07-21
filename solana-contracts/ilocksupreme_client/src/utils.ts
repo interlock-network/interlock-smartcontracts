@@ -553,7 +553,7 @@ export async function availableIDcheck(operatorID: string): Promise<void> {
 }
 */
 /**
-* get all PIECEs with specific MAIN operator account
+* get all STAKEs with specific ENTITY account
 ***/
 export async function getSTAKEs(hash: string) {
 	return await connection.getParsedProgramAccounts(
@@ -574,6 +574,50 @@ export async function getSTAKEs(hash: string) {
 	);
 }
 
+/**
+* get all ENTITYs
+***/
+export async function getENTITYs() {
+	return await connection.getParsedProgramAccounts(
+		ilocksupremeID,
+		{
+			filters: [
+				{
+					dataSize: ENTITY_SIZE,
+				},
+				{
+					memcmp: {
+						offset: 0,
+						bytes: "",
+					},
+				},
+			],
+		},
+	);
+}
+
+
+/**
+* get all USERs
+***/
+export async function getUSERs() {
+	return await connection.getParsedProgramAccounts(
+		ilocksupremeID,
+		{
+			filters: [
+				{
+					dataSize: USER_SIZE,
+				},
+				{
+					memcmp: {
+						offset: 0,
+						bytes: "",
+					},
+				},
+			],
+		},
+	);
+}
 
 
 
