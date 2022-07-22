@@ -15,7 +15,6 @@ import {
 	Transaction,
 	TransactionInstruction,
 	SYSVAR_RENT_PUBKEY,
-	SYSVAR_CLOCK_PUBKEY,
 	SystemProgram,
 	PublicKey,
 
@@ -97,7 +96,6 @@ const CreateStake = async () => {
 				{ pubkey: pdaUSER, isSigner: false, isWritable: true, },
 				{ pubkey: pdaSTAKE, isSigner: false, isWritable: true, },
 				{ pubkey: pdaENTITY, isSigner: false, isWritable: true, },
-				{ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
 			data: Buffer.from(new Uint8Array(ixDATA)),

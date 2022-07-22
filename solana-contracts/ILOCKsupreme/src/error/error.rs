@@ -64,11 +64,35 @@ pub enum ContractError {
     #[error("Entity claimed")]
     EntityClaimedError,
 
+    #[error("Entity unclaimed")]
+    EntityUnclaimedError,
+
+    #[error("Wrong stake valence")]
+    WrongStakeValenceError,
+
     #[error("Time threshold passed")]
     TimeThresholdPassedError,
+
+    #[error("Total stake threshold passed")]
+    TotalStakeThresholdPassedError,
+
+    #[error("Positiive stake threshold passed")]
+    PositiveStakeThresholdPassedError,
+    
+    #[error("Negative stake threshold passed")]
+    NegativeStakeThresholdPassedError,
+
+    #[error("Max staker threshold passed")]
+    MaxStakerThresholdPassedError,
+
+    #[error("Minimum stake not met")]
+    MinimumStakeNotMetError,
     
     #[error("User not a hunter")]
     UserNotHunterError,
+
+    #[error("Not User stake")]
+    NotUserStakeError,
 
 }
 

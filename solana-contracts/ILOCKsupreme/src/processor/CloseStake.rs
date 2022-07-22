@@ -33,7 +33,7 @@ impl Processor {
     pub fn process_close_stake(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        seedENTITY:    Vec<u8>,
+        seedSTAKE:    Vec<u8>,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
@@ -45,55 +45,58 @@ impl Processor {
         let pdaSTAKEend = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
 
+        // get GLOBAL
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // get USER
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+
+        // get STAKE  data
+        let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
+        let STAKEflags = unpack_16_flags(STAKEinfo.flags);
+
+        // get STAKE at end of USER account stake index
+        let endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
+
+        // get ENTITY
+        let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
+        let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // get ENTITY info
-        let ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
-
-        // unpack ENTITY flags
-        let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
-
         // make sure entity is settled
-        if ENTITYflags[6] == false {
+        if !ENTITYflags[6] {
             return Err(EntityNotSettledError.into());
         }
-
-        // get GLOBAL data
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-
-        // get USER info
-        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
         if USERinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
-        
-        // get STAKE  data
-        let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
-
-        // unpack STAKE flags
-        let STAKEflags = unpack_16_flags(STAKEinfo.flags);
-        
 
         // make sure stake is resolved first
         // ...before closing, yields or penalitizies must be processed
-        if STAKEflags[4] == false {
+        if !STAKEflags[4] {
             return Err(StakeNotResolvedError.into());
         }
 
-        // verify ref seed comes from piece
+        // verify STAKE is USER's
         let pdaUSERstring = pdaUSER.key.to_string();
-        let (pdaENTITYcheck, _) = Pubkey::find_program_address(&[&seedENTITY], &program_id);
+        let (pdaSTAKEcheck, _) = Pubkey::find_program_address(&[&seedSTAKE], &program_id);
+        if &seedSTAKE[0..(PUBKEY_LEN - U16_LEN)] !=
+            pdaUSERstring[0..(PUBKEY_LEN - U16_LEN)].as_bytes() ||  // STAKE seed contains pdaUSER address
+            pdaSTAKEcheck != *pdaSTAKE.key {                        // address generated from seed matches STAKE
+            return Err(NotUserStakeError.into());
+        }
 
-        // check if STAKE is also bounty hunter claim
-        if ENTITYinfo.hunter != GLOBALinfo.owner &&     // entity is claimed by bounty hunter 
-            &seedENTITY[0..(PUBKEY_LEN - U16_LEN)] == pdaUSERstring[0..(PUBKEY_LEN - U16_LEN)].as_bytes() &&
-            pdaENTITYcheck == *pdaENTITY.key &&
-            STAKEflags[3] == ENTITYflags[9] {           // entity determination matches stake valence
+        // check and reward bounty hunter
+        if ENTITYflags[10]  &&                      // entity is claimed by bounty hunter 
+            !ENTITYflags[11] &&                     // bounty not yet rewarded
+            ENTITYinfo.hunter == *pdaUSER.key &&    // USER is ENTITY hunter
+            STAKEflags[3] == ENTITYflags[9] {       // entity determination matches stake valence
 
             // reward and pay out bounty hunter
             let reward = GLOBALinfo.values[0] * GLOBALinfo.values[1];
@@ -103,15 +106,10 @@ impl Processor {
             USERinfo.balance += reward as u128;
             GLOBALinfo.pool -= reward as u128;
             GLOBAL::pack(GLOBALinfo, &mut pdaGLOBAL.try_borrow_mut_data()?)?;
+
+            // bounty rewarded
+            ENTITYflags.set(11, true);
         }
-
-        // get STAKE info at end of USER account stake index
-        let endSTAKEinfo = STAKE::unpack_unchecked(&pdaSTAKEend.try_borrow_data()?)?;
-
-        // rearrange stake accounts to make index sequential
-        STAKEinfo.entity = endSTAKEinfo.entity;
-        STAKEinfo.amount = endSTAKEinfo.amount;
-        STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
         // transfer rent lamps back into GLOBAL pool
         let pdaGLOBALlamp = pdaGLOBAL.lamports();
@@ -122,11 +120,19 @@ impl Processor {
         let mut pdaSTAKEdata = pdaSTAKEend.data.borrow_mut();
         pdaSTAKEdata.fill(0);
 
-        // decrement STAKE count variable
+        // update USER
         USERinfo.count -= 1;
-
-        // repack USER info
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
+
+        // rearrange stake accounts to make index sequential
+        // then, update STAKE
+        STAKEinfo.entity = endSTAKEinfo.entity;
+        STAKEinfo.amount = endSTAKEinfo.amount;
+        STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+
+        // update ENTITY
+        ENTITYinfo.flags = pack_16_flags(ENTITYflags);
+        ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
 
         Ok(())
     }

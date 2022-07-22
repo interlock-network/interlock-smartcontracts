@@ -103,10 +103,10 @@ f3 = security stake yield compounding rate (eg, for 3.5%, rate = 0.035)
 f4 = entity total time elapsed threshold
 f5 = minimum stake (to be slashed if stake is wrong)
 f6 = percent of security stake rewarded to staker (u32 value in 100000)
-f7 = 
-f8 = 
-f9 = 
-f10 = 
+f7 = entity stakepos threshold
+f8 = entity stakeneg threshold
+f9 = staker number threshold
+f10 = staker accuracy threshold
 f11 = 
 f12 = 
 f13 = 

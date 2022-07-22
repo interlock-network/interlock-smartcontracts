@@ -107,14 +107,14 @@ impl Processor {
             },
 
             ContractInstruction::CloseStake {
-                seedENTITY,
+                seedSTAKE,
 
             } => {
                 msg!("Instruction: CloseStake");
                 Self::process_close_stake(
                     program_id,
                     accounts,
-                    seedENTITY,
+                    seedSTAKE,
                 )
             },
 
@@ -186,11 +186,13 @@ impl Processor {
             },
 
             ContractInstruction::ResolveStake {
+                seedSTAKE,
             } => {
                 msg!("Instruction: ResolveStake");
                 Self::process_resolve_stake(
                     program_id,
                     accounts,
+                    seedSTAKE,
                 )
             },
         }

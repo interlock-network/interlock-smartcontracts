@@ -63,29 +63,33 @@ impl Processor {
         let rent = next_account_info(account_info_iter)?;
         let clock = next_account_info(account_info_iter)?;
 
+        // get GLOBAL data
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // get USER data
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+        let USERflags = unpack_16_flags(USERinfo.flags);
+
+        // convert serialized valence from u8 into boolean
+        let valence_bool: bool;
+        if valence == 0 { valence_bool = false } else { valence_bool = true }
+
+        // get current time
+        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-
-        // get USER data
-        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
         if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
         }
 
-        let USERflags = unpack_16_flags(USERinfo.flags);
-
-        // calculate rent if we want to create new account
+        // calculate rent and create pda ENTITY
         let rentENTITY = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_ENTITY.into());
-
-        // get GLOBAL data
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-
-        // create pdaENTITY
         invoke_signed(
         &system_instruction::create_account(
             &pdaGLOBAL.key,
@@ -101,51 +105,29 @@ impl Processor {
         &[&[&seedENTITY, &[bumpENTITY]]]
         )?;
         msg!("Successfully created pdaENTITY");
-// need to determine if create_account reverts if account already exists
-
-        // get unititialized ENTITY data
+        // initialize ENTITY data
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
-
-        // if entity creator is a bounty hunter, declare them the owner
-        // if entity created just from regulare security staker, entity is owned by global
-        if USERflags[3] && USERinfo.owner == *owner.key {
-            ENTITYinfo.hunter = USERinfo.owner;
-        } else {
-            ENTITYinfo.hunter = GLOBALinfo.owner;
-        }
 
         // init flags
         let mut ENTITYflags = BitVec::from_elem(16, false);
-
-            // account type is ENTITY == 010
-            // ENTITYflags[0] = false;
-            ENTITYflags.set(1, true);
-            // ENTITYflags[2] = false;
-            
-            // stake total minimum threshold triggered
-            // ENTITYflags[3] = false;
-            // time total minimum threshold triggered
-            // ENTITYflags[4] = false;
-            // staker number total minumum threshold triggered
-            // ENTITYflags[5] = false;
-            // entity settled status
-            // ENTITYflags[6] = false;
-            // entity settling status
-            // ENTITYflags[7] = false;
-            // entity valence
-            // ENTITYflags[8] = false;
-            // entity determination
-            // ENTITYflags[9] = false;
+            // false                            // 0: account type is ENTITY == 010
+            ENTITYflags.set(1, true);           // 1: account type is ENTITY == 010
+            // false                            // 2: account type is ENTITY == 010
+            // false                            // 3: stake total minimum threshold triggered
+            // false                            // 4: time total minimum threshold triggered
+            // false                            // 5: staker number total minumum threshold triggered
+            // false                            // 6: entity settled status
+            // false                            // 7: entity settling status
+            // false                            // 8: entity valence
+            // false                            // 9: entity determination
             if USERflags[3] {
-                ENTITYflags.set(10, true);
+                ENTITYflags.set(10, true);      // 10: entity claimed by bounty hunter
             }
+            // false                            // 11: bounty hunter rewarded
 
-        // calculate rent if we want to create new account
+        // calculate rent and create pda STAKE
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());
-
-
-        // create pdaSTAKE
         invoke_signed(
         &system_instruction::create_account(
             &pdaGLOBAL.key,
@@ -161,48 +143,39 @@ impl Processor {
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
         msg!("Successfully created pdaSTAKE");
-// need to determine if create_account reverts if account already exists
-        
-        // get unititialized STAKE data
+        // initialize STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
-        
-        // convert serialized valence from u8 into boolean
-        let valence_bool: bool;
-        if valence == 0 {
-            valence_bool = false;
-        } else {
-            valence_bool = true;
-        }
-
-        // get current time
-        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
-
-        // set ENTITY valence and time
-        ENTITYflags.set(8, valence_bool);
-        ENTITYinfo.timestamp = timestamp;
 
         // init flags
-        let mut flags = BitVec::from_elem(16, false);
-    
-            // account type is STAKE == 001
-            // flags[0] = false;
-            // flags[1] = false;
-            flags.set(2, true);
-            // stake valence
-            flags.set(3, valence_bool);
+        let mut STAKEflags = BitVec::from_elem(16, false);
+            // false                            // 0: account type is STAKE == 001
+            // false                            // 1: account type is STAKE == 001
+            STAKEflags.set(2, true);            // 2: account type is STAKE == 001
+            STAKEflags.set(3, valence_bool);    // 3: STAKE valence, high == good
 
-
-        // populate and pack STAKE account info
-        STAKEinfo.flags = pack_16_flags(flags);
+        // update STAKE
+        STAKEinfo.flags = pack_16_flags(STAKEflags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
         STAKEinfo.timestamp = timestamp;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
 
-        // credit account for stake amount
+        // if entity creator is a bounty hunter, declare them the owner
+        // if entity created just from regulare security staker, entity is owned by global
+        if USERflags[3] && USERinfo.owner == *owner.key {
+            ENTITYinfo.hunter = USERinfo.owner;
+        } else {
+            ENTITYinfo.hunter = GLOBALinfo.owner;
+        }
+
+        // set ENTITY valence and time
+        ENTITYflags.set(8, valence_bool);
+        ENTITYinfo.timestamp = timestamp;
+        ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
+
+        // update USER
         USERinfo.balance -= amount;
         USERinfo.count += 1;
-
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())

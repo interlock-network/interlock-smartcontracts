@@ -60,16 +60,27 @@ impl Processor {
         let rent = next_account_info(account_info_iter)?;
         let clock = next_account_info(account_info_iter)?;
 
+        // get GLOBAL
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // get USER info
+        let USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+
+        // get ENTITY
+        let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
+        let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
+
+        // convert serialized valence from u8 into boolean
+        let valence_bool: bool;
+        if valence == 0 { valence_bool = false } else { valence_bool = true }
+
+        // get current time
+        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-
-        // get ENTITY info
-        let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
-
-        // unpack ENTITY flags
-        let mut ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
 
         // make sure entity is not settled
         if ENTITYflags[6] {
@@ -81,16 +92,10 @@ impl Processor {
             return Err(EntitySettlingError.into());
         }
 
-        // get GLOBAL data
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
-
         // make sure entity is not already claimed
         if ENTITYinfo.hunter != GLOBALinfo.owner || ENTITYflags[10] {
             return Err(EntityClaimedError.into());
         }
-
-        // get USER info
-        let USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
         if USERinfo.owner != *owner.key && GLOBALinfo.owner != *owner.key {
@@ -102,11 +107,9 @@ impl Processor {
             return Err(UserNotHunterError.into());
         }
 
-        // calculate rent if we want to create new account
+        // calculate rent and create pda STAKE account
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());
-
-        // create pdaSTAKE
         invoke_signed(
         &system_instruction::create_account(
             &pdaGLOBAL.key,
@@ -122,42 +125,26 @@ impl Processor {
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
         msg!("Successfully created pdaSTAKE");
-// need to determine if create_account reverts if account already exists
-
         // get unititialized STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
 
-        // convert serialized valence from u8 into boolean
-        let valence_bool: bool;
-        if valence == 0 {
-            valence_bool = false;
-        } else {
-            valence_bool = true;
-        }
-
-        // get current time
-        let timestamp = Clock::from_account_info(&clock)?.unix_timestamp;
-
-        // init STAKE flags
-        let mut flags = BitVec::from_elem(16, false);
-
-            // account type is STAKE == 001
-            // flags[0] = false;
-            // flags[1] = false;
-            flags.set(2, true);
-            // stake valence
-            flags.set(3, valence_bool);
-
+        // init flags
+        let mut STAKEflags = BitVec::from_elem(16, false);
+            // false                            // 1: account type is STAKE == 001
+            // false                            // 2: account type is STAKE == 001
+            STAKEflags.set(2, true);            // 3: account type is STAKE == 001
+            STAKEflags.set(3, valence_bool);    // 4: STAKE valence, high == good
 
         // populate and pack GLOBAL account info
-        STAKEinfo.flags = pack_16_flags(flags);
+        STAKEinfo.flags = pack_16_flags(STAKEflags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
         STAKEinfo.timestamp = timestamp;
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
         
+        // update ENTITY
         ENTITYinfo.hunter = USERinfo.owner;
-        ENTITYflags.set(10, true);
+        ENTITYflags.set(10, true);              // ENTITY claimed by bounty hunter
         ENTITYinfo.flags = pack_16_flags(ENTITYflags);
         ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
 

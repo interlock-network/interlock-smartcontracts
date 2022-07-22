@@ -39,24 +39,22 @@ impl Processor {
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaENTITY = next_account_info(account_info_iter)?;
 
+        // get GLOBAL data
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // get ENTITY info
+        let ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
+        let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // get ENTITY info
-        let ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
-
-        // unpack ENTITY flags
-        let ENTITYflags = unpack_16_flags(ENTITYinfo.flags);
-
         // make sure entity is settled
-        if ENTITYflags[6] == false {
+        if !ENTITYflags[6] {
             return Err(EntityNotSettledError.into());
         }
-
-        // get GLOBAL data
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
         if GLOBALinfo.owner != *owner.key {

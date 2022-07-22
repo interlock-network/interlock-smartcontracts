@@ -40,13 +40,21 @@ impl Processor {
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
 
+        // get GLOBAL
+        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
+        // get USER
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+        let mut USERflags = unpack_16_flags(USERinfo.flags);
+
+        // convert serialized determination from u8 into boolean
+        let status_bool: bool;
+        if status == 0 { status_bool = false } else { status_bool = true }
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-
-        // get GLOBAL data
-        let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // check that owner is *actually* GLOBAL owner
         // only Interlock Network owner can settle entity
@@ -54,31 +62,14 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
 
-        // get USER  data
-        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
-        
-        // unpack flags here 
-        let mut USERflags = unpack_16_flags(USERinfo.flags);
-
-        // convert serialized determination from u8 into boolean
-        let status_bool: bool;
-        if status == 0 {
-            status_bool = false;
-        } else {
-            status_bool = true;
-        }
-
         // check to see if USER is already hunter status
         if USERflags[3] == status_bool {
             return Err(HunterAlreadySetError.into());
         }
-        // flag is status provided by caller
-        USERflags.set(3, status_bool);
 
-        // repack new flag states
+        // update USER
+        USERflags.set(3, status_bool);          // hunter set
         USERinfo.flags = pack_16_flags(USERflags);
-
-        // store flag state
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())

@@ -61,7 +61,7 @@ impl ContractInstruction {
                 determination: rest[0],
             },
             6 => Self::CloseStake {
-                seedENTITY: rest[0..PUBKEY_LEN].to_vec(),
+                seedSTAKE: rest[0..PUBKEY_LEN].to_vec(),
             },
             7 => Self::CreateEntity {
                 bumpSTAKE: rest[0],
@@ -91,6 +91,7 @@ impl ContractInstruction {
                 valence: rest[1 + PUBKEY_LEN + U128_LEN],
             },
             12 => Self::ResolveStake {
+                seedSTAKE: rest[0..PUBKEY_LEN].to_vec(),
             },
             _ => return Err(InvalidInstruction.into()),
         })
