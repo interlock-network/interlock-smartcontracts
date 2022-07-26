@@ -14,6 +14,7 @@ import {
   SYSVAR_RENT_PUBKEY,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 
@@ -75,7 +76,6 @@ export const ENTITY_SIZE = U16_SIZE +	// flags
 export let connection: Connection;
 export let ownerKEY: Keypair;
 export let ilocksupremeID: PublicKey;
-export let operatorKEY: Keypair;
 export const PROGRAM_KEYFILE = "ILOCKsupreme-keypair.json";
 export const PROGRAM_PATH = path.resolve(
 	"../../ilocksupreme/target/deploy"
@@ -283,8 +283,8 @@ const uint128 = (property = "uint128") => {
  **/
 export const GLOBAL_DATA_LAYOUT = BufferLayout.struct([
 	uint128("pool"),
-	BufferLayout.u16("flags1"),
 	BufferLayout.u16("flags2"),
+	BufferLayout.u16("flags1"),
 	publicKey("owner"),
 	BufferLayout.u32("value0"),
 	BufferLayout.u32("value1"),
@@ -353,8 +353,8 @@ export const GLOBAL_DATA_LAYOUT = BufferLayout.struct([
 ]);	
 export interface GLOBALlayout {
 	pool: Buffer;
-	flags1: number;
 	flags2: number;
+	flags1: number;
 	owner: Uint8Array;
 	value0: number;
 	value1: number;
@@ -510,7 +510,7 @@ export function templateTX(
 	return new Transaction().add(
 		new TransactionInstruction({
 			keys: [
-				{ pubkey: operatorKEY.publicKey, isSigner: true, isWritable: true, },
+				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
 				{ pubkey: pdaMAIN, isSigner: false, isWritable: true, },
 				{ pubkey: pdaPIECE, isSigner: false, isWritable: true, },
 				{ pubkey: pdaREF, isSigner: false, isWritable: true, },
@@ -549,7 +549,7 @@ export function extracomputeTX(
 	return new Transaction().add(additionalComputeBudgetInstruction)
 		.add(new TransactionInstruction({
 			keys: [
-				{ pubkey: operatorKEY.publicKey, isSigner: true, isWritable: true, },
+				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
 				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: pdaselfTARGET, isSigner: false, isWritable: true, },
 				{ pubkey: pdaTARGET, isSigner: false, isWritable: true, },
@@ -707,10 +707,10 @@ export async function findHash(inviteHASH: string) {
 }
 
 /**
-* check to make sure operator ID isn't already taken
+* check to make sure owner ID isn't already taken
 **
-export async function availableIDcheck(operatorID: string): Promise<void> {
-	const operatorIDaccount = await connection.getParsedProgramAccounts(
+export async function availableIDcheck(ownerID: string): Promise<void> {
+	const ownerIDaccount = await connection.getParsedProgramAccounts(
 		ilocksupremeID,
 		{
 			filters: [
@@ -720,20 +720,46 @@ export async function availableIDcheck(operatorID: string): Promise<void> {
 				{
 					memcmp: {
 						offset: PIECE_SIZE - PIECESLUG_SIZE,
-						bytes: bs58.encode(toUTF8Array(operatorID)),
+						bytes: bs58.encode(toUTF8Array(ownerID)),
 					},
 				},
 			],
 		},
 	);
-	if (!lodash.isEqual(operatorIDaccount, [])) {
-		console.log(`! The operator ID '${operatorID}' already has a MAIN account associated with it.\n`,
-			    ` Choose a different ID for your operator MAIN account.`,
+	if (!lodash.isEqual(ownerIDaccount, [])) {
+		console.log(`! The owner ID '${ownerID}' already has a MAIN account associated with it.\n`,
+			    ` Choose a different ID for your owner MAIN account.`,
 		);
 		process.exit(1);
 	}
 }
 */
+
+/**
+* ProgramInit tx
+***
+export function ProgramInitTX(
+	pdaGLOBAL: PublicKey,
+	ixDATA: any[]) {
+	
+	console.log("chirp")
+	return new Transaction().add(
+		new TransactionInstruction({
+			keys: [
+				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
+				{ pubkey: pdaGLOBAL, isSigner: false, isWritable: true, },
+				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
+				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
+			],
+			data: Buffer.from(new Uint8Array(ixDATA)),
+			programId: ilocksupremeID,
+		})
+	);
+}
+*/
+
+
+
 /**
 * get all STAKEs with specific ENTITY account
 ***/
@@ -867,7 +893,7 @@ async function getRpcUrl(): Promise<string> {
 }
 
 /**
- * get operator's local solana config
+ * get owner's local solana config
  **/
 async function getConfig(): Promise<any> {
   	// Path to Solana CLI config file
@@ -883,11 +909,11 @@ async function getConfig(): Promise<any> {
 }
 
 /**
- * establish operator
+ * establish owner
  **/
 export async function establishOperator(): Promise<void> {
   	let fees = 0;
-  	if (!operatorKEY) {
+  	if (!ownerKEY) {
     		const {feeCalculator} = await connection.getRecentBlockhash();
 
  		// Calculate the cost to fund the greeter account
@@ -896,10 +922,10 @@ export async function establishOperator(): Promise<void> {
     		// Calculate the cost of sending transactions
     		fees += feeCalculator.lamportsPerSignature * 100; // wag
 
-    		operatorKEY = await getOperator();
+    		ownerKEY = await getOperator();
   	}
 
-  	let lamports = await connection.getBalance(operatorKEY.publicKey);
+  	let lamports = await connection.getBalance(ownerKEY.publicKey);
   	if (lamports < fees) {
 
     		// If current balance is not enough to pay for fees, request an airdrop
@@ -911,7 +937,7 @@ export async function establishOperator(): Promise<void> {
 
   	console.log(
     		". Operator account is:\t",
-    		operatorKEY.publicKey.toBase58(),
+    		ownerKEY.publicKey.toBase58(),
     		"containing",
     		lamports / LAMPORTS_PER_SOL,
     		"SOL to pay for fees",
@@ -919,7 +945,7 @@ export async function establishOperator(): Promise<void> {
 }
 
 /**
- * setup operatorKEY as Keypair
+ * setup ownerKEY as Keypair
  **/
 async function getOperator(): Promise<Keypair> {
   	try {
