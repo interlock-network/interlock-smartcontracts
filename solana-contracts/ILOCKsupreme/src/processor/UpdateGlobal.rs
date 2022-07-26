@@ -67,7 +67,6 @@ impl Processor {
         let flags1 = unpack_32_flags(updateFlags1);
         let flags2 = unpack_32_flags(updateFlags2);
 
-
         // . check for values that need to be updated
         // . flag high => value is to be changed
         let mut i = 0;

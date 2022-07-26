@@ -54,6 +54,8 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
+        msg!{"chirp"};
+
         // calculate rent if we want to create new account
         let rentGLOBAL = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_GLOBAL.into());

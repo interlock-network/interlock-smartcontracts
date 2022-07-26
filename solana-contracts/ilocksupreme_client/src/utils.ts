@@ -611,39 +611,39 @@ export function unpackFlags32(flags: number) {
 **/
 export function packFlags32(flags: Uint8Array) {
 	
-	var byte1 = flags[0] |
-		flags[1] << 1 |
-		flags[2] << 2 |
-		flags[3] << 3 |
-		flags[4] << 4 |
-		flags[5] << 5 |
-		flags[6] << 6 |
-		flags[7] << 7;
-	var byte2 = flags[8] |
-		flags[9] << 1 |
-		flags[10] << 2 |
-		flags[11] << 3 |
-		flags[12] << 4 |
-		flags[13] << 5 |
-		flags[14] << 6 |
-		flags[15] << 7;
-	var byte3 = flags[16] |
-		flags[17] << 1 |
-		flags[18] << 2 |
-		flags[19] << 3 |
-		flags[20] << 4 |
-		flags[21] << 5 |
-		flags[22] << 6 |
-		flags[23] << 7;
+	var byte1 = flags[0] << 7 |
+		flags[1] << 6 |
+		flags[2] << 5 |
+		flags[3] << 4 |
+		flags[4] << 3 |
+		flags[5] << 2 |
+		flags[6] << 1 |
+		flags[7];
+	var byte2 = flags[8] << 7 |
+		flags[9] << 6 |
+		flags[10] << 5 |
+		flags[11] << 4 |
+		flags[12] << 3 |
+		flags[13] << 2 |
+		flags[14] << 1 |
+		flags[15];
+	var byte3 = flags[16] << 7 |
+		flags[17] << 6 |
+		flags[18] << 5 |
+		flags[19] << 4 |
+		flags[20] << 3 |
+		flags[21] << 2 |
+		flags[22] << 1 |
+		flags[23];
 
-	var byte4 = flags[24] |
-		flags[25] << 1 |
-		flags[26] << 2 |
-		flags[27] << 3 |
-		flags[28] << 4 |
-		flags[29] << 5 |
-		flags[30] << 6 |
-		flags[31] << 7;
+	var byte4 = flags[24] << 7 |
+		flags[25] << 6 |
+		flags[26] << 5 |
+		flags[27] << 4 |
+		flags[28] << 3 |
+		flags[29] << 2 |
+		flags[30] << 1 |
+		flags[31];
 
 	return [byte4, byte3, byte2, byte1]
 }

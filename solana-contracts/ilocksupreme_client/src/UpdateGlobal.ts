@@ -67,8 +67,8 @@ const UpdateGlobal = async () => {
 	// values and their flags, 64
 
 	// 0: entity total stake threshold
-	updateFlagsHigh[0] = 0;
-	updateValues[0] = 0;
+	updateFlagsHigh[0] = 1;
+	updateValues[0] = 555;
 
 	// 1: bounty hunter reward threshold percentage for entity settlement
 	updateFlagsHigh[1] = 0;
@@ -103,7 +103,7 @@ const UpdateGlobal = async () => {
 	updateFlagsHigh[9] = 0;
 	updateValues[9] = 0;
 
-	updateFlagsHigh[10] = 0;
+	updateFlagsHigh[10] = 1;
 	updateValues[10] = 0;
 
 	updateFlagsHigh[11] = 0;
@@ -139,7 +139,7 @@ const UpdateGlobal = async () => {
 	updateFlagsHigh[21] = 0;
 	updateValues[21] = 0;
 
-	updateFlagsHigh[22] = 0;
+	updateFlagsHigh[22] = 1;
 	updateValues[22] = 0;
 
 	updateFlagsHigh[23] = 0;
@@ -160,7 +160,7 @@ const UpdateGlobal = async () => {
 	updateFlagsHigh[28] = 0;
 	updateValues[28] = 0;
 
-	updateFlagsHigh[29] = 0;
+	updateFlagsHigh[29] = 1;
 	updateValues[29] = 0;
 
 	updateFlagsHigh[30] = 0;
@@ -266,14 +266,18 @@ const UpdateGlobal = async () => {
 	updateValues[63] = 0;
 
 
+
 	// setup instruction data
 	var ixDATA = [1]
 		.concat(packFlags32(updateFlagsHigh))
 		.concat(packFlags32(updateFlagsLow));
 
 	for (var i = 0; i < 64; i++) {
-		ixDATA.concat(u32toBytes(updateValues[i]));
+		ixDATA = ixDATA.concat(u32toBytes(updateValues[i]));
+		console.log(u32toBytes(updateValues[i]))
 	}
+
+	console.log(ixDATA)
 
 	// prepare transaction
 	const UpdateGLOBALtx = new Transaction().add(
@@ -281,7 +285,7 @@ const UpdateGlobal = async () => {
 			keys: [
 				{ pubkey: ownerKEY.publicKey, isSigner: true, isWritable: true, },
 				{ pubkey: pdaGLOBAL, isSigner: false, isWritable: true, },
-					// nnew owner below, if needed
+					// new owner below, if needed
 				{ pubkey: ownerKEY.publicKey, isSigner: false, isWritable: true, },
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
 			],
@@ -289,6 +293,8 @@ const UpdateGlobal = async () => {
 			programId: ilocksupremeID,
 		})
 	);
+
+	console.log("chirp")
 		
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, UpdateGLOBALtx, [ownerKEY], )}`);

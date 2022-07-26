@@ -30,6 +30,7 @@ test-ledger
 *.swp
 *.swo
 *.swn
+*.swm
 .vscode/*
 
 # system stuff

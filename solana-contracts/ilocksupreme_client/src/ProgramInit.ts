@@ -60,7 +60,6 @@ const ProgramInit = async () => {
 	const ixDATA = [0, bumpGLOBAL]
 		.concat(toUTF8Array(programID));
 
-
 	// prepare transaction
 	const CreateGLOBALtx = new Transaction().add(
 		new TransactionInstruction({
@@ -74,7 +73,6 @@ const ProgramInit = async () => {
 			programId: ilocksupremeID,
 		})
 	);
-	console.log("chirp")
 
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateGLOBALtx, [ownerKEY], )}`);

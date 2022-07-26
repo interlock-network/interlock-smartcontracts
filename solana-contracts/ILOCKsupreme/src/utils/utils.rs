@@ -121,7 +121,7 @@ pub fn unpack_array_u32(input: &[u8]) -> Result<[u32; VALUES], ProgramError> {
         let number = input
             .get(i..(i + 4))
             .and_then(|slice| slice.try_into().ok())
-            .map(u32::from_le_bytes)
+            .map(u32::from_be_bytes)
             .ok_or(InvalidInstruction)?;
         array[j] = number;
         i += 4;
