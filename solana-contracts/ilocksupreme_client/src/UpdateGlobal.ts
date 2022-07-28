@@ -274,10 +274,7 @@ const UpdateGlobal = async () => {
 
 	for (var i = 0; i < 64; i++) {
 		ixDATA = ixDATA.concat(u32toBytes(updateValues[i]));
-		console.log(u32toBytes(updateValues[i]))
 	}
-
-	console.log(ixDATA)
 
 	// prepare transaction
 	const UpdateGLOBALtx = new Transaction().add(

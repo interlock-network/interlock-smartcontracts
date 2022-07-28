@@ -52,20 +52,20 @@ const CreateUser = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
-	console.log(`. New GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
+	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 1;
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. New USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 	
-	// setup instruction data
-	const ixDATA = [2, bumpUSER]
-		.concat(toUTF8Array(ownerVault));
+	const ixDATA = [2, bumpUSER, bumpGLOBAL]
+		.concat(pdaUSERseed)
+		.concat(toUTF8Array(programID));
 
 	// prepare transaction
 	const CreateUSERtx = new Transaction().add(

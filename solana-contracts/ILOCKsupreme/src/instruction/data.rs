@@ -25,6 +25,8 @@ pub enum ContractInstruction {
 
         bumpUSER: u8,
         seedUSER: Vec<u8>,
+        bumpGLOBAL: u8,
+        seedGLOBAL: Vec<u8>,
     },
 
     FillUser {

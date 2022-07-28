@@ -41,6 +41,8 @@ impl Processor {
         accounts: &[AccountInfo],
         bumpUSER: u8,
         seedUSER: Vec<u8>,
+        bumpGLOBAL: u8,
+        seedGLOBAL: Vec<u8>,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
@@ -70,9 +72,10 @@ impl Processor {
             pdaGLOBAL.clone(),
             pdaUSER.clone(),
         ],
-        &[&[&seedUSER, &[bumpUSER]]]
+        &[&[&seedGLOBAL, &[bumpGLOBAL]], &[&seedUSER, &[bumpUSER]]]
         )?;
         msg!("Successfully created pdaUSER");
+        
         // iniitialize USER data
         let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
         
@@ -88,6 +91,7 @@ impl Processor {
         USERinfo.flags = pack_16_flags(flags);
         USERinfo.owner = *owner.key;
         USERinfo.balance = 0;
+        USERinfo.rewards = 0;
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
