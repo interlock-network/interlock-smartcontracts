@@ -47,6 +47,7 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
+        
         // get GLOBAL account info
         let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 

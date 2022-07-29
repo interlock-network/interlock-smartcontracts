@@ -41,8 +41,6 @@ impl Processor {
         accounts: &[AccountInfo],
         bumpUSER: u8,
         seedUSER: Vec<u8>,
-        bumpGLOBAL: u8,
-        seedGLOBAL: Vec<u8>,
     ) -> ProgramResult {
 
         // it is customary to iterate through accounts like so
@@ -62,20 +60,24 @@ impl Processor {
             .minimum_balance(SIZE_USER.into());
         invoke_signed(
         &system_instruction::create_account(
-            &pdaGLOBAL.key,
+            &owner.key,
             &pdaUSER.key,
             rentUSER,
             SIZE_USER.into(),
             &program_id,
         ),
         &[
-            pdaGLOBAL.clone(),
+            owner.clone(),
             pdaUSER.clone(),
         ],
-        &[&[&seedGLOBAL, &[bumpGLOBAL]], &[&seedUSER, &[bumpUSER]]]
+        &[&[&seedUSER, &[bumpUSER]]],
         )?;
         msg!("Successfully created pdaUSER");
         
+        // cover rent costs by transferring lamp to owner
+        **pdaGLOBAL.try_borrow_mut_lamports()? -= rentUSER;
+        **owner.try_borrow_mut_lamports()? += rentUSER;
+    
         // iniitialize USER data
         let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
         

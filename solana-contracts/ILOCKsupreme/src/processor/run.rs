@@ -57,8 +57,6 @@ impl Processor {
             ContractInstruction::CreateUser {
                 bumpUSER,
                 seedUSER,
-                bumpGLOBAL,
-                seedGLOBAL,
             } => {
                 msg!("Instruction: CreateAccount");
                 Self::process_create_account(
@@ -66,8 +64,6 @@ impl Processor {
                     accounts,
                     bumpUSER,
                     seedUSER,
-                    bumpGLOBAL,
-                    seedGLOBAL,
                 )
             },
 

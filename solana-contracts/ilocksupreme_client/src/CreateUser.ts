@@ -58,7 +58,7 @@ const CreateUser = async () => {
 
 	// find USER address
 	var count = new Uint16Array(1);
-	count[0] = 1;
+	count[0] = 6;
 	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
 	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. New USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
@@ -66,6 +66,13 @@ const CreateUser = async () => {
 	const ixDATA = [2, bumpUSER, bumpGLOBAL]
 		.concat(pdaUSERseed)
 		.concat(toUTF8Array(programID));
+
+	console.log(toUTF8Array(programID))
+	console.log(pdaUSERseed)
+	console.log(bumpGLOBAL)
+	console.log(bumpUSER)
+	console.log(ilocksupremeID)
+	console.log(ilocksupremeID.toBase58())
 
 	// prepare transaction
 	const CreateUSERtx = new Transaction().add(
@@ -81,6 +88,7 @@ const CreateUser = async () => {
 			programId: ilocksupremeID,
 		})
 	);
+	console.log("chirp")
 		
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateUSERtx, [ownerKEY], )}`);

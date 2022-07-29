@@ -71,8 +71,8 @@ const UpdateGlobal = async () => {
 	updateValues[0] = 555;
 
 	// 1: bounty hunter reward threshold percentage for entity settlement
-	updateFlagsHigh[1] = 0;
-	updateValues[1] = 0;
+	updateFlagsHigh[1] = 1;
+	updateValues[1] = 400;
 
 	// 2: entity total time threshold
 	updateFlagsHigh[2] = 0;

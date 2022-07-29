@@ -56,15 +56,15 @@ const SetHunter = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get USER vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
-	console.log(`. New GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
+	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 0;
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// get valence
@@ -88,6 +88,7 @@ const SetHunter = async () => {
 		})
 	);
 		
+	console.log("chirp");
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, SetHuntertx, [ownerKEY], )}`);
 	

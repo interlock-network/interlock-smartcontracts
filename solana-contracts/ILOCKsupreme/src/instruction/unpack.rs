@@ -40,9 +40,7 @@ impl ContractInstruction {
             },
             2 => Self::CreateUser {
                 bumpUSER: rest[0],
-                bumpGLOBAL: rest[1],
-                seedUSER: rest[2..(PUBKEY_LEN+2)].to_vec(),
-                seedGLOBAL: rest[(PUBKEY_LEN+2)..].to_vec(),
+                seedUSER: rest[1..].to_vec(),
             },
             3 => Self::FillUser {
                 amount: rest.get(0..U128_LEN)

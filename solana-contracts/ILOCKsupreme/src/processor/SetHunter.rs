@@ -40,12 +40,14 @@ impl Processor {
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let pdaUSER = next_account_info(account_info_iter)?;
 
+        
         // get GLOBAL
         let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // get USER
         let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
         let mut USERflags = unpack_16_flags(USERinfo.flags);
+        
 
         // convert serialized determination from u8 into boolean
         let status_bool: bool;

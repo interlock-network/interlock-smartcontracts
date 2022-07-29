@@ -35,9 +35,6 @@ const ListUsers = async () => {
 	await establishOperator();
 	await checkProgram();
 
-	// get USER flags
-	var USERflags = unpackFlags(USER.flags);
-
 	// get PIECE accounts with operator Key in operator field
 	const USERs = await getUSERs();
 
@@ -46,7 +43,7 @@ const ListUsers = async () => {
 	
 
 	// cycle through all pieces
-	for (var countUSER = 0; countUSER <= USERs.length; countUSER++) {
+	for (var countUSER = 0; countUSER < USERs.length; countUSER++) {
 
 		// get STAKE data
 		var USER = await getUSERdata(USERs[countUSER].pubkey);
@@ -55,13 +52,13 @@ const ListUsers = async () => {
 		var flags = unpackFlags(USER.flags);
 
 		// print STAKE data
-		console.log(`| ADDRESS: ----- ${USERs[countUSER].pubkey}`);
-		console.log(`| SUCCESS: ----- ${USER.success}`);
-		console.log(`| FAIL: -------- ${USER.fail}`);
-		console.log(`| OWNER: ------- ${USER.owner}`);
-		console.log(`| VAULT: ------- ${USER.vault}`);
-		console.log(`| BALANCE: ----- ${USER.balance}`);
-		console.log(`| REWARDS: ----- ${USER.rewards}`);
+		console.log(`\t| ADDRESS: ----- ${USERs[countUSER].pubkey}`);
+		console.log(`\t| SUCCESS: ----- ${USER.success}`);
+		console.log(`\t| FAIL: -------- ${USER.fail}`);
+		console.log(`\t| OWNER: ------- ${USER.owner}`);
+		console.log(`\t| VAULT: ------- ${USER.vault}`);
+		console.log(`\t| BALANCE: ----- ${USER.balance}`);
+		console.log(`\t| REWARDS: ----- ${USER.rewards}`);
 		process.stdout.write(`\t| FLAGS: ------- `);
 		process.stdout.write(`[ `);
 		for (var index = 0; index < 4; index++) {
