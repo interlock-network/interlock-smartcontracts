@@ -51,19 +51,19 @@ const FillUser = async () => {
 	await establishConnection();
 	await establishOperator();
 	await checkProgram();
-	
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 5;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 	
 	// get fill amount
 	const amount = prompt("Please enter the amount you wish to fill: ");
 
 	// setup instruction data
-	const ixDATA = [3, new BN(amount).toArray("le", 16)];
+	const ixDATA = [3].concat(new BN(amount).toArray("le", 16));
 
 	// prepare transaction
 	const FillUSERtx = new Transaction().add(

@@ -20,6 +20,13 @@ import {
 	toUTF8Array,
 } from "./utils";
 
+// utility constants
+import {
+	connection,
+	ownerKEY,
+	ilocksupremeID,
+} from "./utils";
+
 /****************************************************************
  * main								
  ****************************************************************/
@@ -33,12 +40,12 @@ const ListUserStakes = async () => {
 	await establishOperator();
 	await checkProgram();
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
-	// find MAIN address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
-	console.log(`. Operator MAIN pda:\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
+	// find USER address
+	var count = new Uint16Array(1);
+	count[0] = 1;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
+	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// get MAIN data
 	const USER = await getUSERdata(pdaUSER);

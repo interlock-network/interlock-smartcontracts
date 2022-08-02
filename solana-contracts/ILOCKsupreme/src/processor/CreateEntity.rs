@@ -87,24 +87,31 @@ impl Processor {
             return Err(OwnerImposterError.into());
         }
 
+        // make sure USER has balance for stake amount
+        if USERinfo.balance < amount {
+            return Err(InsufficientBalanceError.into())
+        }
+
         // calculate rent and create pda ENTITY
         let rentENTITY = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_ENTITY.into());
         invoke_signed(
         &system_instruction::create_account(
-            &pdaGLOBAL.key,
+            &owner.key,
             &pdaENTITY.key,
             rentENTITY,
             SIZE_ENTITY.into(),
             &program_id,
         ),
         &[
-            pdaGLOBAL.clone(),
+            owner.clone(),
             pdaENTITY.clone(),
         ],
         &[&[&seedENTITY, &[bumpENTITY]]]
         )?;
         msg!("Successfully created pdaENTITY");
+
+
         // initialize ENTITY data
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
 
@@ -125,24 +132,36 @@ impl Processor {
             }
             // false                            // 11: bounty hunter rewarded
 
+            msg!("{:?}", seedENTITY);
+            msg!("{:?}", seedSTAKE);
+
         // calculate rent and create pda STAKE
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());
+        
         invoke_signed(
         &system_instruction::create_account(
-            &pdaGLOBAL.key,
+            &owner.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            pdaGLOBAL.clone(),
+            owner.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
         msg!("Successfully created pdaSTAKE");
+
+        // cover rent costs by transferring lamp to owner
+        **pdaGLOBAL.try_borrow_mut_lamports()? -= rentSTAKE;
+        **owner.try_borrow_mut_lamports()? += rentSTAKE;
+
+        **pdaGLOBAL.try_borrow_mut_lamports()? -= rentENTITY;
+        **owner.try_borrow_mut_lamports()? += rentENTITY;
+
         // initialize STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
 
@@ -171,6 +190,9 @@ impl Processor {
         // set ENTITY valence and time
         ENTITYflags.set(8, valence_bool);
         ENTITYinfo.timestamp = timestamp;
+        ENTITYinfo.stakers = 1;
+        if valence_bool { ENTITYinfo.stakepos += amount } else { ENTITYinfo.stakeneg += amount }
+        ENTITYinfo.flags = pack_16_flags(ENTITYflags);
         ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
 
         // update USER

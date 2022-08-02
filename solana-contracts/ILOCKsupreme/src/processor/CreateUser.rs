@@ -73,9 +73,10 @@ impl Processor {
         &[&[&seedUSER, &[bumpUSER]]],
         )?;
         msg!("Successfully created pdaUSER");
-        
+       
         // cover rent costs by transferring lamp to owner
         **pdaGLOBAL.try_borrow_mut_lamports()? -= rentUSER;
+        
         **owner.try_borrow_mut_lamports()? += rentUSER;
     
         // iniitialize USER data

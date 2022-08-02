@@ -47,9 +47,9 @@ impl Pack for USER {
 
         Ok( USER {
             flags: u16::from_le_bytes(*flags),
-            count: u16::from_be_bytes(*count),
-            success: u16::from_be_bytes(*success),
-            fail: u16::from_be_bytes(*fail),
+            count: u16::from_le_bytes(*count),
+            success: u16::from_le_bytes(*success),
+            fail: u16::from_le_bytes(*fail),
             owner: Pubkey::new_from_array(*owner),
             vault: Pubkey::new_from_array(*vault),
             balance: u128::from_be_bytes(*balance),
@@ -82,9 +82,9 @@ impl Pack for USER {
         } = self;
 
         *flags_dst = flags.to_le_bytes();
-        *count_dst = count.to_be_bytes();
-        *success_dst = success.to_be_bytes();
-        *fail_dst = fail.to_be_bytes();
+        *count_dst = count.to_le_bytes();
+        *success_dst = success.to_le_bytes();
+        *fail_dst = fail.to_le_bytes();
         owner_dst.copy_from_slice(owner.as_ref());
         vault_dst.copy_from_slice(vault.as_ref());
         *balance_dst = balance.to_be_bytes();

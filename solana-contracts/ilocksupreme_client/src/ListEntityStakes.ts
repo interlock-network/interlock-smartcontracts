@@ -19,6 +19,7 @@ import {
 	getSTAKEdata,
 	toUTF8Array,
 	getSTAKEs,
+	newURLhash,
 } from "./utils";
 
 /****************************************************************
@@ -33,12 +34,13 @@ const ListEntityStakes = async () => {
 	await establishConnection();
 	await establishOperator();
 	await checkProgram();
-
+	
 	// get ENTITY address
-	const ENTITYhash = prompt("Please enter the ENTITY hash: ");
+	const ENTITYurl = prompt("Please enter the ENTITY URL: ");
+	const ENTITYhash = newURLhash(ENTITYurl);
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash.toString()).slice(0,32));
 	console.log(`. Operator MAIN pda:\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// get ENTITY data
@@ -79,14 +81,14 @@ const ListEntityStakes = async () => {
 		process.stdout.write(`\n\n`);
 
 	// get STAKE accounts with operator Key in operator field
-	const STAKEs = await getSTAKEs(ENTITYhash);
+	const STAKEs = await getSTAKEs(ENTITYhash.toString());
 
 	// state intention
 	console.log(`STAKEs:\n`);
 	
-
 	// cycle through all pieces
-	for (var countSTAKE = 1; countSTAKE <= STAKEs.length; countSTAKE++) {
+	for (var countSTAKE = 0; countSTAKE < STAKEs.length; countSTAKE++) {
+
 
 		// get STAKE data
 		var STAKE = await getSTAKEdata(STAKEs[countSTAKE].pubkey);
@@ -95,7 +97,7 @@ const ListEntityStakes = async () => {
 		var flags = unpackFlags(STAKE.flags);
 
 		// print STAKE data
-		console.log(`# ${countSTAKE[0]}\t| STAKE ID: ----> ${STAKE.entity}`);
+		console.log(`# ${countSTAKE}\t| STAKE ID: ---- ${STAKE.entity}`);
 		console.log(`\t| TIMESTAMP: --- ${STAKE.timestamp}`);
 		console.log(`\t| ENTITY: ------ ${STAKE.entity}`);
 		console.log(`\t| AMOUNT: ------ ${STAKE.amount}`);
@@ -118,7 +120,6 @@ const ListEntityStakes = async () => {
 		}
 		process.stdout.write(`]`);
 		process.stdout.write(`\n\n`);
-
 
 
 	}

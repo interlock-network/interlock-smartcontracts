@@ -30,6 +30,7 @@ import {
 	toUTF8Array,
 	createSeed,
 	getUSERdata,
+	newURLhash,
 } from "./utils";
 
 // utility constants
@@ -39,7 +40,9 @@ import {
 	ilocksupremeID,
 } from "./utils";
 
+const bs58 = require("bs58");
 const BN = require("bn.js");
+const crypto = require('crypto-js');
 
 /****************************************************************
  * main								*
@@ -57,22 +60,23 @@ const CreateEntity = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// get ENTITY address
-	const ENTITYhash = prompt("Please enter the ENTITY hash: ");
+	const ENTITYurl = prompt("Please enter the ENTITY URL: ");
+	const ENTITYhash = newURLhash(ENTITYurl);
 
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
 	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash.toString()).slice(0,32));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 5;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// set new STAKE count
@@ -82,8 +86,8 @@ const CreateEntity = async () => {
 	console.log(`. This will be STAKE number ${countSTAKE[0]}.`);
 
 	// get valence
-	var valence = new Uint8Array(1);
-	valence = prompt("Please enter '1' if this entity is good, or '0' if it is bad: ");
+	//var valence = new Uint8Array(1);
+	const valence = parseInt(prompt("Please enter '1' if this entity is good, or '0' if it is bad: "));
 
 	// get STAKE address
 	const pdaSTAKEseed = createSeed(pdaUSER, countSTAKE);
@@ -92,13 +96,13 @@ const CreateEntity = async () => {
 
 	// get fill amount
 	const amount = prompt("Please enter the amount you wish to stake: ");
-	
+
 	// setup instruction data
 	const ixDATA = [7, bumpSTAKE, bumpENTITY]
 		.concat(pdaSTAKEseed)
-		.concat(toUTF8Array(ENTITYhash))
+		.concat(toUTF8Array(ENTITYhash.toString()).slice(0,32))
 		.concat(new BN(amount).toArray("le", 16))
-		.concat([valence[0]]);
+		.concat(valence);
 
 	// prepare transaction
 	const CreateENTITYtx = new Transaction().add(
@@ -109,7 +113,7 @@ const CreateEntity = async () => {
 				{ pubkey: pdaUSER, isSigner: false, isWritable: true, },
 				{ pubkey: pdaSTAKE, isSigner: false, isWritable: true, },
 				{ pubkey: pdaENTITY, isSigner: false, isWritable: true, },
-				{ pubkey: new PublicKey(ENTITYhash), isSigner: false, isWritable: false, },
+				{ pubkey: ENTITYhash, isSigner: false, isWritable: false, },
 				{ pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false, },
 				{ pubkey: SystemProgram.programId, isSigner: false, isWritable: false, },
@@ -118,10 +122,10 @@ const CreateEntity = async () => {
 			programId: ilocksupremeID,
 		})
 	);
-		
+	
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, CreateENTITYtx, [ownerKEY], )}`);
-	
+
 	// confirmation
 	console.log(`\n* Successfully created new ENTITY account '${pdaENTITY.toBase58()}'!\n`);
 	console.log(`\n* Successfully created new STAKE account '${pdaSTAKE.toBase58()}'!\n`);

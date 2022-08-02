@@ -21,6 +21,13 @@ import {
 	getENTITYs,
 } from "./utils";
 
+// utility constants
+import {
+	connection,
+	ownerKEY,
+	ilocksupremeID,
+} from "./utils";
+
 /****************************************************************
  * main								
  ****************************************************************/
@@ -37,9 +44,6 @@ const ListEntities = async () => {
 	// state intention
 	console.log(`\nENTITYs:\n`);
 	
-	// get USER flags
-	var ENTITYflags = unpackFlags(ENTITY.flags);
-
 	// get PIECE accounts with operator Key in operator field
 	const ENTITYs = await getENTITYs();
 
@@ -57,12 +61,12 @@ const ListEntities = async () => {
 		var flags = unpackFlags(ENTITY.flags);
 
 		// print STAKE data
-		console.log(`| ADDRESS: ----- ${ENTITYs[countENTITY].pubkey}`);
-		console.log(`| HUNTER: ------ ${ENTITY.hunter}`);
-		console.log(`| STAKEPOS: ---- ${ENTITY.stakepos}`);
-		console.log(`| STAKENEG: ---- ${ENTITY.stakeneg}`);
-		console.log(`| STAKERS: ----- ${ENTITY.stakers}`);
-		console.log(`| TIMESTAMP: --- ${ENTITY.timestamp}`);
+		console.log(`\t| ADDRESS: ----- ${ENTITYs[countENTITY].pubkey}`);
+		console.log(`\t| HUNTER: ------ ${ENTITY.hunter}`);
+		console.log(`\t| STAKEPOS: ---- ${ENTITY.stakepos}`);
+		console.log(`\t| STAKENEG: ---- ${ENTITY.stakeneg}`);
+		console.log(`\t| STAKERS: ----- ${ENTITY.stakers}`);
+		console.log(`\t| TIMESTAMP: --- ${ENTITY.timestamp}`);
 		process.stdout.write(`\t| FLAGS: ------- `);
 		process.stdout.write(`[ `);
 		for (var index = 0; index < 4; index++) {

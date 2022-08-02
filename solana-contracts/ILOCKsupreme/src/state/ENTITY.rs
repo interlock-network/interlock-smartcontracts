@@ -46,7 +46,7 @@ impl Pack for ENTITY {
             hunter: Pubkey::new_from_array(*hunter),
             stakepos: u128::from_be_bytes(*stakepos),
             stakeneg: u128::from_be_bytes(*stakeneg),
-            stakers: u16::from_be_bytes(*stakers),
+            stakers: u16::from_le_bytes(*stakers),
             timestamp: i64::from_be_bytes(*timestamp),
         })
     }
@@ -75,7 +75,7 @@ impl Pack for ENTITY {
         hunter_dst.copy_from_slice(hunter.as_ref());
         *stakepos_dst = stakepos.to_be_bytes();
         *stakeneg_dst = stakeneg.to_be_bytes();
-        *stakers_dst = stakers.to_be_bytes();
+        *stakers_dst = stakers.to_le_bytes();
         *timestamp_dst = timestamp.to_be_bytes();
 
     }

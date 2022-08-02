@@ -94,6 +94,9 @@ pub enum ContractError {
     #[error("Not User stake")]
     NotUserStakeError,
 
+    #[error("Insufficient balance")]
+    InsufficientBalanceError,
+
 }
 
 impl From<ContractError> for ProgramError {

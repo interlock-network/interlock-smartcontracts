@@ -45,7 +45,7 @@ impl ContractInstruction {
             3 => Self::FillUser {
                 amount: rest.get(0..U128_LEN)
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u128::from_be_bytes)
+                    .map(u128::from_le_bytes)
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
             },
             4 => Self::CreateStake {
@@ -70,7 +70,7 @@ impl ContractInstruction {
                 seedENTITY: rest[(2 + PUBKEY_LEN)..(2 + 2*PUBKEY_LEN)].to_vec(),
                 amount: rest.get((2 + 2*PUBKEY_LEN)..(2 + 2*PUBKEY_LEN + U128_LEN))
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u128::from_be_bytes)
+                    .map(u128::from_le_bytes)
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
                 valence: rest[2 + 2*PUBKEY_LEN + U128_LEN],
             },
@@ -86,7 +86,7 @@ impl ContractInstruction {
                 seedSTAKE: rest[1..(1 + PUBKEY_LEN)].to_vec(),
                 amount: rest.get((1 + PUBKEY_LEN)..(1 + PUBKEY_LEN + U128_LEN))
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u128::from_be_bytes)
+                    .map(u128::from_le_bytes)
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
                 valence: rest[1 + PUBKEY_LEN + U128_LEN],
             },

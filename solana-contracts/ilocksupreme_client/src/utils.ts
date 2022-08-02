@@ -774,7 +774,7 @@ export async function getSTAKEs(hash: string) {
 				{
 					memcmp: {
 						offset: U16_SIZE + U64_SIZE,
-						bytes: hash.toString(),
+						bytes: hash,
 					},
 				},
 			],
@@ -1110,6 +1110,14 @@ export function newKeyhash() {
 	keyhash = new PublicKey(keyhash);
 	return [newkey.publicKey, keyhash];
 }
+
+export function newURLhash(URL: string) {
+	var URLhash = crypto.SHA256(URL);
+	URLhash = bs58.encode(Buffer.from(URLhash.toString(), 'hex'));
+	URLhash = new PublicKey(URLhash);
+	return URLhash;
+}
+
 
 
 

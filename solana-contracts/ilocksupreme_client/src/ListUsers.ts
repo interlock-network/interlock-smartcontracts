@@ -53,6 +53,7 @@ const ListUsers = async () => {
 
 		// print STAKE data
 		console.log(`\t| ADDRESS: ----- ${USERs[countUSER].pubkey}`);
+		console.log(`\t| COUNT: ------- ${USER.count}`);
 		console.log(`\t| SUCCESS: ----- ${USER.success}`);
 		console.log(`\t| FAIL: -------- ${USER.fail}`);
 		console.log(`\t| OWNER: ------- ${USER.owner}`);
