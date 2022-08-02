@@ -182,7 +182,7 @@ impl Processor {
         // if entity creator is a bounty hunter, declare them the owner
         // if entity created just from regulare security staker, entity is owned by global
         if USERflags[3] && USERinfo.owner == *owner.key {
-            ENTITYinfo.hunter = USERinfo.owner;
+            ENTITYinfo.hunter = *pdaUSER.key;
         } else {
             ENTITYinfo.hunter = GLOBALinfo.owner;
         }

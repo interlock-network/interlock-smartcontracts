@@ -68,22 +68,22 @@ const UpdateGlobal = async () => {
 
 	// 0: entity total stake threshold
 	updateFlagsHigh[0] = 1;
-	updateValues[0] = 555;
+	updateValues[0] = 1000000;
 
 	// 1: bounty hunter reward threshold percentage for entity settlement
 	updateFlagsHigh[1] = 1;
 	updateValues[1] = 400;
 
 	// 2: entity total time threshold
-	updateFlagsHigh[2] = 0;
-	updateValues[2] = 0;
+	updateFlagsHigh[2] = 1; // two days
+	updateValues[2] = 172800;
 	
 	// 3: security stake yield compounding rate
 	updateFlagsHigh[3] = 0;
 	updateValues[3] = 0;
 
 	// 4: entity total time elapsed threshold
-	updateFlagsHigh[4] = 0;
+	updateFlagsHigh[4] = 1;
 	updateValues[4] = 0;
 
 	// 5: minimum stake
@@ -94,16 +94,19 @@ const UpdateGlobal = async () => {
 	updateFlagsHigh[6] = 0;
 	updateValues[6] = 0;
 
-	updateFlagsHigh[7] = 0;
-	updateValues[7] = 0;
+	// 7: entity stakepos threshold
+	updateFlagsHigh[7] = 1;
+	updateValues[7] = 1000000;
 
-	updateFlagsHigh[8] = 0;
-	updateValues[8] = 0;
+	// 8: entity stakeneg threshold
+	updateFlagsHigh[8] = 1;
+	updateValues[8] = 1000000;
 
-	updateFlagsHigh[9] = 0;
-	updateValues[9] = 0;
+	// 9: staker number threshold
+	updateFlagsHigh[9] = 1;
+	updateValues[9] = 100;
 
-	updateFlagsHigh[10] = 1;
+	updateFlagsHigh[10] = 0;
 	updateValues[10] = 0;
 
 	updateFlagsHigh[11] = 0;
@@ -291,8 +294,6 @@ const UpdateGlobal = async () => {
 		})
 	);
 
-	console.log("chirp")
-		
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, UpdateGLOBALtx, [ownerKEY], )}`);
 	

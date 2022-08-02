@@ -53,7 +53,7 @@ impl ContractInstruction {
                 seedSTAKE: rest[1..(1 + PUBKEY_LEN)].to_vec(),
                 amount: rest.get((1 + PUBKEY_LEN)..(1 + PUBKEY_LEN + U128_LEN))
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u128::from_be_bytes)
+                    .map(u128::from_le_bytes)
                     .ok_or(InvalidInstruction)?.try_into().unwrap(),
                 valence: rest[1 + PUBKEY_LEN + U128_LEN],
             },

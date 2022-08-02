@@ -84,7 +84,12 @@ impl Processor {
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-
+        
+        // make sure USER has balance for stake amount
+        if USERinfo.balance < amount {
+            return Err(InsufficientBalanceError.into())
+        }
+        
         // check that owner is *actually* owner
         if USERinfo.owner != *owner.key {
             return Err(OwnerImposterError.into());
@@ -94,7 +99,7 @@ impl Processor {
         if (amount as u32) < GLOBALinfo.values[5] {
             return Err(MinimumStakeNotMetError.into());
         }
-
+        
         // make sure ENTITY is not settling
         if ENTITYflags[7] {
             return Err(EntitySettlingError.into());
@@ -111,8 +116,9 @@ impl Processor {
             ENTITYflags.set(7, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
-            
-            return Err(MaxStakerThresholdPassedError.into());
+            msg!("Max staker threshold passed error");
+            return Ok(())
+            //return Err(MaxStakerThresholdPassedError.into());
         }
 
         // is delta over threshold?
@@ -121,8 +127,10 @@ impl Processor {
             ENTITYflags.set(7, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
+            msg!("Time threshold passed error");
+            return Ok(())
+            //return Err(TimeThresholdPassedError.into());
 
-            return Err(TimeThresholdPassedError.into());
         }
 
         // is entity over total stake threshold?
@@ -131,8 +139,9 @@ impl Processor {
             ENTITYflags.set(7, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
-
-            return Err(TotalStakeThresholdPassedError.into());
+            msg!("Total stake threshold passed error");
+            return Ok(())
+            //return Err(TotalStakeThresholdPassedError.into());
         }
 
         // is entity over (+) threshold?
@@ -150,19 +159,23 @@ impl Processor {
             .minimum_balance(SIZE_STAKE.into());
         invoke_signed(
         &system_instruction::create_account(
-            &pdaGLOBAL.key,
+            &owner.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            pdaGLOBAL.clone(),
+            owner.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
         msg!("Successfully created pdaSTAKE account");
+
+        // cover rent costs by transferring lamp to owner
+        **pdaGLOBAL.try_borrow_mut_lamports()? -= rentSTAKE;
+        **owner.try_borrow_mut_lamports()? += rentSTAKE;
         
         // get unititialized STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
