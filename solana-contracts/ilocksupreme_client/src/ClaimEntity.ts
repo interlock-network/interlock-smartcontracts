@@ -30,6 +30,7 @@ import {
 	toUTF8Array,
 	createSeed,
 	getUSERdata,
+	newURLhash,
 } from "./utils";
 
 // utility constants
@@ -57,22 +58,23 @@ const CreateStake = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// get ENTITY address
-	const ENTITYhash = prompt("Please enter the ENTITY hash: ");
+	const ENTITYurl = prompt("Please enter the ENTITY URL: ");
+	const ENTITYhash = newURLhash(ENTITYurl);
 
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
 	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash.toString()).slice(0,32));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 7;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// set new STAKE count

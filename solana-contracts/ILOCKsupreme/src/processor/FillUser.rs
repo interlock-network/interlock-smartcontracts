@@ -12,7 +12,6 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
-        msg,
     };
 
 use crate::{

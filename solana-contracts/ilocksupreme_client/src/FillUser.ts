@@ -54,7 +54,7 @@ const FillUser = async () => {
 
 	// find USER address
 	var count = new Uint16Array(1);
-	count[0] = 5;	// in production, this is always 0
+	count[0] = 7;	// in production, this is always 0
 	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
 	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);

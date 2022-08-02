@@ -60,11 +60,13 @@ impl Processor {
         let rent = next_account_info(account_info_iter)?;
         let clock = next_account_info(account_info_iter)?;
 
+        
         // get GLOBAL
         let GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // get USER info
-        let USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+        let mut USERinfo = USER::unpack_unchecked(&pdaUSER.try_borrow_data()?)?;
+        let USERflags = unpack_16_flags(USERinfo.flags);
 
         // get ENTITY
         let mut ENTITYinfo = ENTITY::unpack_unchecked(&pdaENTITY.try_borrow_data()?)?;
@@ -82,6 +84,11 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
+        // make sure USER has balance for stake amount
+        if USERinfo.balance < amount {
+            return Err(InsufficientBalanceError.into())
+        }
+
         // make sure entity is not settled
         if ENTITYflags[6] {
             return Err(EntitySettledError.into());
@@ -93,7 +100,7 @@ impl Processor {
         }
 
         // make sure entity is not already claimed
-        if ENTITYinfo.hunter != GLOBALinfo.owner || ENTITYflags[10] {
+        if ENTITYflags[10] {
             return Err(EntityClaimedError.into());
         }
 
@@ -103,7 +110,7 @@ impl Processor {
         }
 
         // make sure user is hunter
-        if !ENTITYflags[3] {
+        if !USERflags[3] {
             return Err(UserNotHunterError.into());
         }
 
@@ -112,19 +119,24 @@ impl Processor {
             .minimum_balance(SIZE_STAKE.into());
         invoke_signed(
         &system_instruction::create_account(
-            &pdaGLOBAL.key,
+            &owner.key,
             &pdaSTAKE.key,
             rentSTAKE,
             SIZE_STAKE.into(),
             &program_id
         ),
         &[
-            pdaGLOBAL.clone(),
+            owner.clone(),
             pdaSTAKE.clone(),
         ],
         &[&[&seedSTAKE, &[bumpSTAKE]]]
         )?;
         msg!("Successfully created pdaSTAKE");
+
+        // cover rent costs by transferring lamp to owner
+        **pdaGLOBAL.try_borrow_mut_lamports()? -= rentSTAKE;
+        **owner.try_borrow_mut_lamports()? += rentSTAKE;
+
         // get unititialized STAKE data
         let mut STAKEinfo = STAKE::unpack_unchecked(&pdaSTAKE.try_borrow_data()?)?;
 
@@ -135,7 +147,7 @@ impl Processor {
             STAKEflags.set(2, true);            // 3: account type is STAKE == 001
             STAKEflags.set(3, valence_bool);    // 4: STAKE valence, high == good
 
-        // populate and pack GLOBAL account info
+        // update STAKE
         STAKEinfo.flags = pack_16_flags(STAKEflags);
         STAKEinfo.entity = *hash.key;
         STAKEinfo.amount = amount;
@@ -143,10 +155,16 @@ impl Processor {
         STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
         
         // update ENTITY
-        ENTITYinfo.hunter = USERinfo.owner;
+        if valence_bool { ENTITYinfo.stakepos += amount } else { ENTITYinfo.stakeneg += amount }
+        ENTITYinfo.hunter = *pdaUSER.key;
         ENTITYflags.set(10, true);              // ENTITY claimed by bounty hunter
         ENTITYinfo.flags = pack_16_flags(ENTITYflags);
         ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
+
+        // update USER
+        USERinfo.balance -= amount;
+        USERinfo.count += 1;
+        USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
         Ok(())
     }
