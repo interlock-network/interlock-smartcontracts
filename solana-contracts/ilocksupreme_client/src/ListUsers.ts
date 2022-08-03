@@ -49,7 +49,7 @@ const ListUsers = async () => {
 		var USER = await getUSERdata(USERs[countUSER].pubkey);
 
 		// get flags
-		var flags = unpackFlags(USER.flags);
+		var USERflags = unpackFlags(USER.flags);
 
 		// print STAKE data
 		console.log(`\t| ADDRESS: ----- ${USERs[countUSER].pubkey}`);
@@ -61,23 +61,10 @@ const ListUsers = async () => {
 		console.log(`\t| BALANCE: ----- ${USER.balance}`);
 		console.log(`\t| REWARDS: ----- ${USER.rewards}`);
 		process.stdout.write(`\t| FLAGS: ------- `);
-		process.stdout.write(`[ `);
-		for (var index = 0; index < 4; index++) {
-			process.stdout.write(`${flags[index]} `);
+		for (var index = 0; index < 16; index++) {
+			process.stdout.write(`${USERflags[index]}  `);
 		}
-		process.stdout.write(`| `);
-		for (var index = 4; index < 8; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 8; index < 12; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 12; index < 16; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`]`);
+		console.log("\n\t                 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
 		process.stdout.write(`\n\n`);
 
 	}

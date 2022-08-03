@@ -61,24 +61,11 @@ const ListEntityStakes = async () => {
 	console.log(`| STAKERS: ----- ${ENTITY.stakers}`);
 	console.log(`| TIMESTAMP: --- ${ENTITY.timestamp}`);
 	process.stdout.write(`| FLAGS: ------- `);
-	process.stdout.write(`[ `);
-	for (var index = 0; index < 4; index++) {
-		process.stdout.write(`${ENTITYflags[index]} `);
+	for (var index = 0; index < 16; index++) {
+		process.stdout.write(`${ENTITYflags[index]}  `);
 	}
-	process.stdout.write(`| `);
-	for (var index = 4; index < 8; index++) {
-		process.stdout.write(`${ENTITYflags[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 8; index < 12; index++) {
-		process.stdout.write(`${ENTITYflags[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 12; index < 16; index++) {
-		process.stdout.write(`${ENTITYflags[index]} `);
-	}
-	process.stdout.write(`]`);
-		process.stdout.write(`\n\n`);
+	console.log("\n                 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
+	process.stdout.write(`\n\n`);
 
 	// get STAKE accounts with operator Key in operator field
 	const STAKEs = await getSTAKEs(ENTITYhash.toString());
@@ -102,23 +89,10 @@ const ListEntityStakes = async () => {
 		console.log(`\t| ENTITY: ------ ${STAKE.entity}`);
 		console.log(`\t| AMOUNT: ------ ${STAKE.amount}`);
 		process.stdout.write(`\t| FLAGS: ------- `);
-		process.stdout.write(`[ `);
-		for (var index = 0; index < 4; index++) {
-			process.stdout.write(`${flags[index]} `);
+		for (var index = 0; index < 16; index++) {
+			process.stdout.write(`${ENTITYflags[index]}  `);
 		}
-		process.stdout.write(`| `);
-		for (var index = 4; index < 8; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 8; index < 12; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`| `);
-		for (var index = 12; index < 16; index++) {
-			process.stdout.write(`${flags[index]} `);
-		}
-		process.stdout.write(`]`);
+		console.log("\n\t                 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
 		process.stdout.write(`\n\n`);
 
 

@@ -45,8 +45,8 @@ const ListGlobal = async () => {
 	var GLOBAL = await getGLOBALdata(GLOBE[0].pubkey);
 
 	// get flags
-	var flags1 = unpackFlags(GLOBAL.flags1);
-	var flags2 = unpackFlags(GLOBAL.flags2);
+	var GLOBALflags1 = unpackFlags(GLOBAL.flags1);
+	var GLOBALflags2 = unpackFlags(GLOBAL.flags2);
 
 	// print STAKE data
 	console.log(`\t| ADDRESS: ----- ${GLOBE[0].pubkey}`);
@@ -124,45 +124,20 @@ const ListGlobal = async () => {
 	console.log(`\t| VALUE62: ----- ${GLOBAL.value62}`);
 	console.log(`\t| VALUE63: ----- ${GLOBAL.value63}`);
 
-	process.stdout.write(`\t| FLAGS1: ------ `);
-	process.stdout.write(`[ `);
-	for (var index = 0; index < 4; index++) {
-		process.stdout.write(`${flags1[index]} `);
+	process.stdout.write(`\n\t| FLAGS1: ------- `);
+	for (var index = 0; index < 16; index++) {
+		process.stdout.write(`${GLOBALflags1[index]}  `);
 	}
-	process.stdout.write(`| `);
-	for (var index = 4; index < 8; index++) {
-		process.stdout.write(`${flags1[index]} `);
+	console.log("\n\t                  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
+	process.stdout.write(`\n`);
+
+	process.stdout.write(`\t| FLAGS2: ------- `);
+	for (var index = 0; index < 16; index++) {
+		process.stdout.write(`${GLOBALflags2[index]}  `);
 	}
-	process.stdout.write(`| `);
-	for (var index = 8; index < 12; index++) {
-		process.stdout.write(`${flags1[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 12; index < 16; index++) {
-		process.stdout.write(`${flags1[index]} `);
-	}
-	process.stdout.write(`]`);
+	console.log("\n\t                  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
 	process.stdout.write(`\n\n`);
 
-	process.stdout.write(`\t| FLAGS2: ------ `);
-	process.stdout.write(`[ `);
-	for (var index = 0; index < 4; index++) {
-		process.stdout.write(`${flags2[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 4; index < 8; index++) {
-		process.stdout.write(`${flags2[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 8; index < 12; index++) {
-		process.stdout.write(`${flags2[index]} `);
-	}
-	process.stdout.write(`| `);
-	for (var index = 12; index < 16; index++) {
-		process.stdout.write(`${flags2[index]} `);
-	}
-	process.stdout.write(`]`);
-	process.stdout.write(`\n\n`);
 
 	} catch {
 		console.log(Error);
