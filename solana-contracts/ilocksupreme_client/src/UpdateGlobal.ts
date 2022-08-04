@@ -68,7 +68,7 @@ const UpdateGlobal = async () => {
 
 	// 0: entity total stake threshold
 	updateFlagsHigh[0] = 1;
-	updateValues[0] = 1000000;
+	updateValues[0] = 1_000_000;
 
 	// 1: bounty hunter reward threshold percentage for entity settlement
 	updateFlagsHigh[1] = 1;
@@ -79,8 +79,8 @@ const UpdateGlobal = async () => {
 	updateValues[2] = 0;
 	
 	// 3: security stake yield compounding rate
-	updateFlagsHigh[3] = 0;
-	updateValues[3] = 0;
+	updateFlagsHigh[3] = 1;
+	updateValues[3] = 1000;
 
 	// 4: entity total time elapsed threshold
 	updateFlagsHigh[4] = 1;
@@ -96,24 +96,27 @@ const UpdateGlobal = async () => {
 
 	// 7: entity stakepos threshold
 	updateFlagsHigh[7] = 1;
-	updateValues[7] = 1000000;
+	updateValues[7] = 1_000_000;
 
 	// 8: entity stakeneg threshold
 	updateFlagsHigh[8] = 1;
-	updateValues[8] = 1000000;
+	updateValues[8] = 1_000_000;
 
 	// 9: staker number threshold
 	updateFlagsHigh[9] = 1;
 	updateValues[9] = 100;
 
-	updateFlagsHigh[10] = 0;
-	updateValues[10] = 0;
+	// 10: security stake yield compounding rate factor
+	updateFlagsHigh[10] = 1;
+	updateValues[10] = 10_000;
 
-	updateFlagsHigh[11] = 0;
-	updateValues[11] = 0;
+	// 11: security stake timedelta factor
+	updateFlagsHigh[11] = 1;
+	updateValues[11] = 3600; // number of milliseconds in a year (exp continuous compounding based off years)
 
-	updateFlagsHigh[12] = 0;
-	updateValues[12] = 0;
+	// 12: stake reward factor
+	updateFlagsHigh[12] = 1;
+	updateValues[12] = 10000;
 
 	updateFlagsHigh[13] = 0;
 	updateValues[13] = 0;

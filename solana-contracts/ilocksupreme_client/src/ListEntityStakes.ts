@@ -81,7 +81,7 @@ const ListEntityStakes = async () => {
 		var STAKE = await getSTAKEdata(STAKEs[countSTAKE].pubkey);
 
 		// get flags
-		var flags = unpackFlags(STAKE.flags);
+		var STAKEflags = unpackFlags(STAKE.flags);
 
 		// print STAKE data
 		console.log(`# ${countSTAKE}\t| STAKE ID: ---- ${STAKE.entity}`);
@@ -90,7 +90,7 @@ const ListEntityStakes = async () => {
 		console.log(`\t| AMOUNT: ------ ${STAKE.amount}`);
 		process.stdout.write(`\t| FLAGS: ------- `);
 		for (var index = 0; index < 16; index++) {
-			process.stdout.write(`${ENTITYflags[index]}  `);
+			process.stdout.write(`${STAKEflags[index]}  `);
 		}
 		console.log("\n\t                 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15") 
 		process.stdout.write(`\n\n`);

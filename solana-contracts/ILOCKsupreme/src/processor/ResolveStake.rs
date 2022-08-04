@@ -12,6 +12,7 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
+        msg,
     };
 
 use crate::{
@@ -81,12 +82,10 @@ impl Processor {
             pdaSTAKEcheck != *pdaSTAKE.key {                        // address generated from seed matches STAKE
             return Err(NotUserStakeError.into());
         }
-        
-        // compute time delta
-        let timedelta = ENTITYinfo.timestamp - STAKEinfo.timestamp;
-
+     
         // compute continuous exponential return
-        
+        //
+        //
         // FORMULA: Return(t) = Stake * exp(rate * t)
         //
         // We approximate this by taking the first
@@ -94,16 +93,44 @@ impl Processor {
         //
         // exp(x) = (x^0/0!) + (x^1/1!) + (x^2/2!) + (x^3/3!) + ...
         //        = 1 + x + x^2/2 + x^3/6 + ...
+        //
+        // Because Solana does not deal with floating points,
+        // we need to express the interest rate as
+        // exp(time*rate/ratefactor), where rate factor is the integer
+        // that scales the rate
+        //
+        // For example, a rate of 3.55% will be expressed as 355/10_000,
+        // where rate = 355
+        //
+        // The new approximation looks like this
+        // exp(x/y) = (x^0/(0!*y^0)) + (x^1/(1!*y^1)) + (x^2/(2!*y^2)) + (x^3/(3!*y^3)) + ...
+        //        = 1 + x/y + x^2/(2*y^2) + x^3/(6*y^3) + ...
+        //
+        // In above, x is 'exp_numerator', while y is 'exp_denominator'
         
-        let rate = GLOBALinfo.values[3];            // interest rate
-        let exponent = rate * timedelta as u32;     // continuously compounting exponential factor
-        let stake_payout = STAKEinfo.amount * (
-                                            1 +
-                                            exponent +
-                                            (exponent*exponent)/2 +
-                                            (exponent*exponent*exponent)/6
-                                                ) as u128;
-        let stake_yield = stake_payout - STAKEinfo.amount;
+        let time = ENTITYinfo.timestamp - STAKEinfo.timestamp;      // time elapsed in seconds
+        let timefactor = GLOBALinfo.values[11];                     // time adjustment factor
+        let rate = GLOBALinfo.values[3];                            // interest rate
+        let ratefactor = GLOBALinfo.values[10];                     // rate adjustment factor
+
+        let exp_numerator = time as u128 * rate as u128;               // continuously compounding exponential factor's numerator
+        let exp_denominator = timefactor as u128 * ratefactor as u128; // continuously compounding exponential factor's numerator
+
+        // compute terms in approximation
+        // note the STAKEinfo.amount must be applied within brackets in numerator to make sure
+        // result is not a decimal value (no floating point with solana)
+        let term0 = STAKEinfo.amount;
+        let term1 = (exp_numerator*STAKEinfo.amount)/
+                     exp_denominator;
+        let term2 = (exp_numerator*exp_numerator*STAKEinfo.amount)/
+                    (2*exp_denominator*exp_denominator);
+        let term3 = (exp_numerator*exp_numerator*exp_numerator*STAKEinfo.amount)/
+                    (6*exp_denominator*exp_denominator*exp_denominator);
+
+        // ( bear in mind, term1 >> term2 >> term3 )
+
+        let stake_payout = term0 + term1 + term2 + term3; // computer final continuously compounding approximation
+        let stake_yield = stake_payout - STAKEinfo.amount;           // compute final stake yield to be paid out
 
         // pay reward and return stake principal
         let stake_reward = STAKEinfo.amount * GLOBALinfo.values[9] as u128;
@@ -120,7 +147,7 @@ impl Processor {
 
         } else {
 
-            // transfer stake_yield only to USER
+            // transfer stake_yield only to USER and slash reward and principal
             USERinfo.balance += stake_yield;
             USERinfo.fail += 1;
             GLOBALinfo.pool += STAKEinfo.amount - stake_yield;

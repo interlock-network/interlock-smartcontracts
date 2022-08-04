@@ -114,6 +114,7 @@ impl Processor {
         if ENTITYinfo.stakers as u32 == GLOBALinfo.values[9] {
             // make sure entity is marked 'settling' then repack
             ENTITYflags.set(7, true);
+            ENTITYflags.set(5, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
             msg!("Max staker threshold passed error");
@@ -125,6 +126,7 @@ impl Processor {
         if timedelta as u32 > GLOBALinfo.values[2] {
             // make sure entity is marked 'settling' then repack
             ENTITYflags.set(7, true);
+            ENTITYflags.set(4, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
             msg!("Time threshold passed error");
@@ -137,6 +139,7 @@ impl Processor {
         if (ENTITYinfo.stakepos + ENTITYinfo.stakeneg) > GLOBALinfo.values[0] as u128 {
             // make sure entity is marked 'settling' then repack
             ENTITYflags.set(7, true);
+            ENTITYflags.set(3, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
             msg!("Total stake threshold passed error");

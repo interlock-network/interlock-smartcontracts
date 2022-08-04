@@ -29,6 +29,7 @@ import {
 	toUTF8Array,
 	createSeed,
 	getSTAKEdata,
+	newURLhash,
 } from "./utils";
 
 // utility constants
@@ -56,15 +57,15 @@ const CreateStake = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
 	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 1;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
 	// set new STAKE count
@@ -81,11 +82,12 @@ const CreateStake = async () => {
 	const ENTITYhash = STAKE.entity.toString();
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash.toString()).slice(0,32));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// setup instruction data
-	const ixDATA = [12];
+	const ixDATA = [12]
+		.concat(pdaSTAKEseed);
 
 	// prepare transaction
 	const ResolveSTAKEtx = new Transaction().add(
@@ -103,11 +105,12 @@ const CreateStake = async () => {
 		})
 	);
 		
+	console.log("chirp")
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, ResolveSTAKEtx, [ownerKEY], )}`);
 	
 	// confirmation
-	console.log(`\n* Successfully created new STAKE account '${pdaSTAKE.toBase58()}'!\n`);
+	console.log(`\n* Successfully resolved STAKE account '${pdaSTAKE.toBase58()}'!\n`);
 
 	} catch {
 
