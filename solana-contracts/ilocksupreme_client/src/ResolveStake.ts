@@ -105,7 +105,6 @@ const CreateStake = async () => {
 		})
 	);
 		
-	console.log("chirp")
 	// send transaction
 	console.log(`txhash: ${await sendAndConfirmTransaction(connection, ResolveSTAKEtx, [ownerKEY], )}`);
 	
