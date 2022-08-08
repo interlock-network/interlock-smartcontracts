@@ -1,4 +1,24 @@
-# ILOCKsupreme flow mermaid code below:
+# ILOCKsupreme flow & mermaid code below:
+
+ix === instruction
+
+## 1, CreateUser ix
+
+![](./media/flow_1_CreateUser.png)
+
+## 2, CreateStake ix
+
+![](./media/flow_2_CreateStake.png)
+
+## 3, ResolveStake ix
+
+![](./media/flow_3_ResolveStake.png)
+
+## 4, CloseStake ix
+
+![](./media/flow_4_CloseStake.png)
+
+## Mermaid code
 
 ```
 flowchart TD
