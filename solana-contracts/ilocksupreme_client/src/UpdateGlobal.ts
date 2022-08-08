@@ -76,7 +76,7 @@ const UpdateGlobal = async () => {
 
 	// 2: entity total time threshold
 	updateFlagsHigh[2] = 1; // two days
-	updateValues[2] = 0;
+	updateValues[2] = 1;
 	
 	// 3: security stake yield compounding rate
 	updateFlagsHigh[3] = 1;

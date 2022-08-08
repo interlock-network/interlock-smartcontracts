@@ -28,6 +28,7 @@ import {
 	toUTF8Array,
 	createSeed,
 	getUSERdata,
+	newURLhash,
 } from "./utils";
 
 // utility constants
@@ -55,52 +56,47 @@ const CloseStake = async () => {
 	// get operator ID
 	const programID = "InterlockSupremeAccount";
 
-	// get vault address
-	const ownerVault = prompt("Please enter your Ethereum vault address: ");
-
 	// get ENTITY address
-	const ENTITYhash = prompt("Please enter the ENTITY hash: ");
+	const ENTITYurl = prompt("Please enter the ENTITY URL: ");
+	const ENTITYhash = newURLhash(ENTITYurl);
 
 	// find GLOBAL address
 	const [pdaGLOBAL, bumpGLOBAL] = await deriveAddress(toUTF8Array(programID));
 	console.log(`. GLOBAL pda:\t\t${pdaGLOBAL.toBase58()} found after ${256 - bumpGLOBAL} tries`);
 
 	// find ENTITY address
-	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash));
+	const [pdaENTITY, bumpENTITY] = await deriveAddress(toUTF8Array(ENTITYhash.toString()).slice(0,32));
 	console.log(`. ENTITY pda:\t\t${pdaENTITY.toBase58()} found after ${256 - bumpENTITY} tries`);
 
 	// find USER address
-	const [pdaUSER, bumpUSER] = await deriveAddress(toUTF8Array(ownerVault));
+	var count = new Uint16Array(1);
+	count[0] = 1;	// in production, this is always 0
+	const pdaUSERseed = createSeed(ownerKEY.publicKey, count);
+	const [pdaUSER, bumpUSER] = await deriveAddress(pdaUSERseed);
 	console.log(`. USER pda:\t\t${pdaUSER.toBase58()} found after ${256 - bumpUSER} tries`);
 
-	// set new STAKE count
-	var USER = await getUSERdata(pdaUSER);
-	var countSTAKE = new Uint16Array(1);
-	countSTAKE[0] = USER.count + 1;
-	console.log(`. This will be STAKE number ${countSTAKE[0]}.`);
+	// get USER data
+	const USER = await getUSERdata(pdaUSER);
 
-	// get valence
-	var valence = new Uint8Array(1);
-	valence = prompt("Please enter '1' if this entity is good, or '0' if it is bad: ");
+	// set new STAKE count
+	var STAKEnumber = new Uint16Array(1);
+	STAKEnumber[0] = parseInt(prompt(`From the STAKE list, please enter STAKE # that you wish to resolve: `));
 
 	// get STAKE address
-	const pdaSTAKEseed = createSeed(pdaUSER, countSTAKE);
+	const pdaSTAKEseed = createSeed(pdaUSER, STAKEnumber);
 	const [pdaSTAKE, bumpSTAKE] = await deriveAddress(pdaSTAKEseed);
-	console.log(`. New STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
+	console.log(`. STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
 
 	// get final STAKE address
 	var endSTAKE = new Uint16Array(1);
 	endSTAKE[0] = USER.count;
 	const pdaSTAKEendseed = createSeed(pdaUSER, endSTAKE);
 	const [pdaSTAKEend, bumpSTAKEend] = await deriveAddress(pdaSTAKEendseed);
-	console.log(`. New STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
+	console.log(`. End STAKE pda:\t\t${pdaSTAKE.toBase58()} found after ${256 - bumpSTAKE} tries`);
 
-	// get fill amount
-	const amount = prompt("Please enter the amount you wish to stake: ");
-	
 	// setup instruction data
 	const ixDATA = [6]
-		.concat(toUTF8Array(ENTITYhash));
+		.concat(pdaSTAKEseed);
 
 	// prepare transaction
 	const CloseSTAKEtx = new Transaction().add(

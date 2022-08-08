@@ -92,6 +92,8 @@ impl Processor {
             return Err(NotUserStakeError.into());
         }
 
+
+
         // check and reward bounty hunter
         if ENTITYflags[10]  &&                      // entity is claimed by bounty hunter 
             !ENTITYflags[11] &&                     // bounty not yet rewarded
@@ -124,11 +126,14 @@ impl Processor {
         USERinfo.count -= 1;
         USER::pack(USERinfo, &mut pdaUSER.try_borrow_mut_data()?)?;
 
+        // if not the last stake within index
         // rearrange stake accounts to make index sequential
         // then, update STAKE
-        STAKEinfo.entity = endSTAKEinfo.entity;
-        STAKEinfo.amount = endSTAKEinfo.amount;
-        STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+        if *pdaSTAKE.key != *pdaSTAKEend.key {
+            STAKEinfo.entity = endSTAKEinfo.entity;
+            STAKEinfo.amount = endSTAKEinfo.amount;
+            STAKE::pack(STAKEinfo, &mut pdaSTAKE.try_borrow_mut_data()?)?;
+        }
 
         // update ENTITY
         ENTITYinfo.flags = pack_16_flags(ENTITYflags);

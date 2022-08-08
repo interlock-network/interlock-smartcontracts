@@ -84,7 +84,7 @@ const ListEntityStakes = async () => {
 		var STAKEflags = unpackFlags(STAKE.flags);
 
 		// print STAKE data
-		console.log(`# ${countSTAKE}\t| STAKE ID: ---- ${STAKE.entity}`);
+		console.log(`# ${countSTAKE}\t| STAKE ID: ---- ${STAKEs[countSTAKE].pubkey.toBase58()}`);
 		console.log(`\t| TIMESTAMP: --- ${STAKE.timestamp}`);
 		console.log(`\t| ENTITY: ------ ${STAKE.entity}`);
 		console.log(`\t| AMOUNT: ------ ${STAKE.amount}`);

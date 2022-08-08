@@ -132,9 +132,6 @@ impl Processor {
             }
             // false                            // 11: bounty hunter rewarded
 
-            msg!("{:?}", seedENTITY);
-            msg!("{:?}", seedSTAKE);
-
         // calculate rent and create pda STAKE
         let rentSTAKE = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_STAKE.into());

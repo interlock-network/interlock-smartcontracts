@@ -53,7 +53,7 @@ f7 = entity settling status, bool
 f8 = entity valence, bool, high = good, low = bad
 f9 = entity determination, bool, high = good, low = bad
 f10 = entity claimed, bool
-f11 = 
+f11 = bounty hunter rewarded, bool
 f12 = 
 f13 = 
 f14 = 
