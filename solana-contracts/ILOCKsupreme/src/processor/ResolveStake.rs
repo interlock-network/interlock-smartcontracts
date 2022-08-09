@@ -12,7 +12,6 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
-        msg,
     };
 
 use crate::{
@@ -100,7 +99,7 @@ impl Processor {
         // that scales the rate
         //
         // For example, a rate of 3.55% will be expressed as 355/10_000,
-        // where rate = 355
+        // where rate = 355 and ratefactor = 10_000
         //
         // The new approximation looks like this
         // exp(x/y) = (x^0/(0!*y^0)) + (x^1/(1!*y^1)) + (x^2/(2!*y^2)) + (x^3/(3!*y^3)) + ...
@@ -145,6 +144,7 @@ impl Processor {
             GLOBALinfo.pool -= stake_reward + stake_yield;
             STAKEinfo.amount = 0;
 
+        // if stake does not match determination
         } else {
 
             // transfer stake_yield only to USER and slash reward and principal

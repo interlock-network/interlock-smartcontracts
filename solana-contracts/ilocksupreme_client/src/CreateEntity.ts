@@ -130,9 +130,9 @@ const CreateEntity = async () => {
 	console.log(`\n* Successfully created new ENTITY account '${pdaENTITY.toBase58()}'!\n`);
 	console.log(`\n* Successfully created new STAKE account '${pdaSTAKE.toBase58()}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

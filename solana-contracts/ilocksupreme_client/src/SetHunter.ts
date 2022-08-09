@@ -94,9 +94,9 @@ const SetHunter = async () => {
 	// confirmation
 	console.log(`\n* Successfully set hunter status for USER '${pdaUSER.toBase58()}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

@@ -14,6 +14,7 @@ use solana_program::{
         program_pack::Pack,
         pubkey::Pubkey,
         sysvar::Sysvar,
+        msg,
     };
 
 
@@ -74,10 +75,10 @@ impl Processor {
             return Err(EntitySettledError.into());
         }
 
-        // is delta over threshold?
+        // is delta over time threshold?
         if timedelta as u32 > GLOBALinfo.values[2] {
 
-            // set threshold-passed flag
+            // set time threshold-passed flag
             ENTITYflags.set(4, true);
             // set settling flag
             ENTITYflags.set(7, true);
@@ -86,6 +87,7 @@ impl Processor {
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
 
+            msg!("Time threshold passed");
             return Ok(())
         }
 

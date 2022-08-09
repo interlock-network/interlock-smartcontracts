@@ -87,9 +87,9 @@ const CreateUser = async () => {
 	// confirmation
 	console.log(`\n* Successfully created new USER account for '${pdaUSER.toBase58()}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

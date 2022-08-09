@@ -93,9 +93,9 @@ const CheckEntity = async () => {
 	// confirmation
 	console.log(`\n* Successfully checked ENTITY '${ENTITYhash}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

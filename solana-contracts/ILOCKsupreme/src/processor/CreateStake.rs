@@ -117,9 +117,8 @@ impl Processor {
             ENTITYflags.set(5, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
-            msg!("Max staker threshold passed error");
-            return Ok(())
-            //return Err(MaxStakerThresholdPassedError.into());
+
+            return Err(StakerCountThresholdPassedError.into());
         }
 
         // is delta over threshold?
@@ -129,9 +128,8 @@ impl Processor {
             ENTITYflags.set(4, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
-            msg!("Time threshold passed error");
-            return Ok(())
-            //return Err(TimeThresholdPassedError.into());
+
+            return Err(TimeThresholdPassedError.into());
 
         }
 
@@ -142,9 +140,8 @@ impl Processor {
             ENTITYflags.set(3, true);
             ENTITYinfo.flags = pack_16_flags(ENTITYflags);
             ENTITY::pack(ENTITYinfo, &mut pdaENTITY.try_borrow_mut_data()?)?;
-            msg!("Total stake threshold passed error");
-            return Ok(())
-            //return Err(TotalStakeThresholdPassedError.into());
+            
+            return Err(TotalStakeThresholdPassedError.into());
         }
 
         // is entity over (+) threshold?

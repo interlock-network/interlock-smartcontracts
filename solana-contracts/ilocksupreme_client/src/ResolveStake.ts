@@ -111,9 +111,9 @@ const CreateStake = async () => {
 	// confirmation
 	console.log(`\n* Successfully resolved STAKE account '${pdaSTAKE.toBase58()}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

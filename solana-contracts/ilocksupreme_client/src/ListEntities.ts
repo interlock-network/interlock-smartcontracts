@@ -75,8 +75,8 @@ const ListEntities = async () => {
 		process.stdout.write(`\n\n`);
 	}
 
-	} catch {
-		console.log(Error);
+	} catch(error: any) {
+		console.log(error);
 	}
 };
 

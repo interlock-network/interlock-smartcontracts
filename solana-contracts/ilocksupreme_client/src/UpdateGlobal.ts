@@ -303,9 +303,9 @@ const UpdateGlobal = async () => {
 	// confirmation
 	console.log(`\n* Successfully updated GLOBAL account for '${programID}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

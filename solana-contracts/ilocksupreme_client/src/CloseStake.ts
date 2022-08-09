@@ -121,9 +121,9 @@ const CloseStake = async () => {
 	// confirmation
 	console.log(`\n* Successfully closed STAKE account for '${pdaSTAKE.toBase58()}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };

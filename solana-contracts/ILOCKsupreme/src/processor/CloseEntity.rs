@@ -12,6 +12,7 @@ use solana_program::{
         program_error::ProgramError,
         program_pack::Pack,
         pubkey::Pubkey,
+        msg,
     };
 
 use crate::{
@@ -69,6 +70,8 @@ impl Processor {
         **pdaENTITY.lamports.borrow_mut() = 0;
         let mut pdaENTITYdata = pdaENTITY.data.borrow_mut();
         pdaENTITYdata.fill(0);
+
+        msg!("Entity account closed, rent returned to GLOBAL");
 
         Ok(())
     }

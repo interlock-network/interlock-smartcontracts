@@ -98,8 +98,8 @@ const ListEntityStakes = async () => {
 
 	}
 
-	} catch {
-		console.log(Error);
+	} catch(error: any) {
+		console.log(error);
 	}
 };
 

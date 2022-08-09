@@ -54,8 +54,6 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        msg!{"chirp"};
-
         // calculate rent if we want to create new account
         let rentGLOBAL = Rent::from_account_info(rent)?
             .minimum_balance(SIZE_GLOBAL.into());
@@ -76,7 +74,6 @@ impl Processor {
         &[&[&seedGLOBAL, &[bumpGLOBAL]]]
         )?;
         msg!("Successfully created pdaGLOBAL");
-// need to determine if create_account reverts if account already exists
 
         // get unititialized GLOBAL data
         let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
@@ -88,7 +85,6 @@ impl Processor {
             // flags[0] = false;
             flags.set(1, true);
             flags.set(2, true);
-
 
         // populate and pack GLOBAL account info
         GLOBALinfo.flags = pack_32_flags(flags);

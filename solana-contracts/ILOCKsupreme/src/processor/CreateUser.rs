@@ -76,7 +76,6 @@ impl Processor {
        
         // cover rent costs by transferring lamp to owner
         **pdaGLOBAL.try_borrow_mut_lamports()? -= rentUSER;
-        
         **owner.try_borrow_mut_lamports()? += rentUSER;
     
         // iniitialize USER data

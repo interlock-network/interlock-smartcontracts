@@ -42,14 +42,13 @@ impl Processor {
         let pdaGLOBAL = next_account_info(account_info_iter)?;
         let newOwner = next_account_info(account_info_iter)?;
 
+        // get GLOBAL account info
+        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
+
         // check to make sure tx sender is signer
         if !owner.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-
-        
-        // get GLOBAL account info
-        let mut GLOBALinfo = GLOBAL::unpack_unchecked(&pdaGLOBAL.try_borrow_data()?)?;
 
         // check that owner is *actually* owner
         if GLOBALinfo.owner != *owner.key {

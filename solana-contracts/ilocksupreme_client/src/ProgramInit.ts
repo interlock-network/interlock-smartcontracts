@@ -80,9 +80,9 @@ const ProgramInit = async () => {
 	// confirmation
 	console.log(`\n* Successfully created new GLOBAL account for '${programID}'!\n`);
 
-	} catch {
+	} catch(error: any) {
 
-	console.log(Error);
+	console.log(error);
 
 	}
 };
