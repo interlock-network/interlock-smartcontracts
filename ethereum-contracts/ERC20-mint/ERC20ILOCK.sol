@@ -1,19 +1,16 @@
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 // SPDX-License-Identifier: MIT
 //
 // Interlock ERC-20 ILOCK Token Mint Platform
-// 		(containing)
-// components from OpenZeppelin v4.6.0 contract (token/ERC20/ERC20.sol)
 //
 // Contributors:
 // blairmunroakusa
 // ...
-
-pragma solidity ^0.8.0;
-
-import "./IERC20.sol";
-import "./IWORMHOLE.sol";
-import "./POOL.sol";
-import "./utils/ECDSA.sol";
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
  /** derived from from oz:
  * functions should revert instead returning `false` on failure.
@@ -29,18 +26,24 @@ import "./utils/ECDSA.sol";
  * allowances.
  **/
 
+pragma solidity ^0.8.0;
+
+import "./IERC20.sol";
+import "./POOL.sol";
+
 contract ERC20ILOCK is IERC20 {
 
-	/** @dev **/
-
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* declarations
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
-		// libraries
-    using ECDSA for bytes32;
+	/** @dev **/
 
 		// divisibility factor
 	uint8 private _decimals = 18;
@@ -82,38 +85,17 @@ contract ERC20ILOCK is IERC20 {
 		uint8 payments; }
 	mapping(address => MemberStatus) private _members;
 
-		// EIP712 signature implementation
-	address private _validationKey = address(0);
-	bytes32 public DOMAIN_SEPARATOR;
-	bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
-		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract");
-	bytes32 constant VALIDATION_TYPEHASH = keccak256(
-		"Validation(address wallet,unit256 share,uint8 pool)");
-
-		// domain separator
-	struct EIP712Domain {
-        string  name;
-        string  version;
-        uint256 chainId;
-        address verifyingContract; }
-
-		// data struct for validation claim
-	struct Validation {
-		address wallet;
-		uint256 share;
-		uint8 pool; }
-
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
-	mapping(address => mapping(
-		address => uint256)) private _allowances;
+	mapping(address => mapping(address => uint256)) private _allowances;
+	mapping(address => mapping(address => uint256)) private _lifetimeAllowances;
+	mapping(address => mapping(address => uint256)) private _transferTotals;
 
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
-	// decimals = 18 by default
 
 		// tracking time
 	uint256 public nextPayout;
@@ -123,11 +105,15 @@ contract ERC20ILOCK is IERC20 {
 	bool public TGEtriggered = false;
 	bool public supplySplit = false;
 	
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* init
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
 		 // owned by msg.sender
 		// initializes contract
@@ -149,28 +135,28 @@ contract ERC20ILOCK is IERC20 {
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
-					poolMembers_[i] ) ); }
+					poolMembers_[i] ) );
+		}
+	}
 
-			// initiate EIP712 standard for member validation
-		DOMAIN_SEPARATOR = keccak256(abi.encode(
-			EIP712DOMAIN_TYPEHASH,
-			keccak256(bytes("Validator")),
-			keccak256(bytes("1")),
-			1,
-			0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ) ); }
-
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* modifiers
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
 		// only allows owner to call
 	modifier isOwner(
 	) {
-		require(msg.sender == _owner,
+		require(
+			msg.sender == _owner,
 			"only owner can call");
-		_; }
+		_;
+	}
 
 /*************************************************/
 
@@ -178,9 +164,11 @@ contract ERC20ILOCK is IERC20 {
 	modifier noZero(
 		address _address
 	) {
-		require(_address != address(0),
+		require(
+			_address != address(0),
 			"zero address where it shouldn't be");
-		_; }
+		_;
+	}
 
 /*************************************************/
 
@@ -189,33 +177,41 @@ contract ERC20ILOCK is IERC20 {
 		uint256 _available,
 		uint256 _amount
 	) {
-		require(_available >= _amount,
+		require(
+            		_available >= _amount,
 			"not enough tokens available");
-		_; }
+		_;
+	}
 
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* setup methods
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
 		// creates account for each pool
 	function splitSupply(
 	) public isOwner {
 		
 		// guard
-		require(supplySplit == false,
+		require(
+			supplySplit == false,
 			"supply split already happened");
-
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_allowances[address(this)][Pool] = 0; }
-
+			_lifetimeAllowances[address(this)][Pool] = 0;
+			_transferTotals[address(this)][Pool];
+		}
 		// this must never happen again...
-		supplySplit = true; }
+		supplySplit = true;
+	}
 
 /*************************************************/
 
@@ -224,31 +220,40 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		// guards
-		require(supplySplit == true,
+		require(
+			supplySplit == true,
 			"supply not split");
-		require(TGEtriggered == false,
+		require(
+			TGEtriggered == false,
 			"TGE already happened");
-
 		// mint
 		_balances[address(this)] = _totalSupply;
-		_approve(address(this), msg.sender, _totalSupply);
-		emit Transfer(address(0), address(this), _totalSupply);
-
+		_approve(
+			address(this),
+			msg.sender,
+			_totalSupply);
+		emit Transfer(
+			address(0),
+			address(this),
+			_totalSupply);
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
-
 		// apply the initial round of token distributions
 		_poolDistribution();
-
 		// this must never happen again...
-		TGEtriggered = true; }
+		TGEtriggered = true;
+	}
 
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* payout methods
 	**/
-/*************************************************/							
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/						
 			
 		// distribute tokens to pools on schedule
 	function _poolDistribution(
@@ -257,8 +262,7 @@ contract ERC20ILOCK is IERC20 {
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)
-				) {
+				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
@@ -267,7 +271,10 @@ contract ERC20ILOCK is IERC20 {
 				_approve(
 					_pools[i],
 					msg.sender,
-					_pool[i].tokens/_pool[i].payments ); } } }
+					_pool[i].tokens/_pool[i].payments);
+			}
+		}
+	}
 
 /*************************************************/
 
@@ -279,10 +286,12 @@ contract ERC20ILOCK is IERC20 {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
-			return true; }
+			return true;
+		}
 
 		// not ready
-		return true; }
+		return false;
+	}
 			
 /*************************************************/
 
@@ -291,7 +300,8 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		//disown
-		_owner = address(0); }
+		_owner = address(0);
+	}
 
 /*************************************************/
 
@@ -301,115 +311,192 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		// reassign
-		_owner = newOwner; }
+		_owner = newOwner;
+	}
 
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
-	* member validation methods
+	* merkle distributor member validation methods
 	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+
+	address public token = address(this);
+	bytes32 public merkleRoot;
+
+		// This is a packed array of booleans.
+	mapping(uint256 => uint256) public claimedBitMap;
+
 /*************************************************/
 
-		// sets to serverside whitelist signing key
-	function setValidationKey(
-		address newKey
+		// sets serverside Merkle root
+	function setMerkleRoot(
+		bytes32 newRoot
 	) public isOwner {
-		_validationKey = newKey; }
+
+		merkleRoot = newRoot;
+	}
 
 /*************************************************/
 
-		// generate DOMAIN_SEPARATOR part of digest
-	function hash(
-		EIP712Domain memory eip712Domain
-	) internal pure returns (bytes32) {
-		return keccak256(abi.encode(
-			EIP712DOMAIN_TYPEHASH,
-			keccak256(bytes(eip712Domain.name)),
-			keccak256(bytes(eip712Domain.version)),
-			eip712Domain.chainId,
-			eip712Domain.verifyingContract ) ); }
+		 // returning boolean to indicate whether or member has alreaduy claimed stake
+		// searches claimedBitMap for bitflag representing claimed boolean
+   	function isClaimed(
+		uint256 index
+	) public view returns (bool) {
 
-		// generate VALIDATION part of digest
-	function hash(
-		Validation memory validation
-	) internal pure returns (bytes32) {
-		return keccak256(abi.encode(
-			VALIDATION_TYPEHASH,
-			validation.wallet,
-			validation.share,
-			validation.pool ) ); }
+        	uint256 claimedWordIndex = index / 256;
+        	uint256 claimedBitIndex = index % 256;
+        	uint256 claimedWord = claimedBitMap[claimedWordIndex];
+        	uint256 mask = (1 << claimedBitIndex);
+        	return claimedWord & mask == mask;
+    	}
 
-		event debug(address sig, address key);
-		   // unpacks validation data and stores new member record
-		  // reverts if _validationKey not set
-		 // reverts if recovered key != _validationKey
-		// checks incoming signature packet
+/*************************************************/
 
-	function validate(
-		Validation calldata validation,
-		uint8 v,
-		bytes32 r,
-		bytes32 s
+		// flip bit corresponding to index to indicate member has claimed stake
+    	function _setClaimed(
+		uint256 index
+	) private {
+
+        	uint256 claimedWordIndex = index / 256;
+        	uint256 claimedBitIndex = index % 256;
+        	claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+    	}
+
+/*************************************************/
+
+		// member claims stake to tokens and transfers month's batch to member
+    function claim(
+		uint256 index,
+		address account,
+		uint256 amount,
+		bytes32[] calldata merkleProof
 	) public {
 
-		//  guard
-		require(_validationKey != address(0),
-			"validation key has not been set");
+        	require(
+			!isClaimed(index),
+			"MerkleDistributor: drop already claimed");
 
+        	// Verify the merkle proof.
+        	bytes32 node = keccak256(abi.encodePacked(index, account, amount));
+        	require(
+			_verify(merkleProof, merkleRoot, node),
+			"MerkleDistributor: invalid proof");
 
-
-		// recreate digest
-		bytes32 digest = keccak256(abi.encodePacked(
-			"\x19\x01",
-			DOMAIN_SEPARATOR,
-			hash(validation) ) );
-		emit debug( ecrecover(digest, v, r, s), _validationKey);
-
-		// verify signature
-		//require(digest.recover(signature) == _validationKey,
-
-		//:w
-	//	"test");
-		
-		// pack calldata into new member record
-		MemberStatus memory member;
-		member.pool = validation.pool;
-		member.account = validation.wallet;
-		member.share = validation.share * _DECIMAL;
-		member.cliff = _pool[member.pool].cliff;
-		member.payments = _pool[member.pool].payments;
-		_members[member.account] = member; }
+        	// Mark it claimed and send the token.
+        	_setClaimed(index);
+        	require(
+			IERC20(token).transfer(account, amount),
+			"MerkleDistributor: transfer failed");
+        	emit Claimed(
+			index,
+			account,
+			amount);
+    	}
 
 /*************************************************/
+
+     		   // sibling hashes on the branch from the leaf to the root of the tree
+		  // each pair of pre-images are assumed to be sorted
+		 // a `proof` must be provided, containing pair of leaves 
+		// returns true if a `leaf` can be proved to be a part of a Merkle tree
+    	function _verify(
+        	bytes32[] memory proof,
+        	bytes32 root,
+        	bytes32 leaf
+    	) private pure returns (bool) {
+
+        	return processProof(proof, leaf) == root;
+    	}
+
+/*************************************************/
+
+		 // a `proof` is valid if and only if the rebuilt hash matches the root of the tree
+		// returns the rebuilt hash obtained by traversing a Merkle tree up
+    	function processProof(
+		bytes32[] memory proof,
+		bytes32 leaf
+	) private pure returns (bytes32) {
+
+        	bytes32 computedHash = leaf;
+        	for (uint256 i = 0; i < proof.length; i++) {
+            		bytes32 proofElement = proof[i];
+            		if (computedHash <= proofElement) {
+                		
+				// Hash(current computed hash + current element of the proof)
+                		computedHash = _efficientHash(computedHash, proofElement);
+            		} else {
+                		
+				// Hash(current element of the proof + current computed hash)
+                		computedHash = _efficientHash(proofElement, computedHash);
+            		}
+        	}
+        	return computedHash;
+    	}
+
+/*************************************************/
+
+		// takes hash of two elements
+    	function _efficientHash(
+		bytes32 a,
+		bytes32 b
+	) private pure returns (bytes32 value) {
+
+        	assembly {
+            		mstore(0x00, a)
+            		mstore(0x20, b)
+            		value := keccak256(0x00, 0x40)
+        	}
+    	}
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* getter methods
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
 		// gets token name (Interlock Network)
 	function name(
 	) public view override returns (string memory) {
-		return _name; }
+
+		return _name;
+	}
 
 /*************************************************/
 
 		// gets token symbol (ILOCK)
 	function symbol(
 	) public view override returns (string memory) {
-		return _symbol; }
+
+		return _symbol;
+	}
 
 /*************************************************/
 
 		// gets token decimal number
 	function decimals(
 	) public view override returns (uint8) {
-		return _decimals; }
+
+		return _decimals;
+	}
 
 /*************************************************/
 
 		// gets tokens minted
 	function totalSupply(
 	) public view override returns (uint256) {
-		return _totalSupply; }
+
+		return _totalSupply;
+	}
 
 /*************************************************/
 
@@ -417,7 +504,9 @@ contract ERC20ILOCK is IERC20 {
 	function balanceOf(
 		address account
 	) public view override returns (uint256) {
-		return _balances[account]; }
+
+		return _balances[account];
+	}
 
 /*************************************************/
 
@@ -426,19 +515,28 @@ contract ERC20ILOCK is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
-		return _allowances[owner][spender]; }
+
+		return _allowances[owner][spender];
+	}
 
 /*************************************************/
 
 		// gets total tokens paid out in circulation
-	function circulation() public view returns (uint256) {
-		return _totalSupply - _balances[address(this)]; }
+	function circulation(
+	) public view returns (uint256) {
 
-/*************************************************/
+		return _totalSupply - _balances[address(this)];
+	}
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 	/**
 	* doer methods
 	**/
-/*************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 
 		   // emitting Transfer, reverting on failure
 		  // where caller balanceOf must be >= amount
@@ -448,46 +546,11 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
+
 		address owner = msg.sender;
 		_transfer(owner, to, amount);
-		return true; }
-
-		// internal implementation of transfer() above
-	function _transfer(
-		address from,
-		address to,
-		uint256 amount
-	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
-		_beforeTokenTransfer(from, to, amount);
-		unchecked {
-			_balances[from] = _balances[from] - amount;}
-		_balances[to] += amount;
-		emit Transfer(from, to, amount);
-		_afterTokenTransfer(from, to, amount); }
-
-/*************************************************/
-
-		  // emitting Approval, reverting on failure
-		 // (=> no allownance delta when TransferFrom)
-		// defines tokens available to spender from msg.sender
-	function approve(
-		address spender,
-		uint256 amount
-	) public override returns (bool) {
-		address owner = msg.sender;
-		_approve(owner, spender, amount);
-		return true; }
-
-		// internal implementation of approve() above 
-	function _approve(
-		address owner,
-		address spender,
-		uint256 amount
-	) internal virtual noZero(owner) noZero(spender) {
-		_allowances[owner][spender] = amount;
-		emit Approval(owner, spender, amount); }
-
-/*************************************************/
+		return true;
+	}
 
 		     // emitting Approval, reverting on failure
 		    // where msg.sender allowance w/`from` must be >= amount
@@ -500,10 +563,74 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
+
 		address spender = msg.sender;
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
-		return true; }
+		return true;
+	}
+
+		// internal implementation of transfer() above
+	function _transfer(
+		address from,
+		address to,
+		uint256 amount
+	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
+
+		_beforeTokenTransfer(from, to, amount);
+		unchecked {
+			_balances[from] = _balances[from] - amount;}
+		_balances[to] += amount;
+		emit Transfer(
+			from,
+			to,
+			amount);
+		_afterTokenTransfer(from, to, amount);
+    }
+
+/*************************************************/
+
+		  // emitting Approval, reverting on failure
+		 // (=> no allownance delta when TransferFrom)
+		// defines tokens available to spender from msg.sender
+	function approve(
+		address spender,
+		uint256 amount
+	) public override returns (bool) {
+
+		address owner = msg.sender;
+		_approve(owner, spender, amount);
+		return true;
+	}
+
+		// internal implementation of approve() above 
+	function _approve(
+		address owner,
+		address spender,
+		uint256 amount
+	) internal virtual noZero(owner) noZero(spender) {
+
+		_allowances[owner][spender] = amount;
+		emit Approval(
+			owner,
+			spender,
+			amount);
+	}
+
+		   // emitting Approval if finite, reverting on failure 
+		  // will do nothing if infinite allowance
+		 // used strictly internally
+		// deducts from spender's allowance with owner
+	function _spendAllowance(
+		address owner,
+		address spender,
+		uint256 amount
+	) internal isEnough(allowance(owner, spender), amount) {
+
+		unchecked {
+			_approve(owner, spender, allowance(owner, spender) - amount);
+		}
+	}
 
 /*************************************************/
 
@@ -514,15 +641,12 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 addedValue
 	) public returns (bool) {
+
 		address owner = msg.sender;
 		_approve(owner, spender, allowance(owner, spender) + addedValue);
-		return true; }
+		return true;
+	}
 
- /* Above and below are alternatives to {approve} that can be used
- *  as a mitigation for problems described in {IERC20-approve}.
- *
- * ?? Why is there no owner balance check for increaseAllowance() ??
- **/
 		   // emitting Approval, reverting on failure
 		  // where `spender` must have allowance >= `subtractedValue`
 		 // where `spender` cannot = zero address
@@ -531,10 +655,12 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) public isEnough(allowance(msg.sender, spender), amount) returns (bool) {
+
 		address owner = msg.sender;
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);}
-		return true; }
+		return true;
+	}
 
 /*************************************************/
 
@@ -546,26 +672,24 @@ contract ERC20ILOCK is IERC20 {
 		address account,
 		uint256 amount
 	) internal noZero(account) isEnough(_balances[account], amount) {
-		_beforeTokenTransfer(account, address(0), amount);
+
+		_beforeTokenTransfer(
+			account,
+			address(0),
+			amount);
 		unchecked {
-			_balances[account] = _balances[account] - amount;}
+			_balances[account] = _balances[account] - amount;
+		}
 		_totalSupply -= amount;
-		emit Transfer(account, address(0), amount);
-		_afterTokenTransfer(account, address(0), amount); }
-
-/*************************************************/
-
-		   // emitting Approval if finite, reverting on failure 
-		  // will do nothing if infinite allowance
-		 // used strictly internally
-		// deducts from spender's allowance with owner
-	function _spendAllowance(
-		address owner,
-		address spender,
-		uint256 amount
-	) internal isEnough(allowance(owner, spender), amount) {
-		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);}}
+		emit Transfer(
+ 			account,
+			address(0),
+			amount);
+		_afterTokenTransfer(
+			account,
+			address(0),
+			amount);
+	}
 
 /*************************************************/
 
@@ -595,98 +719,9 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 
-event debughash(bytes32 digest);
-
-function test(bytes calldata signature, Validation calldata validation) public {
-	bytes32 digest = keccak256(
-		abi.encodePacked(
-			"\x19\x01",
-			DOMAIN_SEPARATOR,
-			keccak256(abi.encode(
-				VALIDATION_TYPEHASH,
-				validation.wallet,
-				validation.share,
-				validation.pool
-				))
-		)
-	);
-	emit debug(digest.recover(signature), _validationKey);
 }
 
-/*************************************************/
-	//
-	// wormhole
-	//
-/*************************************************/
-
-    // Hardcode the Wormhole Core Bridge contract address
-    // In a real contract, we would set this in a constructor or Setup
-    address a = address(0xC89Ce4735882C9F0f0FE26686c53074E09B0D550);
-    IWORMHOLE _wormhole = IWORMHOLE(a);
-
-    mapping(bytes32 => bool) _completedMessages;
-    mapping(uint16 => bytes32) _bridgeContracts;
-
-    // sendStr sends bytes to the wormhole.
-    function sendStr(bytes memory str, uint32 nonce) public returns (uint64 sequence) {
-        sequence = _wormhole.publishMessage(nonce, str, 1);
-        return sequence;
-    }
-
-    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
-        uint8 i = 0;
-        bytes memory bytesArray = new bytes(64);
-        for (i = 0; i < bytesArray.length; i++) {
-            bytesArray[i] = toByte((_bytes32[i/2] >> 4) & 0x0f);
-            i = i + 1;
-            bytesArray[i] = toByte(_bytes32[i/2] & 0x0f);
-        }
-        return string(bytesArray);
-    }
-
-    function toByte(bytes1 _b1) public pure returns (bytes1) {
-        uint8 _b  = uint8(_b1);
-        return (_b < 10)? bytes1(_b + 48): bytes1(_b + 87);
-    }
-
-    // receiveStr confirms VAA and processes message on the receiving chain.
-    // Returns true when bytes are seen first time.
-    function receiveBytes(bytes memory encodedVm, uint32 /*nonce*/) public {
-        (IWORMHOLE.VM memory vm, bool valid, string memory reason) = _wormhole.parseAndVerifyVM(encodedVm);
-        // 1. check wormhole signatures/
-        require(valid, reason);
-
-        // 2. Check if emtter chain contract is registered.
-        // Print incoming emitter address.
-        // string memory smsg = string(abi.encodePacked(" invalid em ", Strings.toString(vm.emitterChainId), "-", bytes32ToString(vm.emitterAddress)));
-        // Print map entry address.
-        // string memory smsg = string(abi.encodePacked(" invalid_emitter ", Strings.toString(vm.emitterChainId), "+", bytes32ToString(_bridgeContracts[vm.emitterChainId])));
-        
-        require(verifyBridgeVM(vm), "invalid emitter");
-
-        // 3. Drop duplicate VAA.
-        require(!_completedMessages[vm.hash], " message already received");
-        _completedMessages[vm.hash] = true;
-
-        // Action place..
-        // At this point payload is good to be used for what actual contract needs to do. Like transfer(s) etc
-    }
-
-    // Check if receiveBytes emmiter is actually registered chan.
-    function verifyBridgeVM(IWORMHOLE.VM memory vm) internal view returns (bool){
-        return (_bridgeContracts[vm.emitterChainId] == vm.emitterAddress);
-    }
-    // We register chain,bridge in [mpn run register] command.
-    function registerChain(uint16 chainId_, bytes32 bridgeContract_) public isOwner {
-        _bridgeContracts[chainId_] = bridgeContract_;
-    }
-
-    function wormhole() public view returns (IWORMHOLE) {
-        return _wormhole;
-    }
-
-}
-
-
-
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 

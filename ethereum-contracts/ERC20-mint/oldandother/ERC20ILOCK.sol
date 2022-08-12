@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 //
 // Interlock ERC-20 ILOCK Token Mint Platform
+// 		(containing)
+// components from OpenZeppelin v4.6.0 contract (token/ERC20/ERC20.sol)
 //
 // Contributors:
 // blairmunroakusa
@@ -9,7 +11,9 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
+import "./IWORMHOLE.sol";
 import "./POOL.sol";
+import "./utils/ECDSA.sol";
 
  /** derived from from oz:
  * functions should revert instead returning `false` on failure.
@@ -20,10 +24,14 @@ import "./POOL.sol";
  * This allows applications to reconstruct the allowance for all accounts just
  * by listening to said events.
  *
- * Nonstandard lifetime allowances and total token transfers implemented
- * to protect against multiple withdrawal attacks.
+ * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
+ * functions have been added to mitigate the well-known issues around setting
+ * allowances.
+ **/
 
 contract ERC20ILOCK is IERC20 {
+
+	/** @dev **/
 
 /*************************************************/
 	/**
@@ -31,7 +39,8 @@ contract ERC20ILOCK is IERC20 {
 	**/
 /*************************************************/
 
-	/** @dev **/
+		// libraries
+    using ECDSA for bytes32;
 
 		// divisibility factor
 	uint8 private _decimals = 18;
@@ -96,15 +105,15 @@ contract ERC20ILOCK is IERC20 {
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
-	mapping(address => mapping(address => uint256)) private _allowances;
-	mapping(address => mapping(address => uint256)) private _lifetimeAllowances;
-	mapping(address => mapping(address => uint256)) private _transferTotals;
+	mapping(address => mapping(
+		address => uint256)) private _allowances;
 
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
+	// decimals = 18 by default
 
 		// tracking time
 	uint256 public nextPayout;
@@ -140,18 +149,15 @@ contract ERC20ILOCK is IERC20 {
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
-					poolMembers_[i] ) );
-		}
+					poolMembers_[i] ) ); }
 
 			// initiate EIP712 standard for member validation
-		DOMAIN_SEPARATOR = keccak256(
-			abi.encode(
-				IP712DOMAIN_TYPEHASH,
-				keccak256(bytes("Validator")),
-				eccak256(bytes("1")),
-				1,
-				0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ));
-	}
+		DOMAIN_SEPARATOR = keccak256(abi.encode(
+			EIP712DOMAIN_TYPEHASH,
+			keccak256(bytes("Validator")),
+			keccak256(bytes("1")),
+			1,
+			0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC ) ); }
 
 /*************************************************/
 	/**
@@ -164,8 +170,7 @@ contract ERC20ILOCK is IERC20 {
 	) {
 		require(msg.sender == _owner,
 			"only owner can call");
-		_;
-	}
+		_; }
 
 /*************************************************/
 
@@ -175,8 +180,7 @@ contract ERC20ILOCK is IERC20 {
 	) {
 		require(_address != address(0),
 			"zero address where it shouldn't be");
-		_;
-	}
+		_; }
 
 /*************************************************/
 
@@ -185,11 +189,9 @@ contract ERC20ILOCK is IERC20 {
 		uint256 _available,
 		uint256 _amount
 	) {
-		require(
-            _available >= _amount,
+		require(_available >= _amount,
 			"not enough tokens available");
-		_;
-	}
+		_; }
 
 /*************************************************/
 	/**
@@ -202,20 +204,18 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 		
 		// guard
-		require(
-			supplySplit == false,
+		require(supplySplit == false,
 			"supply split already happened");
+
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			address Pool = address(new POOL());
 			_pools.push(Pool);
 			_balances[Pool] = 0;
-			_lifetimeAllowances[address(this)][Pool] = 0;
-			_transferTotals[address(this)][Pool];
-		}
+			_allowances[address(this)][Pool] = 0; }
+
 		// this must never happen again...
-		supplySplit = true;
-	}
+		supplySplit = true; }
 
 /*************************************************/
 
@@ -224,30 +224,25 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		// guards
-		require(
-			supplySplit == true,
+		require(supplySplit == true,
 			"supply not split");
-		require(
-			TGEtriggered == false,
+		require(TGEtriggered == false,
 			"TGE already happened");
+
 		// mint
 		_balances[address(this)] = _totalSupply;
-		_approve(
-			address(this),
-			msg.sender,
-			_totalSupply);
-		emit Transfer(
-			address(0),
-			address(this),
-			_totalSupply);
+		_approve(address(this), msg.sender, _totalSupply);
+		emit Transfer(address(0), address(this), _totalSupply);
+
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
+
 		// apply the initial round of token distributions
 		_poolDistribution();
+
 		// this must never happen again...
-		TGEtriggered = true;
-	}
+		TGEtriggered = true; }
 
 /*************************************************/
 	/**
@@ -262,7 +257,8 @@ contract ERC20ILOCK is IERC20 {
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)) {
+				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)
+				) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
@@ -271,10 +267,7 @@ contract ERC20ILOCK is IERC20 {
 				_approve(
 					_pools[i],
 					msg.sender,
-					_pool[i].tokens/_pool[i].payments);
-			}
-		}
-	}
+					_pool[i].tokens/_pool[i].payments ); } } }
 
 /*************************************************/
 
@@ -286,12 +279,10 @@ contract ERC20ILOCK is IERC20 {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
-			return true;
-		}
+			return true; }
 
 		// not ready
-		return false;
-	}
+		return true; }
 			
 /*************************************************/
 
@@ -300,8 +291,7 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		//disown
-		_owner = address(0);
-	}
+		_owner = address(0); }
 
 /*************************************************/
 
@@ -311,8 +301,7 @@ contract ERC20ILOCK is IERC20 {
 	) public isOwner {
 
 		// reassign
-		_owner = newOwner;
-	}
+		_owner = newOwner; }
 
 /*************************************************/
 	/**
@@ -324,57 +313,71 @@ contract ERC20ILOCK is IERC20 {
 	function setValidationKey(
 		address newKey
 	) public isOwner {
-		_validationKey = newKey;
-	}
+		_validationKey = newKey; }
 
 /*************************************************/
 
-        // domain hash
+		// generate DOMAIN_SEPARATOR part of digest
+	function hash(
 		EIP712Domain memory eip712Domain
 	) internal pure returns (bytes32) {
-		return keccak256(
-			abi.encode(
-				EIP712DOMAIN_TYPEHASH,
-				keccak256(bytes(eip712Domain.name)),
-				keccak256(bytes(eip712Domain.version)),
-				eip712Domain.chainId,
-				eip712Domain.verifyingContract
-		));
-	}
+		return keccak256(abi.encode(
+			EIP712DOMAIN_TYPEHASH,
+			keccak256(bytes(eip712Domain.name)),
+			keccak256(bytes(eip712Domain.version)),
+			eip712Domain.chainId,
+			eip712Domain.verifyingContract ) ); }
 
-        // data hash
+		// generate VALIDATION part of digest
 	function hash(
-		Validation calldata validation
+		Validation memory validation
 	) internal pure returns (bytes32) {
-		return keccak256(
-			abi.encode(
-				VALIDATION_TYPEHASH,
-				validation.wallet,
-				validation.share,
-				validation.pool
-		));
-	}
+		return keccak256(abi.encode(
+			VALIDATION_TYPEHASH,
+			validation.wallet,
+			validation.share,
+			validation.pool ) ); }
 
-	event compare(address sig, address key);
+		event debug(address sig, address key);
+		   // unpacks validation data and stores new member record
+		  // reverts if _validationKey not set
+		 // reverts if recovered key != _validationKey
+		// checks incoming signature packet
 
-        // validate
-	function verify(
+	function validate(
 		Validation calldata validation,
 		uint8 v,
 		bytes32 r,
 		bytes32 s
 	) public {
-		bytes32 digest = keccak256(
-			abi.encodePacked(
-				"\x19\x01",
-				DOMAIN_SEPARATOR,
-				hash(validation)
-		));
-		emit compare(
-			ecrecover(digest, v, r, s),
-			_validationKey);
-	}
 
+		//  guard
+		require(_validationKey != address(0),
+			"validation key has not been set");
+
+
+
+		// recreate digest
+		bytes32 digest = keccak256(abi.encodePacked(
+			"\x19\x01",
+			DOMAIN_SEPARATOR,
+			hash(validation) ) );
+		emit debug( ecrecover(digest, v, r, s), _validationKey);
+
+		// verify signature
+		//require(digest.recover(signature) == _validationKey,
+
+		//:w
+	//	"test");
+		
+		// pack calldata into new member record
+		MemberStatus memory member;
+		member.pool = validation.pool;
+		member.account = validation.wallet;
+		member.share = validation.share * _DECIMAL;
+		member.cliff = _pool[member.pool].cliff;
+		member.payments = _pool[member.pool].payments;
+		_members[member.account] = member; }
 
 /*************************************************/
 	/**
@@ -385,32 +388,28 @@ contract ERC20ILOCK is IERC20 {
 		// gets token name (Interlock Network)
 	function name(
 	) public view override returns (string memory) {
-		return _name;
-	}
+		return _name; }
 
 /*************************************************/
 
 		// gets token symbol (ILOCK)
 	function symbol(
 	) public view override returns (string memory) {
-		return _symbol;
-	}
+		return _symbol; }
 
 /*************************************************/
 
 		// gets token decimal number
 	function decimals(
 	) public view override returns (uint8) {
-		return _decimals;
-	}
+		return _decimals; }
 
 /*************************************************/
 
 		// gets tokens minted
 	function totalSupply(
 	) public view override returns (uint256) {
-		return _totalSupply;
-	}
+		return _totalSupply; }
 
 /*************************************************/
 
@@ -418,8 +417,7 @@ contract ERC20ILOCK is IERC20 {
 	function balanceOf(
 		address account
 	) public view override returns (uint256) {
-		return _balances[account];
-	}
+		return _balances[account]; }
 
 /*************************************************/
 
@@ -428,20 +426,13 @@ contract ERC20ILOCK is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
-		// front-running occured thus reflect zero allowance (negative is undefined)
-		if (_lifetimeAllowances[owner][spender] < _transferTotals[owner][spender]) {
-			return 0;
-		}
-		// if front running did not occur, allowance is simply delta
-		return _lifetimeAllowances[owner][spender] - _transferTotals[owner][spender];
-	}
+		return _allowances[owner][spender]; }
 
 /*************************************************/
 
 		// gets total tokens paid out in circulation
 	function circulation() public view returns (uint256) {
-		return _totalSupply - _balances[address(this)];
-	}
+		return _totalSupply - _balances[address(this)]; }
 
 /*************************************************/
 	/**
@@ -457,11 +448,9 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
+
 		address owner = msg.sender;
-		_transfer(
-			owner,
-			to,
-			amount);
+		_transfer(owner, to, amount);
 		return true;
 	}
 
@@ -471,22 +460,13 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
-		_beforeTokenTransfer(
-			from,
-			to,
-			amount);
+
+		_beforeTokenTransfer(from, to, amount);
 		unchecked {
-			_balances[from] = _balances[from] - amount;
-		}
+			_balances[from] = _balances[from] - amount;}
 		_balances[to] += amount;
-		emit Transfer(
-			from,
-			to,
-			amount);
-		_afterTokenTransfer(
-			from,
-			to,
-			amount);
+		emit Transfer(from, to, amount);
+		_afterTokenTransfer(from, to, amount);
 	}
 
 /*************************************************/
@@ -499,12 +479,8 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address owner = msg.sender;
-		_approve(
-			owner,
-			spender,
-			amount);
-		return true;
-	}
+		_approve(owner, spender, amount);
+		return true; }
 
 		// internal implementation of approve() above 
 	function _approve(
@@ -512,31 +488,8 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
-			// valid front-running occured before prior allowance decrease was accepted onchain
-		if (_transferTotals[owner][spender] > _lifetimeAllowances[owner][spender]) {
-			_lifetimeAllowances[owner][spender] += amount;
-			if (_transferTotals[owner][spender] >= _lifetimeAllowances[owner][spender]) {
-				// emit 0 if additional allowance is less than delta
-				emit Approval(
-					owner,
-					spender,
-					0);
-			} else {
-				// emit value lesser than amount after overcoming transfer 'debt'
-				emit Approval(
-					owner,
-					spender,
-					_lifetimeAllowances[owner][spender] - _transferTotals[owner][spender]);
-			}
-  			// lower or raise allowance
-        	} else {
-			_lifetimeAllowances[owner][spender] = _transferTotals[owner][spender] + amount;
-			// emit approved allowance, delta between xfer and lifetime
-			emit Approval(
-				owner,
-				spender,
-				_lifetimeAllowances[owner][spender] - _transferTotals[owner][spender]);
-		}
+		_allowances[owner][spender] = amount;
+		emit Approval(owner, spender, amount);
 	}
 
 /*************************************************/
@@ -551,14 +504,42 @@ contract ERC20ILOCK is IERC20 {
 		address from,
 		address to,
 		uint256 amount
-	) public override noZero(to) noZero(from) returns (bool) {
-		require(
-			(_lifetimeAllowances[from][to] - _transferTotals[from][to]) > amount,
-			"insufficient allowance");
-		_transferTotals[from][to] += amount;
+	) public override returns (bool) {
+		address spender = msg.sender;
+		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
-		return true;
-	}
+		return true; }
+
+/*************************************************/
+
+		  // emitting Approval, reverting on failure
+		 // where `spender` cannot = zero address
+		// atomically increases spender's allowance
+	function increaseAllowance(
+		address spender,
+		uint256 addedValue
+	) public returns (bool) {
+		address owner = msg.sender;
+		_approve(owner, spender, allowance(owner, spender) + addedValue);
+		return true; }
+
+ /* Above and below are alternatives to {approve} that can be used
+ *  as a mitigation for problems described in {IERC20-approve}.
+ *
+ * ?? Why is there no owner balance check for increaseAllowance() ??
+ **/
+		   // emitting Approval, reverting on failure
+		  // where `spender` must have allowance >= `subtractedValue`
+		 // where `spender` cannot = zero address
+		// atomically decreases spender's allowance
+	function decreaseAllowance(
+		address spender,
+		uint256 amount
+	) public isEnough(allowance(msg.sender, spender), amount) returns (bool) {
+		address owner = msg.sender;
+		unchecked {
+			_approve(owner, spender, allowance(owner, spender) - amount);}
+		return true; }
 
 /*************************************************/
 
@@ -570,23 +551,26 @@ contract ERC20ILOCK is IERC20 {
 		address account,
 		uint256 amount
 	) internal noZero(account) isEnough(_balances[account], amount) {
-		_beforeTokenTransfer(
-			account,
-			address(0),
-			amount);
+		_beforeTokenTransfer(account, address(0), amount);
 		unchecked {
-			_balances[account] = _balances[account] - amount;
-		}
+			_balances[account] = _balances[account] - amount;}
 		_totalSupply -= amount;
-		emit Transfer(
- 			account,
-			address(0),
-			amount);
-		_afterTokenTransfer(
-			account,
-			address(0),
-			amount);
-	}
+		emit Transfer(account, address(0), amount);
+		_afterTokenTransfer(account, address(0), amount); }
+
+/*************************************************/
+
+		   // emitting Approval if finite, reverting on failure 
+		  // will do nothing if infinite allowance
+		 // used strictly internally
+		// deducts from spender's allowance with owner
+	function _spendAllowance(
+		address owner,
+		address spender,
+		uint256 amount
+	) internal isEnough(allowance(owner, spender), amount) {
+		unchecked {
+			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
 /*************************************************/
 
@@ -616,5 +600,98 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 
+event debughash(bytes32 digest);
+
+function test(bytes calldata signature, Validation calldata validation) public {
+	bytes32 digest = keccak256(
+		abi.encodePacked(
+			"\x19\x01",
+			DOMAIN_SEPARATOR,
+			keccak256(abi.encode(
+				VALIDATION_TYPEHASH,
+				validation.wallet,
+				validation.share,
+				validation.pool
+				))
+		)
+	);
+	emit debug(digest.recover(signature), _validationKey);
 }
+
+/*************************************************/
+	//
+	// wormhole
+	//
+/*************************************************/
+
+    // Hardcode the Wormhole Core Bridge contract address
+    // In a real contract, we would set this in a constructor or Setup
+    address a = address(0xC89Ce4735882C9F0f0FE26686c53074E09B0D550);
+    IWORMHOLE _wormhole = IWORMHOLE(a);
+
+    mapping(bytes32 => bool) _completedMessages;
+    mapping(uint16 => bytes32) _bridgeContracts;
+
+    // sendStr sends bytes to the wormhole.
+    function sendStr(bytes memory str, uint32 nonce) public returns (uint64 sequence) {
+        sequence = _wormhole.publishMessage(nonce, str, 1);
+        return sequence;
+    }
+
+    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+        uint8 i = 0;
+        bytes memory bytesArray = new bytes(64);
+        for (i = 0; i < bytesArray.length; i++) {
+            bytesArray[i] = toByte((_bytes32[i/2] >> 4) & 0x0f);
+            i = i + 1;
+            bytesArray[i] = toByte(_bytes32[i/2] & 0x0f);
+        }
+        return string(bytesArray);
+    }
+
+    function toByte(bytes1 _b1) public pure returns (bytes1) {
+        uint8 _b  = uint8(_b1);
+        return (_b < 10)? bytes1(_b + 48): bytes1(_b + 87);
+    }
+
+    // receiveStr confirms VAA and processes message on the receiving chain.
+    // Returns true when bytes are seen first time.
+    function receiveBytes(bytes memory encodedVm, uint32 /*nonce*/) public {
+        (IWORMHOLE.VM memory vm, bool valid, string memory reason) = _wormhole.parseAndVerifyVM(encodedVm);
+        // 1. check wormhole signatures/
+        require(valid, reason);
+
+        // 2. Check if emtter chain contract is registered.
+        // Print incoming emitter address.
+        // string memory smsg = string(abi.encodePacked(" invalid em ", Strings.toString(vm.emitterChainId), "-", bytes32ToString(vm.emitterAddress)));
+        // Print map entry address.
+        // string memory smsg = string(abi.encodePacked(" invalid_emitter ", Strings.toString(vm.emitterChainId), "+", bytes32ToString(_bridgeContracts[vm.emitterChainId])));
+        
+        require(verifyBridgeVM(vm), "invalid emitter");
+
+        // 3. Drop duplicate VAA.
+        require(!_completedMessages[vm.hash], " message already received");
+        _completedMessages[vm.hash] = true;
+
+        // Action place..
+        // At this point payload is good to be used for what actual contract needs to do. Like transfer(s) etc
+    }
+
+    // Check if receiveBytes emmiter is actually registered chan.
+    function verifyBridgeVM(IWORMHOLE.VM memory vm) internal view returns (bool){
+        return (_bridgeContracts[vm.emitterChainId] == vm.emitterAddress);
+    }
+    // We register chain,bridge in [mpn run register] command.
+    function registerChain(uint16 chainId_, bytes32 bridgeContract_) public isOwner {
+        _bridgeContracts[chainId_] = bridgeContract_;
+    }
+
+    function wormhole() public view returns (IWORMHOLE) {
+        return _wormhole;
+    }
+
+}
+
+
+
 
