@@ -69,11 +69,11 @@ contract ERC20ILOCK is IERC20 {
 	struct PoolData {
 		string name;
 		uint256 tokens;
-		uint8 payments;
+		uint8 vests;
 		uint8 cliff;
 		uint32 members; }
-	PoolData[] private _pool;
-	address[] private _pools;
+	PoolData[] public pool;
+	address[] public pools;
 
 		// keeping track of members
 	struct MemberStatus {
@@ -82,7 +82,7 @@ contract ERC20ILOCK is IERC20 {
 		address account;
 		uint8 cliff;
 		uint8 pool;
-		uint8 payments; }
+		uint8 payouts; }
 	mapping(address => MemberStatus) private _members;
 
 		// core token balance and allowance mappings
@@ -129,7 +129,7 @@ contract ERC20ILOCK is IERC20 {
 			// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			poolTokens_[i] *= _DECIMAL;
-			_pool.push(
+			pool.push(
 				PoolData(
 					_poolNames[i],
 					poolTokens_[i],
@@ -154,7 +154,8 @@ contract ERC20ILOCK is IERC20 {
 	) {
 		require(
 			msg.sender == _owner,
-			"only owner can call");
+			"only owner can call"
+		);
 		_;
 	}
 
@@ -166,7 +167,8 @@ contract ERC20ILOCK is IERC20 {
 	) {
 		require(
 			_address != address(0),
-			"zero address where it shouldn't be");
+			"zero address where it shouldn't be"
+		);
 		_;
 	}
 
@@ -179,7 +181,8 @@ contract ERC20ILOCK is IERC20 {
 	) {
 		require(
             		_available >= _amount,
-			"not enough tokens available");
+			"not enough tokens available"
+		);
 		_;
 	}
 
@@ -204,7 +207,7 @@ contract ERC20ILOCK is IERC20 {
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			address Pool = address(new POOL());
-			_pools.push(Pool);
+			pools.push(Pool);
 			_balances[Pool] = 0;
 			_lifetimeAllowances[address(this)][Pool] = 0;
 			_transferTotals[address(this)][Pool];
@@ -261,17 +264,17 @@ contract ERC20ILOCK is IERC20 {
 
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			if (_pool[i].cliff <= monthsPassed &&
-				monthsPassed >= (_members[_pools[i]].cliff + _members[_pools[i]].payments)) {
+			if (pool[i].cliff <= monthsPassed &&
+				monthsPassed <= (_members[pools[i]].cliff + pool[i].vests)) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
-					_pools[i],
-					_pool[i].tokens/_pool[i].payments );
+					pools[i],
+					pool[i].tokens/pool[i].vests );
 				_approve(
-					_pools[i],
+					pools[i],
 					msg.sender,
-					_pool[i].tokens/_pool[i].payments);
+					pool[i].tokens/pool[i].vests);
 			}
 		}
 	}
@@ -325,11 +328,11 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 
 
-	address public token = address(this);
+    address public token = address(this);
 	bytes32 public merkleRoot;
 
-		// This is a packed array of booleans.
-	mapping(uint256 => uint256) public claimedBitMap;
+    	// This is a packed array of booleans.
+    mapping(uint256 => uint256) public claimedBitMap;
 
 /*************************************************/
 
@@ -362,7 +365,6 @@ contract ERC20ILOCK is IERC20 {
     	function _setClaimed(
 		uint256 index
 	) private {
-
         	uint256 claimedWordIndex = index / 256;
         	uint256 claimedBitIndex = index % 256;
         	claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
@@ -371,33 +373,87 @@ contract ERC20ILOCK is IERC20 {
 /*************************************************/
 
 		// member claims stake to tokens and transfers month's batch to member
-    function claim(
+	function claimWallet(
 		uint256 index,
 		address account,
-		uint256 amount,
+		uint256 share,
+		uint8 poolnumber,
 		bytes32[] calldata merkleProof
 	) public {
 
+		// see if we need to update time
+		_checkTime();
+
         	require(
 			!isClaimed(index),
-			"MerkleDistributor: drop already claimed");
+			"MerkleDistributor: stake already claimed");
 
-        	// Verify the merkle proof.
-        	bytes32 node = keccak256(abi.encodePacked(index, account, amount));
+        	// verify the merkle proof
+            // note, for 0.8.0, needed to change 'encodePacked' to 'encode' to compile
+        	bytes32 node = keccak256(abi.encode(index, account, share, pool));
         	require(
 			_verify(merkleProof, merkleRoot, node),
 			"MerkleDistributor: invalid proof");
 
-        	// Mark it claimed and send the token.
+        	// mark it claimed
         	_setClaimed(index);
-        	require(
-			IERC20(token).transfer(account, amount),
-			"MerkleDistributor: transfer failed");
+
+		// setup member entry
+		_members[account].share = share;
+		_members[account].pool = poolnumber;
+		_members[account].cliff = pool[poolnumber].cliff;
+		_members[account].paid = 0;
+		_members[account].payouts = 0;
+	
         	emit Claimed(
 			index,
 			account,
-			amount);
+			share,
+			poolnumber);
     	}
+
+/*************************************************/
+
+		// claim stake for vest period
+	function claimStake(
+	) public returns (bool) {
+
+		// member must have claimed wallet
+		require(
+			_members[msg.sender].share != 0,
+			"member has not claimed wallet, or claim is fully collected");
+
+		// see if we need to update time
+		_checkTime();
+
+		// transfer tokens to member from pool
+		// number of payouts must not surpass number of vests
+		require(
+			_members[msg.sender].payouts < monthsPassed - pool[_members[msg.sender].pool].cliff,
+			"member already collected entire token share");
+
+		require(
+			monthsPassed > pool[_members[msg.sender].pool].cliff,
+			"too soon -- cliff not yet passed");
+
+		uint8 payments = pool[_members[msg.sender].pool].cliff +
+					_members[msg.sender].payouts -
+					monthsPassed;
+
+		uint256 payout = _members[msg.sender].share /
+					pool[_members[msg.sender].pool].vests *
+					payments;
+				 
+		require(
+			_transfer(pools[_members[msg.sender].pool], msg.sender, payout),
+			"stake claim transfer failed");
+
+		// update member state
+		_members[msg.sender].payouts += payments;
+		_members[msg.sender].paid += payout;
+		
+		return true;
+}	
 
 /*************************************************/
 
@@ -427,12 +483,10 @@ contract ERC20ILOCK is IERC20 {
         	for (uint256 i = 0; i < proof.length; i++) {
             		bytes32 proofElement = proof[i];
             		if (computedHash <= proofElement) {
-                		
-				// Hash(current computed hash + current element of the proof)
+                		// Hash(current computed hash + current element of the proof)
                 		computedHash = _efficientHash(computedHash, proofElement);
             		} else {
-                		
-				// Hash(current element of the proof + current computed hash)
+                		// Hash(current element of the proof + current computed hash)
                 		computedHash = _efficientHash(proofElement, computedHash);
             		}
         	}
@@ -515,9 +569,7 @@ contract ERC20ILOCK is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
-
-		return _allowances[owner][spender];
-	}
+		return _allowances[owner][spender]; }
 
 /*************************************************/
 
@@ -546,11 +598,11 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-
 		address owner = msg.sender;
 		_transfer(owner, to, amount);
 		return true;
-	}
+    }
+
 
 		     // emitting Approval, reverting on failure
 		    // where msg.sender allowance w/`from` must be >= amount
@@ -563,29 +615,25 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-
 		address spender = msg.sender;
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
-		return true;
-	}
+		return true; }
 
 		// internal implementation of transfer() above
 	function _transfer(
 		address from,
 		address to,
 		uint256 amount
-	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
-
+	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) returns (bool) {
 		_beforeTokenTransfer(from, to, amount);
 		unchecked {
 			_balances[from] = _balances[from] - amount;}
 		_balances[to] += amount;
-		emit Transfer(
-			from,
-			to,
-			amount);
+		emit Transfer(from, to, amount);
 		_afterTokenTransfer(from, to, amount);
+
+        return true;
     }
 
 /*************************************************/
@@ -597,11 +645,9 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) public override returns (bool) {
-
 		address owner = msg.sender;
 		_approve(owner, spender, amount);
-		return true;
-	}
+		return true; }
 
 		// internal implementation of approve() above 
 	function _approve(
@@ -609,13 +655,8 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
-
 		_allowances[owner][spender] = amount;
-		emit Approval(
-			owner,
-			spender,
-			amount);
-	}
+		emit Approval(owner, spender, amount); }
 
 		   // emitting Approval if finite, reverting on failure 
 		  // will do nothing if infinite allowance
@@ -626,11 +667,8 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) internal isEnough(allowance(owner, spender), amount) {
-
 		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);
-		}
-	}
+			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
 /*************************************************/
 
@@ -641,12 +679,15 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 addedValue
 	) public returns (bool) {
-
 		address owner = msg.sender;
 		_approve(owner, spender, allowance(owner, spender) + addedValue);
-		return true;
-	}
+		return true; }
 
+ /* Above and below are alternatives to {approve} that can be used
+ *  as a mitigation for problems described in {IERC20-approve}.
+ *
+ * ?? Why is there no owner balance check for increaseAllowance() ??
+ **/
 		   // emitting Approval, reverting on failure
 		  // where `spender` must have allowance >= `subtractedValue`
 		 // where `spender` cannot = zero address
@@ -655,12 +696,10 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) public isEnough(allowance(msg.sender, spender), amount) returns (bool) {
-
 		address owner = msg.sender;
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);}
-		return true;
-	}
+		return true; }
 
 /*************************************************/
 
@@ -672,7 +711,6 @@ contract ERC20ILOCK is IERC20 {
 		address account,
 		uint256 amount
 	) internal noZero(account) isEnough(_balances[account], amount) {
-
 		_beforeTokenTransfer(
 			account,
 			address(0),

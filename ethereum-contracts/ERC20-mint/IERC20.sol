@@ -35,7 +35,8 @@ interface IERC20 {
     	event Claimed(
 		uint256 index,
 		address account,
-		uint256 amount );	
+		uint256 share,
+		uint8 pool );	
 
     	/**
      	* getter methods
