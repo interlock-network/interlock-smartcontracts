@@ -50,7 +50,7 @@ contract ERC20ILOCK is IERC20 {
 	uint256 private _DECIMAL = 10 ** _decimals;
 
 		// pools
-	string[12] private _poolNames = [
+	string[12] public poolNames = [
 		"earlyvc",
 		"ps1",
 		"ps2",
@@ -88,8 +88,6 @@ contract ERC20ILOCK is IERC20 {
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
-	mapping(address => mapping(address => uint256)) private _lifetimeAllowances;
-	mapping(address => mapping(address => uint256)) private _transferTotals;
 
 		// basic token data
 	string private _name = "Interlock Network";
@@ -131,7 +129,7 @@ contract ERC20ILOCK is IERC20 {
 			poolTokens_[i] *= _DECIMAL;
 			pool.push(
 				PoolData(
-					_poolNames[i],
+					poolNames[i],
 					poolTokens_[i],
 					monthlyPayments_[i],
 					poolCliffs_[i],
@@ -209,8 +207,6 @@ contract ERC20ILOCK is IERC20 {
 			address Pool = address(new POOL());
 			pools.push(Pool);
 			_balances[Pool] = 0;
-			_lifetimeAllowances[address(this)][Pool] = 0;
-			_transferTotals[address(this)][Pool];
 		}
 		// this must never happen again...
 		supplySplit = true;
@@ -328,7 +324,6 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 
 
-    address public token = address(this);
 	bytes32 public merkleRoot;
 
     	// This is a packed array of booleans.
@@ -377,7 +372,7 @@ contract ERC20ILOCK is IERC20 {
 		uint256 index,
 		address account,
 		uint256 share,
-		uint8 poolnumber,
+		uint256 poolnumber,
 		bytes32[] calldata merkleProof
 	) public {
 
@@ -389,8 +384,7 @@ contract ERC20ILOCK is IERC20 {
 			"MerkleDistributor: stake already claimed");
 
         	// verify the merkle proof
-            // note, for 0.8.0, needed to change 'encodePacked' to 'encode' to compile
-        	bytes32 node = keccak256(abi.encode(index, account, share, pool));
+        	bytes32 node = keccak256(abi.encodePacked(index, account, share, poolnumber));
         	require(
 			_verify(merkleProof, merkleRoot, node),
 			"MerkleDistributor: invalid proof");
@@ -400,7 +394,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// setup member entry
 		_members[account].share = share;
-		_members[account].pool = poolnumber;
+		_members[account].pool = uint8(poolnumber);
 		_members[account].cliff = pool[poolnumber].cliff;
 		_members[account].paid = 0;
 		_members[account].payouts = 0;
@@ -762,4 +756,5 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
