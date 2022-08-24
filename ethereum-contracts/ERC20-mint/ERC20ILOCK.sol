@@ -77,6 +77,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// keeping track of members
 	struct MemberStatus {
+		uint256 owes;
 		uint256 paid;
 		uint256 share;
 		address account;
@@ -103,6 +104,16 @@ contract ERC20ILOCK is IERC20 {
 		// keeping track of irreversible actions
 	bool public TGEtriggered = false;
 	bool public supplySplit = false;
+
+		// relevant token contract addresses, and other
+	IERC20 USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); // USD tether
+	IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // wrapped ETH
+	mapping(address => bool) public paidMin;
+
+		// these are prices at TGE, meant to verify investors have contributed what they owe
+	uint256 public priceUSDT;
+	uint256 public priceWETH;
+	uint256 public priceETH;
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -749,6 +760,104 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) internal virtual {}
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* methods to accept currencies for tokens
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+	function getWETHowed(address investor) public returns uint256 {
+		return _members[address].owes / priceWETH;
+	}
+
+	function depositWETH(
+		uint256 amount
+	) public return bool {
+
+		require(
+			!didPay,
+			"Already paid dues."
+		);
+
+		// this assumes depositor has already manually approved WETH from wallet
+		// get WETH from caller
+		WETH.transferFrom(msg.sender, address(this), amount);
+
+		// check to see if deposit is enough and adjust accordingly
+		if (amount < _members[msg.sender].owes / priceWETH) {
+			_members[msg.sender].owes -= amount;
+			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
+		} else {
+			didPay[msg.sender] = true;
+			_members[msg.sender].owes = 0;
+		};
+
+		return true
+	}
+
+/*************************************************/
+
+	function getUSDTowed(address investor) public returns uint256 {
+		return _members[address].owes / priceUSDT;
+	}
+
+	function depositUSDT(
+		uint256 amount
+	) public {
+	
+		require(
+			!didPay,
+			"Already paid dues."
+		);
+
+		// this assumes depositor has already manually approved USDT from wallet
+		// get USDT from caller
+		USDT.transferFrom(msg.sender, address(this), amount);
+
+		// check to see if deposit is enough and adjust accordingly
+		if (amount < _members[msg.sender].owes / priceUSDT) {
+			_members[msg.sender].owes -= amount;
+			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
+		} else {
+			didPay[msg.sender] = true;
+			_members[msg.sender].owes = 0;
+		};
+
+		return true
+
+	}
+
+/*************************************************/
+
+	function getETHowed(address investor) public returns uint256 {
+		return _members[address].owes / priceETH;
+	}
+
+	function depositETH(
+	) public payable {
+		
+		require(
+			!didPay,
+			"Already paid dues."
+		);
+
+		// check to see if deposit is enough and adjust accordingly
+		if (msg.value < _members[msg.sender].owes / priceETH) {
+			_members[msg.sender].owes -= msg.value * priceETH;
+			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
+		} else {
+			didPay[msg.sender] = true;
+			_members[msg.sender].owes = 0;
+		};
+
+		return true
+
+	}
 
 /*************************************************/
 
