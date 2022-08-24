@@ -38,6 +38,10 @@ interface IERC20 {
 		uint256 share,
 		uint8 pool );	
 
+	event Repaid(
+		address indexed creditor,
+		uint256 value );
+
     	/**
      	* getter methods
      	**/
