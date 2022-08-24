@@ -89,15 +89,6 @@ contract ERC20ILOCK is IERC20 {
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
 
-		// (completely (almost)) eliminating double withdrawal vulnerability
-	mapping(address => bool) public owes;
-	mapping(address => mapping(address => uint256)) private _allowanceTotalIncrease;
-	mapping(address => mapping(address => uint256)) private _transferFromTotal;
-	struct Credits {
-		address creditor;
-		uint256 owed; }
-	Credits[] private _credits;
-	mapping(address => _credits) private _creditorsOwed;
 
 		// basic token data
 	string private _name = "Interlock Network";
@@ -603,9 +594,6 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address owner = msg.sender;
-		
-		// check and payback double withdrawal debts
-		paybackDoubleWithdrawalDebts(owner, amount);
 
 		_transfer(owner, to, amount);
 
@@ -625,9 +613,6 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address spender = msg.sender;		
-
-		// check and payback double withdrawal debts
-		paybackDoubleWithdrawalDebts(from, amount);
 
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
@@ -659,18 +644,7 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount
 	) public override returns (bool) {
 		address owner = msg.sender;
-		if (_allowances[owner][spender] > amount) {
-			increaseAllowance(
-				owner,
-				spender,
-				amount
-			)
-		if (_allowances[owner][spender] < amount {
-			decreaseAllowance(
-				owner,
-				spender,
-				amount
-			)
+		_approve(owner, spender, amount);
 		return true; }
 
 		// internal implementation of approve() above 
@@ -704,15 +678,6 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) private returns (bool) {
-		
-		if ( > allowanceTotalIncrease) {			
-			utint256 allowanceFree = allowanceTotalIncrease - allowanceTotalDecrease;
-		}
-
-		if 
-		
-		_approve(owner, spender, amount);
-
 		return true; }
 
  /* Above and below are alternatives to {approve} that can be used
@@ -729,8 +694,6 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) private returns (bool) {
-		_approve(owner, spender, amount);
-
 		return true; }
 
 /*************************************************/
@@ -786,67 +749,6 @@ contract ERC20ILOCK is IERC20 {
 		address to,
 		uint256 amount
 	) internal virtual {}
-
-/*************************************************/
-
-		   // from the moment they submit valid tx, not when added to block
-		  // this contract honors the intent of an approver
-		 // if you aren't but got unlucky, sorry
-		// pay everybody back if you are a double withdrawer
-	function paybackDoubleWithdrawalDebts(
-		address debtor,
-		uint256 amount
-	) public returns (bool) {
-
-			// pay back your dirty debt. You can't do a thing until you pay it off.
-		if (owes[debtor]) {
-
-			// settle individual double withdrawal debts
-			// note that this is only really happening if somebody has cheated
-			// so I am not worried about expensive gas iterating and popping so much
-			for (uint16 i = 0, i < _creditorsOwed[debtor].length, i++) {
-				if (_creditorsOwed[debtor][i].owed > _balances[debtor]) {
-
-					_creditorsOwed[debtor][i].owed -= _balances[debtor]; 
-					_transfer(
-						owner,
-						creditorsOwed[debtor][i].creditor,
-						_balances[debtor]
-					);
-					emit Repaid(
-						creditorsOwed[debtor][i].creditor,
-						_balances[debtor]
-					);
-					emit TooMuchDebt();
-					for (uint16 index = i, index < _creditorsOwed[owner].length - i, index++) {
-						_creditorsOwed[debtor][index - i] = _creditorsOwed[debtor][index];
-					}
-					for (uint16 index = 0, index < i, index++) {
-						_creditorsOwed[debtor].pop();
-					}
-
-					return true;
-				}
-				transfer(
-					owner,
-					creditorsOwed[debtor][i].creditor,
-					creditorsOwed[debtor][i].owes,
-				);
-				emit Repaid(
-					creditorsOwed[debtor][i].creditor,
-					creditorsOwed[debtor][i].owes,
-				);
-				
-			}	
-			owes[debtor] = false;
-			for (uint16 i = 0, i < _creditorsOwed[debtor].length, index++) {
-				_creditorsOwed[debtor].pop();
-			}
-			if (ammount > _balances[debtor]) {
-				emit InsufficientBalanceAfterRepay();
-				return true;
-			}
-		}	
 
 /*************************************************/
 
