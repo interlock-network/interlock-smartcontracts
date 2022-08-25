@@ -108,7 +108,6 @@ contract ERC20ILOCK is IERC20 {
 		// relevant token contract addresses, and other
 	IERC20 USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); // USD tether
 	IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // wrapped ETH
-	mapping(address => bool) public paidMin;
 
 		// these are prices at TGE, meant to verify investors have contributed what they owe
 	uint256 public priceUSDT;
@@ -384,6 +383,7 @@ contract ERC20ILOCK is IERC20 {
 		uint256 index,
 		address account,
 		uint256 share,
+		uint256 owes,
 		uint256 poolnumber,
 		bytes32[] calldata merkleProof
 	) public {
@@ -410,6 +410,8 @@ contract ERC20ILOCK is IERC20 {
 		_members[account].cliff = pool[poolnumber].cliff;
 		_members[account].paid = 0;
 		_members[account].payouts = 0;
+		_members[account].owes = owes;
+
 	
         	emit Claimed(
 			index,
@@ -432,23 +434,29 @@ contract ERC20ILOCK is IERC20 {
 		// see if we need to update time
 		_checkTime();
 
+		// make sure if investor, they have paid in
+		require(
+			_members[msg.sender].owes == 0,
+			"Investor has not paid in yet."
+		);
+
 		// transfer tokens to member from pool
 		// number of payouts must not surpass number of vests
 		require(
-			_members[msg.sender].payouts < monthsPassed - pool[_members[msg.sender].pool].cliff,
+			_members[msg.sender].payouts < pool[_members[msg.sender].pool].vests,
 			"member already collected entire token share");
 
 		require(
 			monthsPassed > pool[_members[msg.sender].pool].cliff,
 			"too soon -- cliff not yet passed");
 
-		uint8 payments = pool[_members[msg.sender].pool].cliff +
-					_members[msg.sender].payouts -
-					monthsPassed;
+		uint8 payments = monthsPassed -
+				 _members[msg.sender].payouts -
+				 pool[_members[msg.sender].pool].cliff;
+				
 
 		uint256 payout = _members[msg.sender].share /
-					pool[_members[msg.sender].pool].vests *
-					payments;
+				 pool[_members[msg.sender].pool].vests * payments;
 				 
 		require(
 			_transfer(pools[_members[msg.sender].pool], msg.sender, payout),
@@ -459,7 +467,7 @@ contract ERC20ILOCK is IERC20 {
 		_members[msg.sender].paid += payout;
 		
 		return true;
-}	
+	}	
 
 /*************************************************/
 
@@ -679,13 +687,13 @@ contract ERC20ILOCK is IERC20 {
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);}}
 
-/*************************************************/
+/*************************************************
 
 		  // emitting Approval, reverting on failure
 		 // where `spender` cannot = zero address
 		// atomically increases spender's allowance
 	function _increaseAllowance(
-		address owner
+		address owner,
 		address spender,
 		uint256 amount
 	) private returns (bool) {
@@ -695,7 +703,7 @@ contract ERC20ILOCK is IERC20 {
  *  as a mitigation for problems described in {IERC20-approve}.
  *
  * ?? Why is there no owner balance check for increaseAllowance() ??
- **/
+ **
 		   // emitting Approval, reverting on failure
 		  // where `spender` must have allowance >= `subtractedValue`
 		 // where `spender` cannot = zero address
@@ -771,16 +779,17 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 
-	function getWETHowed(address investor) public returns uint256 {
-		return _members[address].owes / priceWETH;
+	function getWETHowed(
+			address investor) public view returns (uint256) {
+		return _members[investor].owes / priceWETH;
 	}
 
 	function depositWETH(
 		uint256 amount
-	) public return bool {
+	) public returns (bool) {
 
 		require(
-			!didPay,
+			_members[msg.sender].owes != 0,
 			"Already paid dues."
 		);
 
@@ -793,25 +802,24 @@ contract ERC20ILOCK is IERC20 {
 			_members[msg.sender].owes -= amount;
 			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
 		} else {
-			didPay[msg.sender] = true;
 			_members[msg.sender].owes = 0;
-		};
+		}
 
-		return true
+		return true;
 	}
 
 /*************************************************/
 
-	function getUSDTowed(address investor) public returns uint256 {
-		return _members[address].owes / priceUSDT;
+	function getUSDTowed(address investor) public view returns (uint256) {
+		return _members[investor].owes / priceUSDT;
 	}
 
 	function depositUSDT(
 		uint256 amount
-	) public {
+	) public returns (bool) {
 	
 		require(
-			!didPay,
+			_members[msg.sender].owes != 0,
 			"Already paid dues."
 		);
 
@@ -824,25 +832,24 @@ contract ERC20ILOCK is IERC20 {
 			_members[msg.sender].owes -= amount;
 			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
 		} else {
-			didPay[msg.sender] = true;
 			_members[msg.sender].owes = 0;
-		};
+		}
 
-		return true
+		return true;
 
 	}
 
 /*************************************************/
 
-	function getETHowed(address investor) public returns uint256 {
-		return _members[address].owes / priceETH;
+	function getETHowed(address investor) public view returns (uint256) {
+		return _members[investor].owes / priceETH;
 	}
 
 	function depositETH(
-	) public payable {
+	) public payable returns (bool) {
 		
 		require(
-			!didPay,
+			_members[msg.sender].owes != 0,
 			"Already paid dues."
 		);
 
@@ -851,13 +858,62 @@ contract ERC20ILOCK is IERC20 {
 			_members[msg.sender].owes -= msg.value * priceETH;
 			emit MoreDepositNeeded(msg.sender, _members[msg.sender].owes);
 		} else {
-			didPay[msg.sender] = true;
 			_members[msg.sender].owes = 0;
-		};
+		}
 
-		return true
+		return true;
 
 	}
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* vesting and staking
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+		// get time remaining until next payout ready
+	function vestingStatus(
+		address vestee
+	) public view returns (
+		uint256 timeLeft,
+		uint256 stillOwes,
+		uint256 paidOut,
+		uint256 payRemaining,
+		uint256 payAvailable
+	) {
+
+		if (monthsPassed >= pool[_members[vestee].pool].vests + pool[_members[vestee].pool].cliff) {
+			timeLeft = 0;
+		} else if (monthsPassed < pool[_members[vestee].pool].cliff) {
+			timeLeft = nextPayout - block.timestamp + 
+			   	   (pool[_members[vestee].pool].cliff - monthsPassed - 1) * 30 days;
+		} else {
+			timeLeft = nextPayout - block.timestamp;
+		}
+
+		stillOwes = _members[vestee].owes;
+
+		paidOut = _members[vestee].paid;
+
+		payRemaining = _members[vestee].share - _members[vestee].paid;
+
+		payAvailable = (monthsPassed - pool[_members[vestee].pool].cliff - _members[vestee].payouts) *
+			       (_members[vestee].share / pool[_members[vestee].pool].vests);
+
+		return (
+			timeLeft,
+			stillOwes,
+			paidOut,
+			payRemaining,
+			payAvailable
+		);
+	}
+
+
 
 /*************************************************/
 
@@ -866,5 +922,6 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
 

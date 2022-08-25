@@ -36,7 +36,7 @@ interface IERC20 {
 		uint256 index,
 		address account,
 		uint256 share,
-		uint8 pool );	
+		uint256 pool );	
 
 	event MoreDepositNeeded(
 		address depositor,
