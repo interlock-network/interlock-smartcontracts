@@ -14,6 +14,7 @@ interface MerkleDistributorInfo {
     [account: string]: {
       index: number
       share: string
+      owes: string
       pool: string
       proof: string[]
       flags?: {
@@ -23,8 +24,8 @@ interface MerkleDistributorInfo {
   }
 }
 
-type OldFormat = { [account: string]: [number | string, number] }
-type NewFormat = { address: string; earnings: string; whichpool: string; reasons: string }
+type OldFormat = { [account: string]: [number | string, number, number] }
+type NewFormat = { address: string; earnings: string; oweswhat: string; whichpool: string; reasons: string }
 
 export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistributorInfo {
   // if balances are in an old format, process them
@@ -34,23 +35,27 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
         (account): NewFormat => ({
           address: account,
           earnings: `0x${balances[account][0].toString(16)}`,
-          whichpool: `0x${balances[account][1].toString(16)}`,
+          oweswhat: `0x${balances[account][1].toString(16)}`,
+          whichpool: `0x${balances[account][2].toString(16)}`,
           reasons: '',
         })
       )
 
   const dataByAddress = balancesInNewFormat.reduce<{
-    [address: string]: { share: BigNumber; pool: BigNumber; flags?: { [flag: string]: boolean } }
-  }>((memo, { address: account, earnings, whichpool, reasons }) => {
+    [address: string]: { share: BigNumber; owes: BigNumber; pool: BigNumber; flags?: { [flag: string]: boolean } }
+  }>((memo, { address: account, earnings, oweswhat, whichpool, reasons }) => {
+
     if (!isAddress(account)) {
       throw new Error(`Found invalid address: ${account}`)
     }
     const parsed = getAddress(account)
     if (memo[parsed]) throw new Error(`Duplicate address: ${parsed}`)
     const parsedNum1 = BigNumber.from(earnings)
-    if (parsedNum1.lte(0)) throw new Error(`Invalid amount for account: ${account}`)
-    const parsedNum2 = BigNumber.from(whichpool)
-    if (parsedNum2.lte(0)) throw new Error(`Invalid pool for account: ${account}`)
+    if (parsedNum1.lte(0)) throw new Error(`Invalid share for account: ${account}`)
+    const parsedNum2 = BigNumber.from(oweswhat)
+    //if (parsedNum2.lte(0)) throw new Error(`Invalid owes for account: ${account}`)
+    const parsedNum3 = BigNumber.from(whichpool)
+    if (parsedNum3.lte(0)) throw new Error(`Invalid pool for account: ${account}`)
 
 
     const flags = {
@@ -59,7 +64,7 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
       isUser: reasons.includes('user'),
     }
 
-    memo[parsed] = { share: parsedNum1, pool: parsedNum2, ...(reasons === '' ? {} : { flags }) }
+    memo[parsed] = { share: parsedNum1, owes: parsedNum2, pool: parsedNum3, ...(reasons === '' ? {} : { flags }) }
     return memo
   }, {})
 
@@ -68,19 +73,20 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
 
   // construct a tree
   const tree = new BalanceTree(
-    sortedAddresses.map((address) => ({ account: address, share: dataByAddress[address].share, pool: dataByAddress[address].pool }))
+    sortedAddresses.map((address) => ({ account: address, share: dataByAddress[address].share, owes: dataByAddress[address].owes, pool: dataByAddress[address].pool }))
   )
 
   // generate claims
   const claims = sortedAddresses.reduce<{
-    [address: string]: { share: string; pool: string, index: number; proof: string[]; flags?: { [flag: string]: boolean } }
+    [address: string]: { share: string; owes: string; pool: string; index: number; proof: string[]; flags?: { [flag: string]: boolean } }
   }>((memo, address, index) => {
-    const { share, pool, flags } = dataByAddress[address]
+    const { share, owes, pool, flags } = dataByAddress[address]
     memo[address] = {
       index,
       share: share.toHexString(),
+      owes: owes.toHexString(),
       pool: pool.toHexString(),
-      proof: tree.getProof(index, address, share, pool),
+      proof: tree.getProof(index, address, share, owes, pool),
       ...(flags ? { flags } : {}),
     }
     return memo

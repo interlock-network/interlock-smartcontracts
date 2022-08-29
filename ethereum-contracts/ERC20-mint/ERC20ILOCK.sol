@@ -113,6 +113,11 @@ contract ERC20ILOCK is IERC20 {
 	uint256 public priceUSDT;
 	uint256 public priceWETH;
 	uint256 public priceETH;
+
+
+	event MoreDepositNeeded(
+		address depositor,
+		uint256 owed );
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -396,7 +401,7 @@ contract ERC20ILOCK is IERC20 {
 			"MerkleDistributor: stake already claimed");
 
         	// verify the merkle proof
-        	bytes32 node = keccak256(abi.encodePacked(index, account, share, poolnumber));
+        	bytes32 node = keccak256(abi.encodePacked(index, account, share, owes, poolnumber));
         	require(
 			_verify(merkleProof, merkleRoot, node),
 			"MerkleDistributor: invalid proof");
@@ -901,8 +906,12 @@ contract ERC20ILOCK is IERC20 {
 
 		payRemaining = _members[vestee].share - _members[vestee].paid;
 
-		payAvailable = (monthsPassed - pool[_members[vestee].pool].cliff - _members[vestee].payouts) *
-			       (_members[vestee].share / pool[_members[vestee].pool].vests);
+		if (monthsPassed >= pool[_members[vestee].pool].cliff) {
+			payAvailable = (1 + monthsPassed - pool[_members[vestee].pool].cliff - _members[vestee].payouts) *
+			      	       (_members[vestee].share / pool[_members[vestee].pool].vests);
+		} else {
+			payAvailable = 0;
+		}
 
 		return (
 			timeLeft,
@@ -917,11 +926,31 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* test functions
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+	function incrementMonthsPassed(
+	) public {
+		monthsPassed++;
+	}
+	
+
+
+
+
 }
 
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
 
 
