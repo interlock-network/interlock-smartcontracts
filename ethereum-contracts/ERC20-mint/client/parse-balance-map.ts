@@ -55,7 +55,7 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
     const parsedNum2 = BigNumber.from(oweswhat)
     //if (parsedNum2.lte(0)) throw new Error(`Invalid owes for account: ${account}`)
     const parsedNum3 = BigNumber.from(whichpool)
-    if (parsedNum3.lte(0)) throw new Error(`Invalid pool for account: ${account}`)
+    //if (parsedNum3.lte(0)) throw new Error(`Invalid pool for account: ${account}`)
 
 
     const flags = {

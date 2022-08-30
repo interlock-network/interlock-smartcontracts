@@ -20,10 +20,6 @@
  * An {Approval} event is emitted on calls to {transferFrom}.
  * This allows applications to reconstruct the allowance for all accounts just
  * by listening to said events.
- *
- * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
- * functions have been added to mitigate the well-known issues around setting
- * allowances.
  **/
 
 pragma solidity ^0.8.0;
@@ -272,12 +268,12 @@ contract ERC20ILOCK is IERC20 {
 			
 		// distribute tokens to pools on schedule
 	function _poolDistribution(
-	) internal {
+	) public {
 
 		// iterate through pools
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			if (pool[i].cliff <= monthsPassed &&
-				monthsPassed <= (_members[pools[i]].cliff + pool[i].vests)) {
+				monthsPassed < (_members[pools[i]].cliff + pool[i].vests)) {
 				// transfer month's distribution to pools
 				transferFrom(
 					address(this),
@@ -301,6 +297,7 @@ contract ERC20ILOCK is IERC20 {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
+			_poolDistribution;
 			return true;
 		}
 
@@ -427,7 +424,7 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 
-		// claim stake for vest period
+		// claim stake for vest periods accumulated
 	function claimStake(
 	) public returns (bool) {
 
@@ -445,24 +442,47 @@ contract ERC20ILOCK is IERC20 {
 			"Investor has not paid in yet."
 		);
 
-		// transfer tokens to member from pool
 		// number of payouts must not surpass number of vests
 		require(
 			_members[msg.sender].payouts < pool[_members[msg.sender].pool].vests,
 			"member already collected entire token share");
 
+		// make sure cliff has been surpassed
 		require(
-			monthsPassed > pool[_members[msg.sender].pool].cliff,
+			monthsPassed >= pool[_members[msg.sender].pool].cliff,
 			"too soon -- cliff not yet passed");
 
-		uint8 payments = monthsPassed -
-				 _members[msg.sender].payouts -
-				 pool[_members[msg.sender].pool].cliff;
-				
+		
+		// determine the number of payments claimant has rights to
+		uint8 payments;
+		// when time has past vesting period, pay out remaining unclaimed payments
+		if (pool[_members[msg.sender].pool].cliff +
+		    pool[_members[msg.sender].pool].vests <= monthsPassed) {
+			
+			payments = pool[_members[msg.sender].pool].vests -
+				   _members[msg.sender].payouts;
 
+		// don't count months past vests+cliff as payments
+		} else {
+
+			payments = 1 + monthsPassed -
+				   _members[msg.sender].payouts -
+				   pool[_members[msg.sender].pool].cliff;
+		}
+				
+		// use payments to calculate amount to pay out
 		uint256 payout = _members[msg.sender].share /
 				 pool[_members[msg.sender].pool].vests * payments;
-				 
+
+		// if at final payment, add remainder of share to final payment
+		if (_members[msg.sender].share -
+			_members[msg.sender].paid - payout <
+			_members[msg.sender].share / pool[_members[msg.sender].pool].vests) {
+			payout += _members[msg.sender].share %
+				 	  pool[_members[msg.sender].pool].vests;
+		}
+
+		// transfer and make sure it succeeds
 		require(
 			_transfer(pools[_members[msg.sender].pool], msg.sender, payout),
 			"stake claim transfer failed");
@@ -839,6 +859,7 @@ contract ERC20ILOCK is IERC20 {
 		} else {
 			_members[msg.sender].owes = 0;
 		}
+		
 
 		return true;
 
@@ -891,26 +912,64 @@ contract ERC20ILOCK is IERC20 {
 		uint256 payAvailable
 	) {
 
-		if (monthsPassed >= pool[_members[vestee].pool].vests + pool[_members[vestee].pool].cliff) {
+		// compute the time left until the next payment is available
+		// if months passed beyond last payment, stop counting
+		if (monthsPassed >= pool[_members[vestee].pool].vests +
+				    pool[_members[vestee].pool].cliff) {
+			
 			timeLeft = 0;
+
+		// when cliff hasn't been surpassed, include that time into countdown
 		} else if (monthsPassed < pool[_members[vestee].pool].cliff) {
-			timeLeft = nextPayout - block.timestamp + 
-			   	   (pool[_members[vestee].pool].cliff - monthsPassed - 1) * 30 days;
+			
+			timeLeft = (pool[_members[vestee].pool].cliff -
+				    monthsPassed - 1) * 30 days +
+				    nextPayout - block.timestamp;
+
+		// during vesting period, timeleft is only time til next month's payment
 		} else {
+
 			timeLeft = nextPayout - block.timestamp;
 		}
 
+		// how much does investor still owe before claiming share
 		stillOwes = _members[vestee].owes;
 
+		// how much has member already claimed
 		paidOut = _members[vestee].paid;
 
+		// how much does member have yet to collect, after vesting complete
 		payRemaining = _members[vestee].share - _members[vestee].paid;
 
-		if (monthsPassed >= pool[_members[vestee].pool].cliff) {
-			payAvailable = (1 + monthsPassed - pool[_members[vestee].pool].cliff - _members[vestee].payouts) *
+		// computer the pay available to claim at current moment
+		// if months passed are inbetween cliff and end of vesting period
+		if (monthsPassed >= pool[_members[vestee].pool].cliff &&
+		    monthsPassed < pool[_members[vestee].pool].cliff +
+				   pool[_members[vestee].pool].vests) {
+			
+			payAvailable = (1 + monthsPassed -
+					pool[_members[vestee].pool].cliff -
+					_members[vestee].payouts) *
 			      	       (_members[vestee].share / pool[_members[vestee].pool].vests);
-		} else {
+
+		// until time reaches cliff, no pay is available
+		} else if (monthsPassed < pool[_members[vestee].pool].cliff ){
+
 			payAvailable = 0;
+
+		// if time has passed cliff and vesting period, the entire remaining share is available
+		} else {
+
+			payAvailable = _members[vestee].share - _members[vestee].paid;
+		}
+
+		// if at final payment, add remainder of share to final payment
+		if (_members[msg.sender].share -
+			_members[msg.sender].paid - payAvailable <
+			_members[msg.sender].share / pool[_members[msg.sender].pool].vests) {
+			
+			payAvailable += _members[msg.sender].share %
+				 	pool[_members[msg.sender].pool].vests;
 		}
 
 		return (
@@ -925,25 +984,6 @@ contract ERC20ILOCK is IERC20 {
 
 
 /*************************************************/
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-	/**
-	* test functions
-	**/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-	function incrementMonthsPassed(
-	) public {
-		monthsPassed++;
-	}
-	
-
-
-
 
 }
 
