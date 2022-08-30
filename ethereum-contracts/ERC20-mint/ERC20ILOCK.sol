@@ -964,9 +964,9 @@ contract ERC20ILOCK is IERC20 {
 		}
 
 		// if at final payment, add remainder of share to final payment
-		if (_members[msg.sender].share -
-			_members[msg.sender].paid - payAvailable <
-			_members[msg.sender].share / pool[_members[msg.sender].pool].vests) {
+		if (_members[msg.sender].share - _members[msg.sender].paid - payAvailable <
+			_members[msg.sender].share / pool[_members[msg.sender].pool].vests &&
+			payAvailable > 0) {
 			
 			payAvailable += _members[msg.sender].share %
 				 	pool[_members[msg.sender].pool].vests;
