@@ -26,6 +26,7 @@ pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
 import "./POOL.sol";
+import "./Messenger.sol";
 
 contract ERC20ILOCK is IERC20 {
 
@@ -71,6 +72,8 @@ contract ERC20ILOCK is IERC20 {
 	PoolData[] public pool;
 	address[] public pools;
 
+	address public tokenlockPool;
+
 		// keeping track of members
 	struct MemberStatus {
 		uint256 owes;
@@ -114,6 +117,11 @@ contract ERC20ILOCK is IERC20 {
 	event MoreDepositNeeded(
 		address depositor,
 		uint256 owed );
+
+	event SentTokens(
+		address from,
+		bytes32 pubkeyTo,
+		uint256 amount );
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -136,7 +144,7 @@ contract ERC20ILOCK is IERC20 {
 		_owner = msg.sender;
 		_balances[address(this)] = 0; 
 
-			// iterate through pools to create struct array
+		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
 			poolTokens_[i] *= _DECIMAL;
 			pool.push(
@@ -146,6 +154,11 @@ contract ERC20ILOCK is IERC20 {
 					monthlyPayments_[i],
 					poolCliffs_[i],
 					poolMembers_[i] ) );
+
+		// establish pool to lock bridged tokens in
+		tokenlockPool = address(new POOL());
+		_balances[tokenlockPool] = 0;
+		
 		}
 	}
 
@@ -901,6 +914,10 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 
+		    // get how much of amount left to pay is available to claim
+		   // get amount left to pay
+		  // get amount paid so far to member
+		 // get amount investor still needs to pay in before claiming tokens
 		// get time remaining until next payout ready
 	function vestingStatus(
 		address vestee
@@ -981,6 +998,47 @@ contract ERC20ILOCK is IERC20 {
 		);
 	}
 
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/***
+	* wormhole
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+	Messenger wormhole = new Messenger();
+
+/*************************************************/
+
+		 // locks tokens in tokenlockPool account
+		// sends message to wormhole guardians/bridge
+	function sendToken(
+		uint256 amount,
+		bytes32 pubkey
+	) public returns (uint64 sequence) {
+	
+		// condition message here
+		// (84 byte message = 32B amount + 20B sender address + 32B sender pubkey)
+		bytes memory message = abi.encode(amount, msg.sender, pubkey);
+		
+		// send message to transfer token
+		sequence = 0;
+		sequence = wormhole.sendMsg(message);
+		
+		// make sure message was properly sent
+		require(
+			sequence != 0,
+			"token bridge transfer failed"
+		);
+		
+		// now move token amount to locked-pool
+		_balances[tokenlockPool] += amount;
+
+		emit SentTokens(msg.sender, pubkey, amount);
+
+	}
 
 
 /*************************************************/
@@ -990,6 +1048,7 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
 
 
