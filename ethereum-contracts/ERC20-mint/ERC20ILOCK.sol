@@ -122,6 +122,12 @@ contract ERC20ILOCK is IERC20 {
 		address from,
 		bytes32 pubkeyTo,
 		uint256 amount );
+
+	event ReceivedTokens(
+		bytes32 pubkeyFrom,
+		address to,
+		uint256 amount );
+
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -1018,9 +1024,13 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount,
 		bytes32 pubkey
 	) public returns (uint64 sequence) {
+
+		// condition amount to truncate and floor at 128 bits
+		// 
+		amount = uint128(amount);
 	
 		// condition message here
-		// (84 byte message = 32B amount + 20B sender address + 32B sender pubkey)
+		// (68 byte message = 16B amount + 20B sender address + 32B sender pubkey)
 		bytes memory message = abi.encode(amount, msg.sender, pubkey);
 		
 		// send message to transfer token
@@ -1033,13 +1043,40 @@ contract ERC20ILOCK is IERC20 {
 			"token bridge transfer failed"
 		);
 		
-		// now move token amount to locked-pool
+		// now move token amount from member balance to locked-pool
+		_balances[msg.sender] -= amount
 		_balances[tokenlockPool] += amount;
 
 		emit SentTokens(msg.sender, pubkey, amount);
 
 	}
 
+/*************************************************/
+
+	function receiveToken(
+		bytes memory encodedMessage
+	) public returns (string message) {
+	
+		// verify message is legit and decode
+		message = wormhole.receiveEncodedMsg(encodedMessage);
+
+		// extract message contents from message string
+		uint128 amount = uint128(message[0:15]);
+		address account = address(message[16:35]);
+		bytes32 pubkey = bytes32(message[36:77]);
+
+		// adjust account balances
+		_balances[msg.sender] += amount;
+		_balances[tokenlockPool] -= amount;
+
+		// make sure token transfer is authorized by function caller
+		require(
+			account == msg.sender,
+			"recipient must be sender"
+		);
+
+		emit ReceivedTokens(pubkey, msg.sender, amount);
+	}
 
 /*************************************************/
 
