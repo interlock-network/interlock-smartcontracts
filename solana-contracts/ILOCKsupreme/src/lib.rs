@@ -1,5 +1,5 @@
 /****************************************************************
- * ILOCKsupreme Solana Contractj
+ * ILOCKsupreme Solana Contract
  ****************************************************************/
 
 pub mod error;

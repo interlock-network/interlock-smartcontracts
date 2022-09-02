@@ -570,7 +570,7 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* getter methods
+	* ERC20 getter methods
 	**/
 /***************************************************************************/
 /***************************************************************************/
@@ -642,7 +642,7 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* doer methods
+	* ERC20 doer methods
 	**/
 /***************************************************************************/
 /***************************************************************************/
@@ -733,31 +733,18 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************
 
-		  // emitting Approval, reverting on failure
-		 // where `spender` cannot = zero address
-		// atomically increases spender's allowance
-	function _increaseAllowance(
-		address owner,
-		address spender,
-		uint256 amount
-	) private returns (bool) {
-		return true; }
+NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
 
- /* Above and below are alternatives to {approve} that can be used
- *  as a mitigation for problems described in {IERC20-approve}.
- *
- * ?? Why is there no owner balance check for increaseAllowance() ??
- **
-		   // emitting Approval, reverting on failure
-		  // where `spender` must have allowance >= `subtractedValue`
-		 // where `spender` cannot = zero address
-		// atomically decreases spender's allowance
-	function _decreaseAllowance(
-		address owner,
-		address spender,
-		uint256 amount
-	) private returns (bool) {
-		return true; }
+THIS ATTACK CAN ONLY BE MITIGATED CLIENT-SIDE, BECAUSE IT IS LITERALLY
+IMPOSSIBLE FOR A CONTRACT TO DISCERN BETWEEN AN HONEST WITHDRAWAL, AND
+A WITHDRAWAL IN BAD FAITH. (work it out, it is impossible. and in fact, 
+trying to mitigate against this attack on contract-side makes it possible for
+honest token holders to get screwed over if Alice coincidentally withdraws after Bob
+has changed his mind about her allowance, but before Bob gets the chance to implement
+that change...)
+
+SETTING ALLOWANCE TO ZERO FIRST IS SILLY, BECAUSE YOU CAN STILL FRONTRUN THAT
+TRANSACTION, AND SAID TRANSACTION IS INDISTINGUISHABLE FROM AN HONEST TRANSACTION.
 
 /*************************************************/
 
