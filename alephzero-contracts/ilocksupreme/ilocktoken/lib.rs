@@ -1,13 +1,6 @@
 // INTERLOCK NETWORK
 //
-// blairmunroakusa@1019Fri.17Jun22.anch.AK:br
-//
-// THIS IS A TEST ERC20 CONTRACT TO DETERMINE HOW
-// EASILY ONE CAN SPIN UP A TOKEN ON ALEPH ZERO
-// USING INK! FRAMEWORK
-
-
-
+// blairmunroakusa@0903Fri.09Sep22.anch.AK:br
 
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 
@@ -18,6 +11,9 @@
 // with functions to emit each event. This is ugly and frustrating. 
 // I also need to make sure I implemented transfer_from correctly, because I believe
 // it may be missing an allowance update element.
+//
+// blairmunroakusa@0904Fri.09Sep22.anch.AK:br
+// The above note needs to be reevaluated.
 
 
 #![allow(non_snake_case)]
