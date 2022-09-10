@@ -17,16 +17,15 @@ use ink_lang as ink;
 #[ink::contract]
 mod ilockrewards {
 
-    use ilocktoken::ilocktoken::ILOCKtokenRef;
+    use ilocktoken::ILOCKtokenRef;
+    use ilockrewardsdata::ILOCKrewardsDataRef;
     use ink_env::call::FromAccountId;
 
     #[ink(storage)]
     pub struct ILOCKrewards {
         ilocktoken_contract: ILOCKtokenRef,
-        rewardedTotal: u128,
-        rewardedPastMonth: u128,
-        rewardedPastWeek: u128,
-        rewardedPastDay: u128,
+        ilockrewardsdata_contract: ILOCKrewardsDataRef,
+
     }
 
     impl ILOCKrewards {
@@ -35,21 +34,21 @@ mod ilockrewards {
         #[ink(constructor)]
         pub fn new_ILOCKrewards(
             ilocktoken_address: AccountId,
+            ilockrewardsdata_address: AccountId,
         ) -> Self {
-            
+
             let ilocktoken_contract: ILOCKtokenRef = FromAccountId::from_account_id(ilocktoken_address);
+            let ilockrewardsdata_contract: ILOCKrewardsDataRef = FromAccountId::from_account_id(ilockrewardsdata_address);
 
             Self {
                 ilocktoken_contract,
-                rewardedTotal: 0,
-                rewardedPastMonth: 0,
-                rewardedPastWeek: 0,
-                rewardedPastDay: 0,
+                ilockrewardsdata_contract,
             }
         }
 
         #[ink(message)]
         pub fn dummyfunction(&self) -> bool {
+            ink_env::debug_println!("{:?}", self.ilockrewardsdata_contract.rewardFactor());
             true
         }
     }
