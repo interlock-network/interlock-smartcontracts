@@ -3,7 +3,12 @@
 // blairmunroakusa@1531Fri.09Sep22.anch.AK:south
 
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
-
+//
+// NOTE: This contract exists because I cannot figure out how to
+// create a delegator contract that also contains state. (The 'initialize_contract'
+// method is not defined for any type ```ThisContractRef```.) So creating a struct
+// with both Ref types and regular types makes it (possibly) impossible to initialize
+// delegator contract.
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -15,13 +20,10 @@ pub use self::ilockrewardsdata::{
 
 use ink_lang as ink;
 
-
 #[ink::contract]
 pub mod ilockrewardsdata {
 
     use ink_lang::utils::initialize_contract;
-    use ink_prelude::string::String;
-    use ink_prelude::string::ToString;
     use ink_storage::Mapping;
     use ink_storage::traits::SpreadAllocate;
 
@@ -31,8 +33,8 @@ pub mod ilockrewardsdata {
     pub struct ILOCKrewardsData {
         rewardedTotal: Balance,
         rewardedUser: Mapping<AccountId, Balance>,
-        rewardFactor: u32,    }
-
+        rewardFactor: u32,
+    }
 
     impl ILOCKrewardsData {
 
@@ -57,29 +59,57 @@ pub mod ilockrewardsdata {
         /// get rewarded total
         #[ink(message)]
         pub fn rewardedTotal(&self) -> Balance {
+
             self.rewardedTotal
+        }
+
+        /// set rewarded total
+        #[ink(message)]
+        pub fn mut_rewardedTotal(&mut self, total: Balance) -> bool {
+
+            self.rewardedTotal = total;
+
+            true
         }
 
         /// get user rewards
         #[ink(message)]
         pub fn rewardedUser(&self, user: AccountId) -> Balance {
+
             match self.rewardedUser.get(&user) {
                 Some(value) => value,
                 None => 0,
             }
         }
 
+        /// set user rewards
+        #[ink(message)]
+        pub fn mut_rewardedUser(&mut self, user: AccountId, reward: Balance) -> bool {
+
+            // update total rewarded to user
+            self.rewardedUser.insert(&user, &reward);
+
+            // update total rewarded
+            self.mut_rewardedTotal(reward + self.rewardedTotal());
+
+            true
+        }
+
         /// get reward factor
         #[ink(message)]
         pub fn rewardFactor(&self) -> u32 {
+
             self.rewardFactor
         }
 
-        /// set user rewards
+        /// set reward factor
         #[ink(message)]
-        pub fn set_rewardedUser(&mut self, user: AccountId, value: Balance) -> bool {
-            self.rewardedUser.insert(&user, &value);
+        pub fn mut_rewardFactor(&mut self, factor: u32) -> bool {
+
+            self.rewardFactor = factor;
+            
             true
         }
+        
     }
 }

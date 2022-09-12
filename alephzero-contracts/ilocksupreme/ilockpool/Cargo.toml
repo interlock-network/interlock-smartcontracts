@@ -1,5 +1,5 @@
 [package]
-name = "ilocktoken"
+name = "ilockpool"
 version = "0.1.0"
 authors = ["[your_name] <[your_email]>"]
 edition = "2021"
@@ -20,10 +20,8 @@ ink_storage_derive = { version = "=3.0.1", default-features = false }
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
-ilockpool = { path = "../ilockpool", default-features = false, features = ["ink-as-dependency"]}
-
 [lib]
-name = "ilocktoken"
+name = "ilockpool"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
@@ -42,7 +40,5 @@ std = [
     "ink_primitives/std",
     "scale/std",
     "scale-info/std",
-
-    "ilockpool/std"
 ]
 ink-as-dependency = []

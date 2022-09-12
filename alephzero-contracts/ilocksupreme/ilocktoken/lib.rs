@@ -33,21 +33,64 @@ pub mod ilocktoken {
     use ink_lang::utils::initialize_contract;
     use ink_prelude::string::String;
     use ink_prelude::string::ToString;
-    use ink_storage::Mapping;
-    use ink_storage::traits::SpreadAllocate;
+    use ink_storage::{
+        Mapping,
+        traits::{
+            PackedLayout,
+            SpreadLayout,
+            SpreadAllocate,
+        },
+    };
 
-    /// defines contract storage
+    /// PoolData struct contains all pertinant information about the various token pools
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    #[derive(Debug)]
+    pub struct PoolData {
+        name: String,
+        tokens: u128,
+        vests: u8,
+        cliff: u8,
+    }
+
+    /// MemberData struct contains all pertinent information for each member
+    /// (Besides balance and allowance mappings)
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    #[derive(Debug)]
+    pub struct MemberData {
+        owes: u128,
+        paid: u128,
+        share: u128,
+        pool: u8,
+        payouts: u8,
+    }
+
+    /// ILOCKtoken struct contains overall storage data for contract
     #[derive(SpreadAllocate)]
     #[ink(storage)]
     pub struct ILOCKtoken {
+        owner: AccountId,
         name: String,
         symbol: String,
         decimals: u8,
-        total_supply: u32,
-        balances: Mapping<AccountId, u32>,
-        allowances: Mapping<(AccountId, AccountId), u32>,
+        totalsupply: u128,
+        balances: Mapping<AccountId, u128>,
+        allowances: Mapping<(AccountId, AccountId), u128>,
+        memberdata: Mapping<AccountId, MemberData>,
+        pooldata: Mapping<AccountId, PoolData>,
+        pools: [AccountId; 12], // this is pattern to iterate through pooldata mapping
+        poolcount: u8,
+        monthspassed: u8,
+        nextpayout: u64,
+        onemonth: u64,
     }
-
 
     /// specify transfer event
     #[ink(event)]
@@ -56,7 +99,7 @@ pub mod ilocktoken {
         from: Option<AccountId>,
         #[ink(topic)]
         to: Option<AccountId>,
-        amount: u32,
+        amount: u128,
     }
 
     /// specify approve event
@@ -66,25 +109,17 @@ pub mod ilocktoken {
         owner: Option<AccountId>,
         #[ink(topic)]
         spender: Option<AccountId>,
-        amount: u32,
+        amount: u128,
     }
-
-    /// specify stake event
-    #[ink(event)]
-    pub struct Stake {
-        #[ink(topic)]
-        staker: Option<AccountId>,
-        #[ink(topic)]
-        hash: Option<Hash>,
-        amount: u32,
-    }
-
 
     impl ILOCKtoken {
 
+////////////////////////////////////////////////////////////////////
+
         /// constructor that initializes contract
+        /// and simultaneously creates TGE
         #[ink(constructor)]
-        pub fn new_token(supply: u32) -> Self {
+        pub fn new_token(pools: [AccountId; 12]) -> Self {
 
             // create contract
             initialize_contract(|contract: &mut Self| {
@@ -92,35 +127,111 @@ pub mod ilocktoken {
                 // define owner as caller
                 let caller = Self::env().caller();
 
-                // mint
-                contract.balances.insert(&caller, &supply);
-                contract.total_supply = supply;
+                // define supply and decimals
+                let token_total: u128 = 1_000_000_000;
+                let decimal_total: u128 = 1_000_000_000_000_000_000;
+                let supply: u128 = token_total * decimal_total;
 
-                // emit Transfer event
+                // mint preparation
+                contract.owner = caller;
+                contract.totalsupply = supply;
+                contract.balances.insert(Self::env().account_id(), &supply);
+
+                // emit mint Transfer event
                 Self::env().emit_event(Transfer {
                     from: None,
                     to: Some(caller),
                     amount: supply,
                 });
 
-                // set optional metadata
+                // pool data
+                const POOLCOUNT: usize = 12;
+                let pool_names: [&str; POOLCOUNT] = [
+                    "early_backers+venture_capital",
+                    "presale_1",
+                    "presale_2",
+                    "presale_3",
+                    "team+founders",
+                    "outlier_ventures",
+                    "advisors",
+                    "rewards",
+                    "foundation",
+                    "partners",
+                    "whitelist",
+                    "public_sale",
+                ];
+                let pool_tokens: [u128; POOLCOUNT] = [
+                    20_000_000,
+                    48_622_222,
+                    66_666_667,
+                    40_000_000,
+                    200_000_000,
+                    40_000_000,
+                    25_000_000,
+                    285_000_000,
+                    172_711_711,
+                    37_000_000,
+                    15_000_000,
+                    50_000_000,
+                ];
+                let pool_vests: [u8; POOLCOUNT] = [
+                    24,
+                    18,
+                    15,
+                    12,
+                    36,
+                    24,
+                    24,
+                    48,
+                    84,
+                    1,
+                    48,
+                    1,
+                ];
+                let pool_cliffs: [u8; POOLCOUNT] = [
+                    1,
+                    1,
+                    1,
+                    1,
+                    6,
+                    1,
+                    1,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                ];
+
+                // assign pool data
+                for pool in 0..POOLCOUNT {
+                    contract.pools[pool] = pools[pool];
+
+                    // define pooldata struct for this pool
+                    let this_pool = PoolData {
+                        name: pool_names[pool].to_string(),
+                        tokens: pool_tokens[pool] * decimal_total,
+                        vests: pool_vests[pool],
+                        cliff: pool_cliffs[pool],
+                    };
+
+                    // push current pool into pooldata map
+                    contract.pooldata.insert(pools[pool], &this_pool);
+                }
+
+                // set metadata
+                let month = 1662006314 - 1659414314;
                 contract.name = "Interlock Network".to_string();
                 contract.symbol = "ILOCK".to_string();
                 contract.decimals = 18;
+                contract.poolcount = POOLCOUNT as u8;
+                contract.monthspassed = 0;
+                contract.onemonth = month;
+                contract.nextpayout = Self::env().block_timestamp() + month;
             })
         }
 
-        
-        /// emit stake event because .emit_event method can only be impl once >( 
-        #[ink(message)]
-        pub fn emit_stake(&self, staker: AccountId, hash: Hash, amount: u32) -> bool {
-            Self::env().emit_event(Stake {
-                staker: Some(staker),
-                hash: Some(hash),
-                amount: amount,
-            });
-            true
-        }
+////////////////////////////////////////////////////////////////////
 
         /// token decimal count getter
         #[ink(message)]
@@ -145,16 +256,16 @@ pub mod ilocktoken {
 
         /// total supply getter
         #[ink(message)]
-        pub fn total_supply(&self) -> u32 {
+        pub fn total_supply(&self) -> u128 {
 
-            self.total_supply
+            self.totalsupply
         }
 
         /// account balance getter
         #[ink(message)]
-        pub fn balance_of(&self, account: AccountId) -> u32 {
+        pub fn balance_of(&self, account: AccountId) -> u128 {
 
-            match self.balances.get(&account) {
+            match self.balances.get(account) {
                 Some(value) => value,
                 None => 0,
             }
@@ -162,17 +273,19 @@ pub mod ilocktoken {
 
         /// account allowance getter
         #[ink(message)]
-        pub fn allowance(&self, owner: AccountId, spender: AccountId) -> u32 {
+        pub fn allowance(&self, owner: AccountId, spender: AccountId) -> u128 {
 
-            match self.allowances.get((&owner, &spender)) {
+            match self.allowances.get((owner, spender)) {
                 Some(value) => value,
                 None => 0,
             }
         }
         
+////////////////////////////////////////////////////////////////////
+
         /// transfer method
         #[ink(message)]
-        pub fn transfer(&mut self, recipient: AccountId, amount: u32) -> bool {
+        pub fn transfer(&mut self, recipient: AccountId, amount: u128) -> bool {
 
             // get caller information
             let sender = self.env().caller();
@@ -186,8 +299,8 @@ pub mod ilocktoken {
 
             // update balances
             let recipient_balance = self.balance_of(recipient);
-            self.balances.insert(sender, &(&sender_balance - amount));
-            self.balances.insert(recipient, &(&recipient_balance + amount));
+            self.balances.insert(sender, &(sender_balance - amount));
+            self.balances.insert(recipient, &(recipient_balance + amount));
 
             // emit Transfer event
             Self::env().emit_event(Transfer {
@@ -201,19 +314,19 @@ pub mod ilocktoken {
 
         /// approve method
         #[ink(message)]
-        pub fn approve(&mut self, spender: AccountId, amount: u32) -> bool {
+        pub fn approve(&mut self, spender: AccountId, amount: u128) -> bool {
 
             // get caller information
             let owner = self.env().caller();
 
             // add/update approval amount
-            self.allowances.insert((&owner, &spender), &amount);
+            self.allowances.insert((owner, spender), &amount);
 
             // emit Approval event
             self.env().emit_event(Approval {
                 owner: Some(owner),
                 spender: Some(spender),
-                amount,
+                amount: amount,
             });
 
             true
@@ -225,7 +338,7 @@ pub mod ilocktoken {
             &mut self,
             from: AccountId,
             to: AccountId,
-            amount: u32,
+            amount: u128,
         ) -> bool {
 
             // get owner balance
@@ -241,6 +354,18 @@ pub mod ilocktoken {
             self.balances.insert(from, &(from_balance - amount));
             let to_balance = self.balance_of(to);
             self.balances.insert(to, &(to_balance + amount));
+
+            // update allowances
+            let caller = self.env().caller();
+            let caller_allowance = self.allowance(from, caller);
+            self.allowances.insert((from, caller), &(caller_allowance - amount));
+
+            // emit Approval event
+            self.env().emit_event(Approval {
+                owner: Some(from),
+                spender: Some(caller),
+                amount: amount,
+            });
 
             // emit Transfer event
             Self::env().emit_event(Transfer {
@@ -291,7 +416,7 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenERC20.name(), "Interlock Network");
             assert_eq!(ILOCKtokenERC20.symbol(), "ILOCK");
             assert_eq!(ILOCKtokenERC20.decimals(), 18);
-            assert_eq!(ILOCKtokenERC20.total_supply(), 100_000);
+            assert_eq!(ILOCKtokenERC20.totalsupply(), 100_000);
 
         }
 
@@ -318,9 +443,9 @@ pub mod ilocktoken {
 
         /// test if total supply getter does its job
         #[ink::test]
-        fn total_supply_works() {
+        fn totalsupply_works() {
             let ILOCKtokenERC20 = ILOCKtoken::new_token(100_000);
-            assert_eq!(ILOCKtokenERC20.total_supply(), 100_000);
+            assert_eq!(ILOCKtokenERC20.totalsupply(), 100_000);
         }
 
         /// test if balance getter does its job
@@ -459,7 +584,7 @@ pub mod ilocktoken {
             event: &ink_env::test::EmittedEvent,
             expected_from: Option<AccountId>,
             expected_to: Option<AccountId>,
-            expected_amount: u32,
+            expected_amount: u128,
         ) {
 
             // decode Event object
@@ -516,7 +641,7 @@ pub mod ilocktoken {
             event: &ink_env::test::EmittedEvent,
             expected_owner: Option<AccountId>,
             expected_spender: Option<AccountId>,
-            expected_amount: u32,
+            expected_amount: u128,
         ) {
 
             // decode Event object

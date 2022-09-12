@@ -11,7 +11,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
-//pub use crate::ilockrewards::ILOCKrewards;
 use ink_lang as ink;
 
 #[ink::contract]
@@ -23,8 +22,8 @@ mod ilockrewards {
 
     #[ink(storage)]
     pub struct ILOCKrewards {
-        ilocktoken_contract: ILOCKtokenRef,
-        ilockrewardsdata_contract: ILOCKrewardsDataRef,
+        contract_ilocktoken: ILOCKtokenRef,
+        contract_ilockrewardsdata: ILOCKrewardsDataRef,
 
     }
 
@@ -33,23 +32,51 @@ mod ilockrewards {
         /// create rewards contract and link to ilocktoken contract
         #[ink(constructor)]
         pub fn new_ILOCKrewards(
-            ilocktoken_address: AccountId,
-            ilockrewardsdata_address: AccountId,
+            address_ilocktoken: AccountId,
+            address_ilockrewardsdata: AccountId,
         ) -> Self {
 
-            let ilocktoken_contract: ILOCKtokenRef = FromAccountId::from_account_id(ilocktoken_address);
-            let ilockrewardsdata_contract: ILOCKrewardsDataRef = FromAccountId::from_account_id(ilockrewardsdata_address);
+            // get contract handles
+            let contract_ilocktoken: ILOCKtokenRef =
+                FromAccountId::from_account_id(address_ilocktoken);
+
+            let contract_ilockrewardsdata: ILOCKrewardsDataRef =
+                FromAccountId::from_account_id(address_ilockrewardsdata);
 
             Self {
-                ilocktoken_contract,
-                ilockrewardsdata_contract,
+                contract_ilocktoken,
+                contract_ilockrewardsdata,
             }
         }
 
+        /// get total amount rewarded to date
         #[ink(message)]
-        pub fn dummyfunction(&self) -> bool {
-            ink_env::debug_println!("{:?}", self.ilockrewardsdata_contract.rewardFactor());
-            true
+        pub fn totalRewarded(&self) -> Balance {
+            self.contract_ilockrewardsdata.rewardedTotal()
         }
+
+        /// get amount rewarded to user to date
+        #[ink(message)]
+        pub fn totalRewardedUser(&self, user: AccountId) -> Balance {
+            self.contract_ilockrewardsdata.rewardedUser(user)
+        }
+
+        /// reward the user for browsing
+        #[ink(message)]
+        pub fn rewardUser(&mut self, reward: Balance, user: AccountId) -> (Balance, Balance) {
+
+            // get total amount rewarded to user so far
+            let mut totalRewarded: Balance = self.contract_ilockrewardsdata.rewardedUser(user);
+
+            // update total amount rewarded to user
+            totalRewarded += reward;
+
+            // update state for user and total amounts rewarded
+            self.contract_ilockrewardsdata.mut_rewardedUser(user, reward);
+
+            // this returns user total and reward amount for extension display purposes
+            (totalRewarded, reward)
+        }
+
     }
 }
