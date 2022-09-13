@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["[your_name] <[your_email]>"]
 edition = "2021"
 
+# This is to enable unsigned integer division (floor division)
+[profile.release]
+overflow-checks = false
+
 [dependencies]
 ink_primitives = { version = "=3.0.1", default-features = false }
 ink_metadata = { version = "=3.0.1", default-features = false, features = ["derive"], optional = true }
@@ -21,6 +25,8 @@ scale = { package = "parity-scale-codec", version = "3", default-features = fals
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
 ilockpool = { path = "../ilockpool", default-features = false, features = ["ink-as-dependency"]}
+
+libmath = "0.2.1"
 
 [lib]
 name = "ilocktoken"
@@ -46,3 +52,4 @@ std = [
     "ilockpool/std"
 ]
 ink-as-dependency = []
+

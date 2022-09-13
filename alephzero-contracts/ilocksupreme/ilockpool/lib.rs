@@ -9,6 +9,9 @@
 // not from the token contract). This is for the same reason that
 // ilockrewards delegator must use ilockrewardsdata to store state.
 
+// NOTE: To enable unsigned integer division, overflow_checks
+// has been turned 'off' in Cargo.toml file.
+
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 

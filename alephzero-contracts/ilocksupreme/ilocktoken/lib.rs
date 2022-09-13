@@ -1,20 +1,11 @@
 // INTERLOCK NETWORK
 //
 // blairmunroakusa@0903Fri.09Sep22.anch.AK:br
-
-// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
-
-// NOTES: the emit_event method cannot be used in other contracts,
-// something about it only accepting on impl. I don't know how to get 
-// around this, so the hack from now on (when I get to it) is to
-// create a contract the has all the ILOCKsupreme events declared,
-// with functions to emit each event. This is ugly and frustrating. 
-// I also need to make sure I implemented transfer_from correctly, because I believe
-// it may be missing an allowance update element.
 //
-// blairmunroakusa@0904Fri.09Sep22.anch.AK:br
-// The above note needs to be reevaluated.
-
+// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
+//
+// NOTE: To enable unsigned integer division, overflow_checks
+// has been turned 'off' in Cargo.toml file.
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -42,6 +33,8 @@ pub mod ilocktoken {
         },
     };
 
+
+
     /// PoolData struct contains all pertinant information about the various token pools
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
@@ -52,8 +45,8 @@ pub mod ilocktoken {
     pub struct PoolData {
         name: String,
         tokens: u128,
-        vests: u8,
-        cliff: u8,
+        vests: u128,
+        cliff: u128,
     }
 
     /// MemberData struct contains all pertinent information for each member
@@ -68,8 +61,8 @@ pub mod ilocktoken {
         owes: u128,
         paid: u128,
         share: u128,
-        pool: u8,
-        payouts: u8,
+        pool: u128,
+        payouts: u128,
     }
 
     /// ILOCKtoken struct contains overall storage data for contract
@@ -80,6 +73,7 @@ pub mod ilocktoken {
         name: String,
         symbol: String,
         decimals: u8,
+        decimalfactor: u128,
         totalsupply: u128,
         balances: Mapping<AccountId, u128>,
         allowances: Mapping<(AccountId, AccountId), u128>,
@@ -87,9 +81,10 @@ pub mod ilocktoken {
         pooldata: Mapping<AccountId, PoolData>,
         pools: [AccountId; 12], // this is pattern to iterate through pooldata mapping
         poolcount: u8,
-        monthspassed: u8,
+        monthspassed: u128,
         nextpayout: u64,
         onemonth: u64,
+        TGEtriggered: bool,
     }
 
     /// specify transfer event
@@ -118,6 +113,7 @@ pub mod ilocktoken {
 
         /// constructor that initializes contract
         /// and simultaneously creates TGE
+        /// (splitSupply() and triggerTGE())
         #[ink(constructor)]
         pub fn new_token(pools: [AccountId; 12]) -> Self {
 
@@ -135,14 +131,25 @@ pub mod ilocktoken {
                 // mint preparation
                 contract.owner = caller;
                 contract.totalsupply = supply;
+                contract.decimalfactor = decimal_total;
                 contract.balances.insert(Self::env().account_id(), &supply);
+
+                contract.allowances.insert((Self::env().account_id(), Self::env().caller()), &supply);
 
                 // emit mint Transfer event
                 Self::env().emit_event(Transfer {
                     from: None,
-                    to: Some(caller),
+                    to: Some(Self::env().account_id()),
                     amount: supply,
                 });
+
+                // emit mint Approval event
+                Self::env().emit_event(Approval {
+                    owner: Some(Self::env().account_id()),
+                    spender: Some(Self::env().caller()),
+                    amount: supply,
+                });
+
 
                 // pool data
                 const POOLCOUNT: usize = 12;
@@ -174,7 +181,7 @@ pub mod ilocktoken {
                     15_000_000,
                     50_000_000,
                 ];
-                let pool_vests: [u8; POOLCOUNT] = [
+                let pool_vests: [u128; POOLCOUNT] = [
                     24,
                     18,
                     15,
@@ -188,7 +195,7 @@ pub mod ilocktoken {
                     48,
                     1,
                 ];
-                let pool_cliffs: [u8; POOLCOUNT] = [
+                let pool_cliffs: [u128; POOLCOUNT] = [
                     1,
                     1,
                     1,
@@ -220,7 +227,7 @@ pub mod ilocktoken {
                 }
 
                 // set metadata
-                let month = 1662006314 - 1659414314;
+                let month = 2592000; // derived from two unix timestamps 30 days apart
                 contract.name = "Interlock Network".to_string();
                 contract.symbol = "ILOCK".to_string();
                 contract.decimals = 18;
@@ -228,7 +235,160 @@ pub mod ilocktoken {
                 contract.monthspassed = 0;
                 contract.onemonth = month;
                 contract.nextpayout = Self::env().block_timestamp() + month;
+                contract.TGEtriggered = false;
+
             })
+        }
+
+////////////////////////////////////////////////////////////////////
+
+        /// function to distribute tokens to respective pools
+        fn pool_distribution(&mut self) -> bool {
+
+            // iterate through all pools
+            for pool in 0..self.poolcount as usize {
+
+                // get pooldata struct for given pool
+                let pooldata = self.pooldata.get(self.pools[pool]).unwrap();
+
+                // checks to see if it is time to distribute next token batch
+                if pooldata.cliff <= self.monthspassed &&
+                    self.monthspassed < (pooldata.cliff + pooldata.vests) {
+                    
+                    // transfer tokens to pool
+                    self.transfer_from(
+                        self.env().account_id(),
+                        self.pools[pool],
+                        pooldata.tokens/pooldata.vests,
+                    );
+
+                    // adjust owner's allowance
+                    self.allowances.insert(
+                        (self.pools[pool], self.env().caller()), 
+                        &(pooldata.tokens/pooldata.vests),
+                    );
+
+                    // emit mint Approval event
+                    Self::env().emit_event(Approval {
+                        owner: Some(self.pools[pool]),
+                        spender: Some(self.env().caller()),
+                        amount: pooldata.tokens/pooldata.vests,
+                    });
+                }
+            }
+            true
+        }
+
+        /// function to check if enough time has passed to push next payout
+        #[ink(message)]
+        pub fn check_time(&mut self) -> bool {
+
+            // perform initial token distribution
+            if self.monthspassed == 0 && !self.TGEtriggered {
+
+                // make first distribution
+                self.pool_distribution();
+
+                // TGE is now complete
+                self.TGEtriggered = true;
+            }
+
+            // test to see if current time falls beyond time for next payout
+            if self.env().block_timestamp() > self.nextpayout {
+
+                // update time variables
+                self.nextpayout += self.onemonth;
+                self.monthspassed += 1;
+
+                // distribute next round of tokens to pool
+                self.pool_distribution();
+
+                return true
+            }
+
+            // too early
+            false
+        }
+
+        /// function for user to claim the token share they are currently entitled to
+        #[ink(message)]
+        pub fn claim_tokens(&mut self, claimant: AccountId) -> bool {
+
+            // get data structs
+            let mut this_member = self.memberdata.get(claimant).unwrap();
+            let this_pool = self.pooldata.get(self.pools[this_member.pool as usize]).unwrap();
+
+            // require share has not been completely paid out
+            if this_member.paid == this_member.share {
+                ink_env::debug_println!("claimant has already been paid out completely");
+                return false
+            }
+
+            // require if investor, to pay due first
+            if this_member.owes > 0 {
+                ink_env::debug_println!("claimant is investor who still needs to pay dues");
+                return false
+            }
+
+            // require number of payouts not to exceed number of vests
+            if this_member.payouts >= this_pool.vests {
+                ink_env::debug_println!("too many payouts, claimant has already been paid out");
+                return false
+            }
+
+            // now make sure monthspassed is up to date
+            self.check_time();
+
+            // require cliff to have been surpassed
+            if self.monthspassed < this_pool.cliff {
+                ink_env::debug_println!("too soon, the cliff has not yet been surpassed");
+                return false
+            }
+
+            // determine the number of payments claimant is entitled to
+            let payments: u128;
+            if this_pool.cliff + this_pool.vests <= self.monthspassed {
+            // for first case, claimant waited until all payments are available
+
+                // payments owed are payments remaining 
+                payments = this_pool.vests - this_member.payouts;
+
+            } else {
+            // for second case, claimant did not wait and is claiming only a portion of payments
+                
+                // factor of one to line everything up right
+                payments = 1 + self.monthspassed - this_member.payouts - this_pool.cliff;
+
+            }
+
+            // now calculate the payout owed
+            let mut payout: u128 = (this_member.share/this_pool.vests)*payments;
+
+            // if this is final payment, add token remainder to payout
+            if this_member.share - this_member.paid - payout < this_member.share/this_pool.vests {
+
+                // add remainder
+                payout += this_member.share % this_pool.vests;
+            }
+
+            // now transfer tokens
+            let balance_sender = self.balance_of(self.pools[this_member.pool as usize]);
+            let balance_recipient = self.balance_of(claimant);
+            self.balances.insert(self.pools[this_member.pool as usize], &(balance_sender - payout));
+            self.balances.insert(claimant, &(balance_recipient + payout));
+
+            // emit transfer event
+            Self::env().emit_event(Transfer {
+                from: Some(self.pools[this_member.pool as usize]),
+                to: Some(claimant),
+                amount: payout,
+            });
+
+            // finally update member data struct state
+            this_member.payouts += payments;
+            this_member.paid += payout;
+
+            true
         }
 
 ////////////////////////////////////////////////////////////////////
