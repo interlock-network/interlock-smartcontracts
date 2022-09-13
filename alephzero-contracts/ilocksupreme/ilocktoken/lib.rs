@@ -82,8 +82,8 @@ pub mod ilocktoken {
         pools: [AccountId; 12], // this is pattern to iterate through pooldata mapping
         poolcount: u8,
         monthspassed: u128,
-        nextpayout: u64,
-        onemonth: u64,
+        nextpayout: u128,
+        onemonth: u128,
         TGEtriggered: bool,
     }
 
@@ -115,6 +115,7 @@ pub mod ilocktoken {
         /// and simultaneously creates TGE
         /// (splitSupply() and triggerTGE())
         #[ink(constructor)]
+        // takes in array of pool addresses generated earlier, pre token contract constructor
         pub fn new_token(pools: [AccountId; 12]) -> Self {
 
             // create contract
@@ -227,14 +228,14 @@ pub mod ilocktoken {
                 }
 
                 // set metadata
-                let month = 2592000; // derived from two unix timestamps 30 days apart
+                let month: u128 = 2592000; // derived from two unix timestamps 30 days apart
                 contract.name = "Interlock Network".to_string();
                 contract.symbol = "ILOCK".to_string();
                 contract.decimals = 18;
                 contract.poolcount = POOLCOUNT as u8;
                 contract.monthspassed = 0;
                 contract.onemonth = month;
-                contract.nextpayout = Self::env().block_timestamp() + month;
+                contract.nextpayout = Self::env().block_timestamp() as u128 + month;
                 contract.TGEtriggered = false;
 
             })
@@ -259,20 +260,20 @@ pub mod ilocktoken {
                     self.transfer_from(
                         self.env().account_id(),
                         self.pools[pool],
-                        pooldata.tokens/pooldata.vests,
+                        pooldata.tokens / pooldata.vests,
                     );
 
                     // adjust owner's allowance
                     self.allowances.insert(
                         (self.pools[pool], self.env().caller()), 
-                        &(pooldata.tokens/pooldata.vests),
+                        &(pooldata.tokens / pooldata.vests),
                     );
 
                     // emit mint Approval event
                     Self::env().emit_event(Approval {
                         owner: Some(self.pools[pool]),
                         spender: Some(self.env().caller()),
-                        amount: pooldata.tokens/pooldata.vests,
+                        amount: pooldata.tokens / pooldata.vests,
                     });
                 }
             }
@@ -294,7 +295,7 @@ pub mod ilocktoken {
             }
 
             // test to see if current time falls beyond time for next payout
-            if self.env().block_timestamp() > self.nextpayout {
+            if self.env().block_timestamp() as u128 > self.nextpayout {
 
                 // update time variables
                 self.nextpayout += self.onemonth;
@@ -362,7 +363,7 @@ pub mod ilocktoken {
             }
 
             // now calculate the payout owed
-            let mut payout: u128 = (this_member.share/this_pool.vests)*payments;
+            let mut payout: u128 = (this_member.share / this_pool.vests)*payments;
 
             // if this is final payment, add token remainder to payout
             if this_member.share - this_member.paid - payout < this_member.share/this_pool.vests {
@@ -389,6 +390,75 @@ pub mod ilocktoken {
             this_member.paid += payout;
 
             true
+        }
+
+////////////////////////////////////////////////////////////////////
+
+        /// function that returns a member's vesting status
+        #[ink(message)]
+        pub fn vesting_status(&self, vestee: AccountId) -> (u128, u128, u128, u128, u128) {
+
+            // get pool and member data structs first
+            let this_member = self.memberdata.get(vestee).unwrap();
+            let this_pool = self.pooldata.get(self.pools[this_member.pool as usize]).unwrap();
+
+            // first we need to compute how long until the next payout is available
+            let timeleft: u128;
+            if self.monthspassed >= this_pool.vests + this_pool.cliff {
+            // what happens when time surpasses vests and cliff? vv
+
+                // it's time for everything to payout, no more timer
+                timeleft = 0;
+
+            } else if self.monthspassed < this_pool.cliff {
+            // what happens if cliff hasn't been surpassed yet?
+
+                // timeleft is time til next month plus time left on cliff
+                timeleft = (this_pool.cliff - self.monthspassed - 1) * self.onemonth +
+                    self.nextpayout - self.env().block_timestamp() as u128;
+
+            } else {
+            // during vesting period, time left is always time until nextpayout
+                
+                timeleft = self.nextpayout - self.env().block_timestamp() as u128;
+            }
+
+            // how much does investor still owe in dues?
+            let stillowes: u128 = this_member.owes;
+
+            // how much has member already claimed?
+            let paidout: u128 = this_member.paid;
+
+            // how much does member have yet to collect?
+            let payremaining: u128 = this_member.share - this_member.paid;
+
+            // now compute the tokens available to claim at given moment
+            let payavailable: u128;
+            if self.monthspassed >= this_pool.cliff &&
+                self.monthspassed < this_pool.cliff + this_pool.vests {
+            // if months passed are inbetween cliff and end of vesting period
+                
+                payavailable = (1 + self.monthspassed - this_pool.cliff - this_member.payouts) *
+                    (this_member.share / this_pool.vests);
+
+            } else if self.monthspassed < this_pool.cliff {
+            // until time passes cliff, no pay is available
+
+                payavailable = 0;
+
+            } else {
+            // after passing cliff and vest, the rest of share is available
+
+                payavailable = this_member.share - this_member.paid;
+            }
+
+            return (
+                timeleft,
+                stillowes,
+                paidout,
+                payremaining,
+                payavailable,
+            )
         }
 
 ////////////////////////////////////////////////////////////////////
