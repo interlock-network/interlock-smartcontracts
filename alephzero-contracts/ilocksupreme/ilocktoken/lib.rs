@@ -195,7 +195,7 @@ pub mod ilocktoken {
                     36,
                     24,
                     24,
-                    48,
+                    48,   // This is rewards pool. Should #vests be 1 instead? Probably for consistency's sake.
                     84,
                     1,
                     48,
@@ -413,11 +413,6 @@ pub mod ilocktoken {
             } else {
                 payments = 0;
             }
-
-
-            ink_env::debug_println!("passed{:?}", self.monthspassed);
-            ink_env::debug_println!("payout{:?}", this_member.payouts);
-            ink_env::debug_println!("payment{:?}", payments);
 
             // now calculate the payout owed
             let mut payout: u128 = (this_member.share / this_pool.vests)*payments;
@@ -691,6 +686,16 @@ pub mod ilocktoken {
             true
         }
 
+    
+
+//// misc  //////////////////////////////////////////////////////////////////////
+        
+        /// function to provide rewards pool address to ilockrewards contract
+        #[ink(message)]
+        pub fn rewards_pool(&self) -> AccountId {
+            self.pools[7]
+        }
+
     }
 
 //// tests //////////////////////////////////////////////////////////////////////
@@ -713,11 +718,6 @@ pub mod ilocktoken {
         use ink_lang::codegen::Env;
 
         type Event = <ILOCKtoken as ::ink_lang::reflect::ContractEventBase>::Type;
-   //     type Accounts = test::DefaultAccounts<DefaultEnvironment>;
-
-     //   fn default_accounts() -> Accounts {
-       //     test::default_accounts() 
-        //}
 
         pub const DECIMALS_TOTAL: u128 = 1_000_000_000_000_000_000;
         pub const SUPPLY: u128 = 1_000_000_000;
@@ -725,9 +725,6 @@ pub mod ilocktoken {
         /// test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
-
-
-//            let accounts = default_accounts();
 
             let pool_accounts: [AccountId; 12] = [
                 AccountId::from([0x11; 32]),

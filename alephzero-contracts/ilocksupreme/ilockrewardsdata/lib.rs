@@ -31,9 +31,8 @@ pub mod ilockrewardsdata {
     #[derive(SpreadAllocate)]
     #[ink(storage)]
     pub struct ILOCKrewardsData {
-        rewardedTotal: Balance,
-        rewardedUser: Mapping<AccountId, Balance>,
-        rewardFactor: u32,
+        rewardedTotal: u128,
+        rewardedUser: Mapping<AccountId, u128>,
     }
 
     impl ILOCKrewardsData {
@@ -51,30 +50,29 @@ pub mod ilockrewardsdata {
                 // initialize
                 contract.rewardedTotal = 0;
                 contract.rewardedUser.insert(&caller, &0);
-                contract.rewardFactor = 0; // << This determines what the reward will be
 
             })
         }
 
         /// get rewarded total
         #[ink(message)]
-        pub fn rewardedTotal(&self) -> Balance {
+        pub fn rewardedTotal(&self) -> u128 {
 
             self.rewardedTotal
         }
 
         /// set rewarded total
         #[ink(message)]
-        pub fn mut_rewardedTotal(&mut self, total: Balance) -> bool {
+        pub fn mut_rewardedTotal(&mut self, reward: u128) -> bool {
 
-            self.rewardedTotal = total;
+            self.rewardedTotal += reward;
 
             true
         }
 
         /// get user rewards
         #[ink(message)]
-        pub fn rewardedUser(&self, user: AccountId) -> Balance {
+        pub fn rewardedUser(&self, user: AccountId) -> u128 {
 
             match self.rewardedUser.get(&user) {
                 Some(value) => value,
@@ -84,7 +82,7 @@ pub mod ilockrewardsdata {
 
         /// set user rewards
         #[ink(message)]
-        pub fn mut_rewardedUser(&mut self, user: AccountId, reward: Balance) -> bool {
+        pub fn mut_rewardedUser(&mut self, user: AccountId, reward: u128) -> bool {
 
             // update total rewarded to user
             self.rewardedUser.insert(&user, &reward);
@@ -94,22 +92,5 @@ pub mod ilockrewardsdata {
 
             true
         }
-
-        /// get reward factor
-        #[ink(message)]
-        pub fn rewardFactor(&self) -> u32 {
-
-            self.rewardFactor
-        }
-
-        /// set reward factor
-        #[ink(message)]
-        pub fn mut_rewardFactor(&mut self, factor: u32) -> bool {
-
-            self.rewardFactor = factor;
-            
-            true
-        }
-        
     }
 }
