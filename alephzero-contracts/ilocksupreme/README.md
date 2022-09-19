@@ -1,6 +1,6 @@
 # ILOCKsupreme Smart Contracts
 
-ILOCKsupreme is the collections of all Interlock Network smart contracts on Aleph Zero. For now this consists of one ERC20-style token contract, and one contract to manage user rewards for surfing the web with browser extension.
+ILOCKsupreme is the main collection of Interlock Network smart contracts on Aleph Zero. For now this consists of one ERC20-style token contract, and one contract to manage user rewards for surfing the web with browser extension. Future contracts will be responsible for Phase 2, where we implement the security staking model for users to actively earn rewards by staking tokens on questionable websites.
 
 ## How to get setup
 
@@ -37,4 +37,8 @@ cargo +nightly contract build
 ```
 to build token portion of ilocksupreme.
 
-Then navigate to the ilockrewards directory.
+Do the same thing in the ilockrewardsdata directory.
+
+Finally navigate to the ilockrewards directory and again, do the same thing.
+
+To run a contract, upload to [testnet.alephzero.org](https://testnet.alephzero.org).

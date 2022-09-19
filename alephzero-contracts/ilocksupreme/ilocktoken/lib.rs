@@ -246,9 +246,230 @@ pub mod ilocktoken {
             })
         }
 
+/////// modifiers ///////////////////////////////////////////////////////////
+
+        /// . make sure caller is owner
+        /// . returns true if caller is owner
+        fn is_owner(
+            &self,
+        ) -> bool {
+            self.env().caller() == self.owner
+        }
+
+        /// . make sure transfer amount is available
+        /// . returns true if token holder has enough
+        fn has_enough(
+            &self,
+            holder: AccountId,
+            amount: u128,
+        ) -> bool {
+            self.balances.get(holder).unwrap() >= amount
+        }
+
+        /// . make sure allowance is sufficient
+        /// . returns true if token spender has sufficient allowance
+        fn allowed_enough(
+            &self,
+            holder: AccountId,
+            spender: AccountId,
+            amount: u128,
+        ) -> bool {
+            self.allowances.get((holder, spender)).unwrap() >= amount
+        }
+
+        /// . make sure account is not zero account
+        /// . returns true if not zero account
+        fn not_zero(
+            &self,
+            account: AccountId,
+        ) -> bool {
+            account != ink_env::AccountId::from([0_u8; 32])
+        }
+
+        /// . protect against reentrancy
+        fn no_reentery(
+            &mut self,
+        ) -> bool {
+
+            // reentrancy modifier code here
+
+            true
+        }
+
+
+/////// ERC20 getters ///////////////////////////////////////////////////////////
+
+        /// token decimal count getter
+        #[ink(message)]
+        pub fn name(
+            &self,
+        ) -> String {
+
+            self.name.clone()
+        }
+
+        /// token decimal count getter
+        #[ink(message)]
+        pub fn symbol(
+            &self,
+        ) -> String {
+
+            self.symbol.clone()
+        }
+
+        /// token decimal count getter
+        #[ink(message)]
+        pub fn decimals(
+            &self,
+        ) -> u8 {
+
+            self.decimals
+        }
+
+        /// total supply getter
+        #[ink(message)]
+        pub fn total_supply(
+            &self,
+        ) -> u128 {
+
+            self.totalsupply
+        }
+
+        /// account balance getter
+        #[ink(message)]
+        pub fn balance_of(
+            &self,
+            account: AccountId,
+        ) -> u128 {
+
+            match self.balances.get(account) {
+                Some(value) => value,
+                None => 0,
+            }
+        }
+
+        /// account allowance getter
+        #[ink(message)]
+        pub fn allowance(
+            &self,
+            owner: AccountId,
+            spender: AccountId,
+        ) -> u128 {
+
+            match self.allowances.get((owner, spender)) {
+                Some(value) => value,
+                None => 0,
+            }
+        }
+        
+/////// ERC20 doers /////////////////////////////////////////////////////////////
+
+        /// transfer method
+        #[ink(message)]
+        pub fn transfer(
+            &mut self,
+            recipient: AccountId,
+            amount: u128,
+        ) -> bool {
+
+            // get caller information
+            let sender = self.env().caller();
+            let sender_balance = self.balance_of(sender);
+
+            // make sure balance is adequate
+            if sender_balance < amount {
+                ink_env::debug_println!("Insufficient balance");
+                return false
+            }
+
+            // update balances
+            let recipient_balance = self.balance_of(recipient);
+            self.balances.insert(sender, &(sender_balance - amount));
+            self.balances.insert(recipient, &(recipient_balance + amount));
+
+            // emit Transfer event
+            Self::env().emit_event(Transfer {
+                from: Some(sender),
+                to: Some(recipient),
+                amount: amount,
+            });
+
+            true
+        }
+
+        /// approve method
+        #[ink(message)]
+        pub fn approve(
+            &mut self,
+            spender: AccountId,
+            amount: u128,
+        ) -> bool {
+
+            // get caller information
+            let owner = self.env().caller();
+
+            // add/update approval amount
+            self.allowances.insert((owner, spender), &amount);
+
+            // emit Approval event
+            self.env().emit_event(Approval {
+                owner: Some(owner),
+                spender: Some(spender),
+                amount: amount,
+            });
+
+            true
+        }
+
+        /// transfer from method
+        #[ink(message)]
+        pub fn transfer_from(
+            &mut self,
+            from: AccountId,
+            to: AccountId,
+            amount: u128,
+        ) -> bool {
+
+            // get owner balance
+            let from_balance = self.balance_of(from);
+
+            // make sure balance is adequate
+            if from_balance < amount {
+                ink_env::debug_println!("Insufficient balance");
+                return false
+            }
+
+            // update balances
+            self.balances.insert(from, &(from_balance - amount));
+            let to_balance = self.balance_of(to);
+            self.balances.insert(to, &(to_balance + amount));
+
+            // update allowances
+            let caller = self.env().caller();
+            let caller_allowance = self.allowance(from, caller);
+            self.allowances.insert((from, caller), &(caller_allowance - amount));
+
+            // emit Approval event
+            self.env().emit_event(Approval {
+                owner: Some(from),
+                spender: Some(caller),
+                amount: amount,
+            });
+
+            // emit Transfer event
+            Self::env().emit_event(Transfer {
+                from: Some(from),
+                to: Some(to),
+                amount: amount,
+            });
+
+            true
+        }
+
 /////// distributing /////////////////////////////////////////////////////////////
 
-        /// function to distribute tokens to respective pools
+        /// . function to distribute tokens to respective pools
+        /// . TGE is complete when distribute_pools() completes
         #[ink(message)]
         pub fn distribute_pools(
             &mut self,
@@ -296,7 +517,7 @@ pub mod ilocktoken {
 
 /////// timing /////////////////////////////////////////////////////////////
 
-        /// function to check if enough time has passed to push next payout
+        /// function to check if enough time has passed to collect next payout
         #[ink(message)]
         pub fn check_time(
             &mut self,
@@ -517,174 +738,6 @@ pub mod ilocktoken {
             )
         }
 
-/////// ERC20 getters ///////////////////////////////////////////////////////////
-
-        /// token decimal count getter
-        #[ink(message)]
-        pub fn name(
-            &self,
-        ) -> String {
-
-            self.name.clone()
-        }
-
-        /// token decimal count getter
-        #[ink(message)]
-        pub fn symbol(
-            &self,
-        ) -> String {
-
-            self.symbol.clone()
-        }
-
-        /// token decimal count getter
-        #[ink(message)]
-        pub fn decimals(
-            &self,
-        ) -> u8 {
-
-            self.decimals
-        }
-
-        /// total supply getter
-        #[ink(message)]
-        pub fn total_supply(
-            &self,
-        ) -> u128 {
-
-            self.totalsupply
-        }
-
-        /// account balance getter
-        #[ink(message)]
-        pub fn balance_of(
-            &self,
-            account: AccountId,
-        ) -> u128 {
-
-            match self.balances.get(account) {
-                Some(value) => value,
-                None => 0,
-            }
-        }
-
-        /// account allowance getter
-        #[ink(message)]
-        pub fn allowance(
-            &self,
-            owner: AccountId,
-            spender: AccountId,
-        ) -> u128 {
-
-            match self.allowances.get((owner, spender)) {
-                Some(value) => value,
-                None => 0,
-            }
-        }
-        
-/////// ERC20 doers /////////////////////////////////////////////////////////////
-
-        /// transfer method
-        #[ink(message)]
-        pub fn transfer(
-            &mut self,
-            recipient: AccountId,
-            amount: u128,
-        ) -> bool {
-
-            // get caller information
-            let sender = self.env().caller();
-            let sender_balance = self.balance_of(sender);
-
-            // make sure balance is adequate
-            if sender_balance < amount {
-                ink_env::debug_println!("Insufficient balance");
-                return false
-            }
-
-            // update balances
-            let recipient_balance = self.balance_of(recipient);
-            self.balances.insert(sender, &(sender_balance - amount));
-            self.balances.insert(recipient, &(recipient_balance + amount));
-
-            // emit Transfer event
-            Self::env().emit_event(Transfer {
-                from: Some(sender),
-                to: Some(recipient),
-                amount: amount,
-            });
-
-            true
-        }
-
-        /// approve method
-        #[ink(message)]
-        pub fn approve(
-            &mut self,
-            spender: AccountId,
-            amount: u128,
-        ) -> bool {
-
-            // get caller information
-            let owner = self.env().caller();
-
-            // add/update approval amount
-            self.allowances.insert((owner, spender), &amount);
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(owner),
-                spender: Some(spender),
-                amount: amount,
-            });
-
-            true
-        }
-
-        /// transfer from method
-        #[ink(message)]
-        pub fn transfer_from(
-            &mut self,
-            from: AccountId,
-            to: AccountId,
-            amount: u128,
-        ) -> bool {
-
-            // get owner balance
-            let from_balance = self.balance_of(from);
-
-            // make sure balance is adequate
-            if from_balance < amount {
-                ink_env::debug_println!("Insufficient balance");
-                return false
-            }
-
-            // update balances
-            self.balances.insert(from, &(from_balance - amount));
-            let to_balance = self.balance_of(to);
-            self.balances.insert(to, &(to_balance + amount));
-
-            // update allowances
-            let caller = self.env().caller();
-            let caller_allowance = self.allowance(from, caller);
-            self.allowances.insert((from, caller), &(caller_allowance - amount));
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(from),
-                spender: Some(caller),
-                amount: amount,
-            });
-
-            // emit Transfer event
-            Self::env().emit_event(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount: amount,
-            });
-
-            true
-        }
 
     
 
@@ -692,9 +745,102 @@ pub mod ilocktoken {
         
         /// function to provide rewards pool address to ilockrewards contract
         #[ink(message)]
-        pub fn rewards_pool(&self) -> AccountId {
+        pub fn rewards_pool(
+            &self,
+        ) -> AccountId {
+
             self.pools[7]
         }
+
+        /// function to increment monthspassed for testing
+        #[ink(message)]
+        pub fn increment_month(
+            &mut self,
+        ) -> bool {
+
+            self.monthspassed += 1;
+            true
+        }
+
+
+        /// function to change contract owners
+        #[ink(message)]
+        pub fn change_owner(
+            &mut self,
+            newowner: AccountId,
+        ) -> bool {
+
+            if !self.is_owner() {
+                ink_env::debug_println!("caller is not owner");
+                return false
+            }
+
+            self.owner = newowner;
+
+            true
+        }
+
+        /// function to disown contract
+        #[ink(message)]
+        pub fn disown(
+            &mut self,
+        ) -> bool {
+
+            if !self.is_owner() {
+                ink_env::debug_println!("caller is not owner");
+                return false
+            }
+
+            self.owner = ink_env::AccountId::from([0_u8; 32]);
+
+            true
+        }
+
+        /// function to receive dues from investors in form of AZERO
+        #[ink(message)]
+        pub fn pay_azero(
+            &mut self,
+            member: AccountId,
+        ) -> bool {
+
+
+            let mut this_member = self.memberdata.get(member).unwrap();
+
+            if self.env().transferred_value() > this_member.owes {
+                ink_env::debug_println!("paying more than owed");
+                return false
+            }
+            
+            this_member.owes -= self.env().transferred_value();
+
+            self.memberdata.insert(member, &this_member);
+
+            true
+        }
+
+        /// function to receive dues from investors in form of other currencies
+        #[ink(message)]
+        pub fn pay_other(
+            &mut self,
+            member: AccountId,
+            amount: u128,
+        ) -> bool {
+
+
+            let mut this_member = self.memberdata.get(member).unwrap();
+
+            if amount > this_member.owes {
+                ink_env::debug_println!("paying more than owed");
+                return false
+            }
+            
+            this_member.owes -= amount;
+
+            self.memberdata.insert(member, &this_member);
+
+            true
+        }
+
 
     }
 
