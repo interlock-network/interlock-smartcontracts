@@ -38,6 +38,78 @@ pub mod ilocktoken {
 
 //// state /////////////////////////////////////////////////////////////
 
+    /// magic numbers
+    pub const ID_LENGTH: usize = 32;                                // 32B account id
+    pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
+    pub const MEMBER_COUNT: usize = 1000;                            // number of vesting stakeholders
+    pub const MONTH: u128 = 2592000;                                // seconds in 30 days
+
+    /// token data
+    pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
+    pub const DECIMALS_POWER10: u128 = 1_000_000_000_000_000_000;   // 10^18
+    pub const SUPPLY_CAP: u128 = TOKEN_CAP * DECIMALS_POWER10;      // 10^27
+    pub const TOKEN_NAME: &str = "Interlock Network";
+    pub const TOKEN_DECIMALS: u8 = 18;
+    pub const TOKEN_SYMBOL: &str = "ILOCK";
+
+    /// pool data
+    pub const POOL_NAMES: [&str; POOL_COUNT] = [
+                    "early_backers+venture_capital",
+                    "presale_1",
+                    "presale_2",
+                    "presale_3",
+                    "team+founders",
+                    "outlier_ventures",
+                    "advisors",
+                    "rewards",
+                    "foundation",
+                    "partners",
+                    "whitelist",
+                    "public_sale",
+                ];
+    pub const POOL_TOKENS: [u128; POOL_COUNT] = [
+                    20_000_000,
+                    48_622_222,
+                    66_666_667,
+                    40_000_000,
+                    200_000_000,
+                    40_000_000,
+                    25_000_000,
+                    285_000_000,
+                    172_711_111,
+                    37_000_000,
+                    15_000_000,
+                    50_000_000,
+                ];
+    pub const POOL_VESTS: [u128; POOL_COUNT] = [
+                    24,
+                    18,
+                    15,
+                    12,
+                    36,
+                    24,
+                    24,
+                    1,
+                    84,
+                    1,
+                    48,
+                    1,
+                ];
+    pub const POOL_CLIFFS: [u128; POOL_COUNT] = [
+                    1,
+                    1,
+                    1,
+                    1,
+                    6,
+                    1,
+                    1,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                ];
+
     /// PoolData struct contains all pertinant information about the various token pools
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
@@ -52,7 +124,7 @@ pub mod ilocktoken {
         cliff: u128,
     }
 
-    /// MemberData struct contains all pertinent information for each member
+    /// StakeholderData struct contains all pertinent information for each stakeholder
     /// (Besides balance and allowance mappings)
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
@@ -60,7 +132,7 @@ pub mod ilocktoken {
     derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
     )]
     #[derive(Debug)]
-    pub struct MemberData {
+    pub struct StakeholderData {
         owes: u128,
         paid: u128,
         share: u128,
@@ -73,20 +145,13 @@ pub mod ilocktoken {
     #[ink(storage)]
     pub struct ILOCKtoken {
         owner: AccountId,
-        name: String,
-        symbol: String,
-        decimals: u8,
-        decimalfactor: u128,
-        totalsupply: u128,
         balances: Mapping<AccountId, u128>,
         allowances: Mapping<(AccountId, AccountId), u128>,
-        memberdata: Mapping<AccountId, MemberData>,
+        stakeholderdata: Mapping<AccountId, StakeholderData>,
         pooldata: Mapping<AccountId, PoolData>,
-        pools: [AccountId; 12], // this is pattern to iterate through pooldata mapping
-        poolcount: u8,
+        pools: [AccountId; POOL_COUNT], // this is pattern to iterate through pooldata mapping
         monthspassed: u128,
         nextpayout: u128,
-        onemonth: u128,
         TGEtriggered: bool,
     }
 
@@ -117,132 +182,57 @@ pub mod ilocktoken {
 
 /////// init /////////////////////////////////////////////////////////////
 
-        /// constructor that initializes contract
-        /// and simultaneously creates TGE
-        /// (splitSupply() and triggerTGE())
+        /// . constructor to initialize contract
+        /// . note: pool contracts must be created prior to construction (for args)
         #[ink(constructor)]
         // takes in array of pool addresses generated earlier, pre token contract constructor
         pub fn new_token(
-            pools: [AccountId; 12],
+            pools: [AccountId; POOL_COUNT],
         ) -> Self {
 
             // create contract
             initialize_contract(|contract: &mut Self| {
 
-                // define supply and decimals
-                let token_total: u128 = 1_000_000_000;
-                let decimal_total: u128 = 1_000_000_000_000_000_000;
-                let supply: u128 = token_total * decimal_total;
-
                 // define owner as caller
                 let caller = Self::env().caller();
-                contract.owner = caller;
-                contract.totalsupply = supply;
-                contract.decimalfactor = decimal_total;
-                contract.balances.insert(Self::env().account_id(), &supply);
-                contract.allowances.insert((Self::env().account_id(), Self::env().caller()), &supply);
-
-                // emit mint Transfer event
-                Self::env().emit_event(Transfer {
-                    from: None,
-                    to: Some(Self::env().account_id()),
-                    amount: supply,
-                });
-
-                // emit mint Approval event
-                Self::env().emit_event(Approval {
-                    owner: Some(Self::env().account_id()),
-                    spender: Some(Self::env().caller()),
-                    amount: supply,
-                });
-
-
-                // pool data
-                const POOLCOUNT: usize = 12;
-                let pool_names: [&str; POOLCOUNT] = [
-                    "early_backers+venture_capital",
-                    "presale_1",
-                    "presale_2",
-                    "presale_3",
-                    "team+founders",
-                    "outlier_ventures",
-                    "advisors",
-                    "rewards",
-                    "foundation",
-                    "partners",
-                    "whitelist",
-                    "public_sale",
-                ];
-                let pool_tokens: [u128; POOLCOUNT] = [
-                    20_000_000,
-                    48_622_222,
-                    66_666_667,
-                    40_000_000,
-                    200_000_000,
-                    40_000_000,
-                    25_000_000,
-                    285_000_000,
-                    172_711_111,
-                    37_000_000,
-                    15_000_000,
-                    50_000_000,
-                ];
-                let pool_vests: [u128; POOLCOUNT] = [
-                    24,
-                    18,
-                    15,
-                    12,
-                    36,
-                    24,
-                    24,
-                    48,   // This is rewards pool. Should #vests be 1 instead? Probably for consistency's sake.
-                    84,
-                    1,
-                    48,
-                    1,
-                ];
-                let pool_cliffs: [u128; POOLCOUNT] = [
-                    1,
-                    1,
-                    1,
-                    1,
-                    6,
-                    1,
-                    1,
-                    0,
-                    1,
-                    0,
-                    0,
-                    0,
-                ];
 
                 // assign pool data
-                for pool in 0..POOLCOUNT {
+                for pool in 0..POOL_COUNT {
                     contract.pools[pool] = pools[pool];
 
                     // define pooldata struct for this pool
                     let this_pool = PoolData {
-                        name: pool_names[pool].to_string(),
-                        tokens: pool_tokens[pool] * decimal_total,
-                        vests: pool_vests[pool],
-                        cliff: pool_cliffs[pool],
+                        name: POOL_NAMES[pool].to_string(),
+                        tokens: POOL_TOKENS[pool] * DECIMALS_POWER10,
+                        vests: POOL_VESTS[pool],
+                        cliff: POOL_CLIFFS[pool],
                     };
 
                     // push current pool into pooldata map
                     contract.pooldata.insert(pools[pool], &this_pool);
                 }
 
-                // set metadata
-                let month: u128 = 2592000; // derived from two unix timestamps 30 days apart
-                contract.name = "Interlock Network".to_string();
-                contract.symbol = "ILOCK".to_string();
-                contract.decimals = 18;
-                contract.poolcount = POOLCOUNT as u8;
+                // set initial data
                 contract.monthspassed = 0;
-                contract.onemonth = month;
-                contract.nextpayout = Self::env().block_timestamp() as u128 + month;
+                contract.nextpayout = Self::env().block_timestamp() as u128 + MONTH;
                 contract.TGEtriggered = false;
+                contract.owner = caller;
+                contract.balances.insert(Self::env().account_id(), &SUPPLY_CAP);
+                contract.allowances.insert((Self::env().account_id(), Self::env().caller()), &SUPPLY_CAP);
 
+                // emit mint Transfer event
+                Self::env().emit_event(Transfer {
+                    from: None,
+                    to: Some(Self::env().account_id()),
+                    amount: SUPPLY_CAP,
+                });
+
+                // emit mint Approval event
+                Self::env().emit_event(Approval {
+                    owner: Some(Self::env().account_id()),
+                    spender: Some(Self::env().caller()),
+                    amount: SUPPLY_CAP,
+                });
             })
         }
 
@@ -283,7 +273,7 @@ pub mod ilocktoken {
             &self,
             account: AccountId,
         ) -> bool {
-            account != ink_env::AccountId::from([0_u8; 32])
+            account != ink_env::AccountId::from([0_u8; ID_LENGTH])
         }
 
         /// . protect against reentrancy
@@ -305,7 +295,7 @@ pub mod ilocktoken {
             &self,
         ) -> String {
 
-            self.name.clone()
+            TOKEN_NAME.to_string()
         }
 
         /// token decimal count getter
@@ -314,7 +304,7 @@ pub mod ilocktoken {
             &self,
         ) -> String {
 
-            self.symbol.clone()
+            TOKEN_SYMBOL.to_string()
         }
 
         /// token decimal count getter
@@ -323,7 +313,7 @@ pub mod ilocktoken {
             &self,
         ) -> u8 {
 
-            self.decimals
+            TOKEN_DECIMALS
         }
 
         /// total supply getter
@@ -332,7 +322,7 @@ pub mod ilocktoken {
             &self,
         ) -> u128 {
 
-            self.totalsupply
+            SUPPLY_CAP
         }
 
         /// account balance getter
@@ -482,7 +472,7 @@ pub mod ilocktoken {
             }
 
             // iterate through all pools
-            for pool in 0..self.poolcount as usize {
+            for pool in 0..POOL_COUNT as usize {
 
                 // get pooldata struct for given pool
                 let this_pool = self.pooldata.get(self.pools[pool]).unwrap();
@@ -527,7 +517,7 @@ pub mod ilocktoken {
             if self.env().block_timestamp() as u128 > self.nextpayout {
 
                 // update time variables
-                self.nextpayout += self.onemonth;
+                self.nextpayout += MONTH;
                 self.monthspassed += 1;
 
                 return true
@@ -539,24 +529,24 @@ pub mod ilocktoken {
 
 /////// registration  /////////////////////////////////////////////////////////////
 
-        /// function that registers a member's wallet and vesting info
+        /// function that registers a stakeholder's wallet and vesting info
         #[ink(message)]
-        pub fn register_member(
+        pub fn register_stakeholder(
             &mut self,
-            member: AccountId,
+            stakeholder: AccountId,
             owes: u128,
             share: u128,
             pool: u128,
         ) -> bool {
 
-            // members must be added before TGE
+            // stakeholders must be added before TGE
             if self.TGEtriggered {
-                ink_env::debug_println!("member data may only be added prior to TGE. TGE happened.");
+                ink_env::debug_println!("stakeholder data may only be added prior to TGE. TGE happened.");
                 return false
             }
 
-            // create member struct
-            let this_member = MemberData {
+            // create stakeholder struct
+            let this_stakeholder = StakeholderData {
                 owes: owes,
                 paid: 0,
                 share: share,
@@ -564,8 +554,8 @@ pub mod ilocktoken {
                 payouts: 0,
             };
 
-            // insert member struct into mapping
-            self.memberdata.insert(member, &this_member);
+            // insert stakeholder struct into mapping
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             true
         }
@@ -577,7 +567,7 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn claim_tokens(
             &mut self,
-            claimant: AccountId,
+            stakeholder: AccountId,
         ) -> bool {
 
             // make sure TGE is complete
@@ -587,24 +577,24 @@ pub mod ilocktoken {
             }
 
             // get data structs
-            let mut this_member = self.memberdata.get(claimant).unwrap();
-            let this_pool = self.pooldata.get(self.pools[this_member.pool as usize]).unwrap();
+            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+            let this_pool = self.pooldata.get(self.pools[this_stakeholder.pool as usize]).unwrap();
 
             // require share has not been completely paid out
-            if this_member.paid == this_member.share {
-                ink_env::debug_println!("claimant has already been paid out completely");
+            if this_stakeholder.paid == this_stakeholder.share {
+                ink_env::debug_println!("stakeholder has already been paid out completely");
                 return false
             }
 
             // require if investor, to pay due first
-            if this_member.owes > 0 {
-                ink_env::debug_println!("claimant is investor who still needs to pay dues");
+            if this_stakeholder.owes > 0 {
+                ink_env::debug_println!("stakeholder is investor who still needs to pay dues");
                 return false
             }
 
             // require number of payouts not to exceed number of vests
-            if this_member.payouts >= this_pool.vests {
-                ink_env::debug_println!("too many payouts, claimant has already been paid out");
+            if this_stakeholder.payouts >= this_pool.vests {
+                ink_env::debug_println!("too many payouts, stakeholder has already been paid out");
                 return false
             }
 
@@ -617,67 +607,67 @@ pub mod ilocktoken {
                 return false
             }
 
-            // determine the number of payments claimant is entitled to
+            // determine the number of payments stakeholder is entitled to
             let payments: u128;
             if this_pool.cliff + this_pool.vests <= self.monthspassed {
-            // for first case, claimant waited until all payments are available
+            // for first case, stakeholder waited until all payments are available
 
                 // payments owed are payments remaining 
-                payments = this_pool.vests - this_member.payouts;
+                payments = this_pool.vests - this_stakeholder.payouts;
 
             } else if self.monthspassed >= this_pool.cliff {
-            // for second case, claimant did not wait and is claiming only a portion of payments
+            // for second case, stakeholder did not wait and is claiming only a portion of payments
                 
                 // factor of one to line everything up right
-                payments = 1 + self.monthspassed - this_member.payouts - this_pool.cliff;
+                payments = 1 + self.monthspassed - this_stakeholder.payouts - this_pool.cliff;
 
             } else {
                 payments = 0;
             }
 
             // now calculate the payout owed
-            let mut payout: u128 = (this_member.share / this_pool.vests)*payments;
+            let mut payout: u128 = (this_stakeholder.share / this_pool.vests)*payments;
 
             // if this is final payment, add token remainder to payout
-            if this_member.share - this_member.paid - payout < this_member.share/this_pool.vests {
+            if this_stakeholder.share - this_stakeholder.paid - payout < this_stakeholder.share/this_pool.vests {
 
                 // add remainder
-                payout += this_member.share % this_pool.vests;
+                payout += this_stakeholder.share % this_pool.vests;
             }
 
             // now transfer tokens
-            let balance_sender = self.balance_of(self.pools[this_member.pool as usize]);
-            let balance_recipient = self.balance_of(claimant);
-            self.balances.insert(self.pools[this_member.pool as usize], &(balance_sender - payout));
-            self.balances.insert(claimant, &(balance_recipient + payout));
+            let balance_sender = self.balance_of(self.pools[this_stakeholder.pool as usize]);
+            let balance_recipient = self.balance_of(stakeholder);
+            self.balances.insert(self.pools[this_stakeholder.pool as usize], &(balance_sender - payout));
+            self.balances.insert(stakeholder, &(balance_recipient + payout));
 
             // emit transfer event
             Self::env().emit_event(Transfer {
-                from: Some(self.pools[this_member.pool as usize]),
-                to: Some(claimant),
+                from: Some(self.pools[this_stakeholder.pool as usize]),
+                to: Some(stakeholder),
                 amount: payout,
             });
 
-            // finally update member data struct state
-            this_member.payouts += payments;
-            this_member.paid += payout;
-            self.memberdata.insert(claimant, &this_member);
+            // finally update stakeholder data struct state
+            this_stakeholder.payouts += payments;
+            this_stakeholder.paid += payout;
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             true
         }
 
 /////// vesting ////////////////////////////////////////////////////////////
 
-        /// function that returns a member's vesting status
+        /// function that returns a stakeholder's vesting status
         #[ink(message)]
         pub fn vesting_status(
             &self,
             vestee: AccountId,
         ) -> (u128, u128, u128, u128, u128) {
 
-            // get pool and member data structs first
-            let this_member = self.memberdata.get(vestee).unwrap();
-            let this_pool = self.pooldata.get(self.pools[this_member.pool as usize]).unwrap();
+            // get pool and stakeholder data structs first
+            let this_stakeholder = self.stakeholderdata.get(vestee).unwrap();
+            let this_pool = self.pooldata.get(self.pools[this_stakeholder.pool as usize]).unwrap();
 
             // first we need to compute how long until the next payout is available
             let timeleft: u128;
@@ -691,7 +681,7 @@ pub mod ilocktoken {
             // what happens if cliff hasn't been surpassed yet?
 
                 // timeleft is time til next month plus time left on cliff
-                timeleft = (this_pool.cliff - self.monthspassed - 1) * self.onemonth +
+                timeleft = (this_pool.cliff - self.monthspassed - 1) * MONTH +
                     self.nextpayout - self.env().block_timestamp() as u128;
 
             } else {
@@ -701,13 +691,13 @@ pub mod ilocktoken {
             }
 
             // how much does investor still owe in dues?
-            let stillowes: u128 = this_member.owes;
+            let stillowes: u128 = this_stakeholder.owes;
 
-            // how much has member already claimed?
-            let paidout: u128 = this_member.paid;
+            // how much has stakeholder already claimed?
+            let paidout: u128 = this_stakeholder.paid;
 
-            // how much does member have yet to collect?
-            let payremaining: u128 = this_member.share - this_member.paid;
+            // how much does stakeholder have yet to collect?
+            let payremaining: u128 = this_stakeholder.share - this_stakeholder.paid;
 
             // now compute the tokens available to claim at given moment
             let payavailable: u128;
@@ -715,8 +705,8 @@ pub mod ilocktoken {
                 self.monthspassed < this_pool.cliff + this_pool.vests {
             // if months passed are inbetween cliff and end of vesting period
                 
-                payavailable = (1 + self.monthspassed - this_pool.cliff - this_member.payouts) *
-                    (this_member.share / this_pool.vests);
+                payavailable = (1 + self.monthspassed - this_pool.cliff - this_stakeholder.payouts) *
+                    (this_stakeholder.share / this_pool.vests);
 
             } else if self.monthspassed < this_pool.cliff {
             // until time passes cliff, no pay is available
@@ -726,7 +716,7 @@ pub mod ilocktoken {
             } else {
             // after passing cliff and vest, the rest of share is available
 
-                payavailable = this_member.share - this_member.paid;
+                payavailable = this_stakeholder.share - this_stakeholder.paid;
             }
 
             return (
@@ -754,13 +744,41 @@ pub mod ilocktoken {
 
         /// function to increment monthspassed for testing
         #[ink(message)]
-        pub fn increment_month(
+        pub fn TESTING_increment_month(
             &mut self,
         ) -> bool {
 
             self.monthspassed += 1;
             true
         }
+
+        /// function to increment monthspassed for testing
+        #[ink(message)]
+        pub fn TESTING_register_1000_stakeholders(
+            &mut self,
+        ) -> bool {
+
+            let mut new_address: [u8; 32] = [0; 32];
+
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[0] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[1] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[2] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[3] += 1;
+            }
+            true
+        }
+
 
 
         /// function to change contract owners
@@ -791,7 +809,7 @@ pub mod ilocktoken {
                 return false
             }
 
-            self.owner = ink_env::AccountId::from([0_u8; 32]);
+            self.owner = ink_env::AccountId::from([0_u8; ID_LENGTH]);
 
             true
         }
@@ -800,20 +818,20 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn pay_azero(
             &mut self,
-            member: AccountId,
+            stakeholder: AccountId,
         ) -> bool {
 
 
-            let mut this_member = self.memberdata.get(member).unwrap();
+            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
 
-            if self.env().transferred_value() > this_member.owes {
+            if self.env().transferred_value() > this_stakeholder.owes {
                 ink_env::debug_println!("paying more than owed");
                 return false
             }
             
-            this_member.owes -= self.env().transferred_value();
+            this_stakeholder.owes -= self.env().transferred_value();
 
-            self.memberdata.insert(member, &this_member);
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             true
         }
@@ -822,21 +840,21 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn pay_other(
             &mut self,
-            member: AccountId,
+            stakeholder: AccountId,
             amount: u128,
         ) -> bool {
 
 
-            let mut this_member = self.memberdata.get(member).unwrap();
+            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
 
-            if amount > this_member.owes {
+            if amount > this_stakeholder.owes {
                 ink_env::debug_println!("paying more than owed");
                 return false
             }
             
-            this_member.owes -= amount;
+            this_stakeholder.owes -= amount;
 
-            self.memberdata.insert(member, &this_member);
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             true
         }
@@ -865,29 +883,28 @@ pub mod ilocktoken {
 
         type Event = <ILOCKtoken as ::ink_lang::reflect::ContractEventBase>::Type;
 
-        pub const DECIMALS_TOTAL: u128 = 1_000_000_000_000_000_000;
-        pub const SUPPLY: u128 = 1_000_000_000;
+
 
         /// test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
 
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
 
             // check events
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -896,32 +913,25 @@ pub mod ilocktoken {
                 &emitted_events[0],
                 None,
                 Some(ILOCKtokenERC20.env().account_id()),
-                SUPPLY * DECIMALS_TOTAL,
+                SUPPLY_CAP,
             );
             assert_approval_event(
                 &emitted_events[1],
                 Some(ILOCKtokenERC20.env().account_id()),
                 Some(ILOCKtokenERC20.owner),
-                SUPPLY * DECIMALS_TOTAL,
+                SUPPLY_CAP,
             );
 
             assert_eq!(ILOCKtokenERC20.owner, ILOCKtokenERC20.env().caller());
-            assert_eq!(ILOCKtokenERC20.name, "Interlock Network");
-            assert_eq!(ILOCKtokenERC20.symbol, "ILOCK");
-            assert_eq!(ILOCKtokenERC20.decimals, 18);
-            assert_eq!(ILOCKtokenERC20.decimalfactor, DECIMALS_TOTAL);
-            assert_eq!(ILOCKtokenERC20.totalsupply, SUPPLY * DECIMALS_TOTAL);
-            assert_eq!(ILOCKtokenERC20.balance_of(ILOCKtokenERC20.env().account_id()), SUPPLY * DECIMALS_TOTAL);
+            assert_eq!(ILOCKtokenERC20.balance_of(ILOCKtokenERC20.env().account_id()), SUPPLY_CAP);
 
-            let test_pool6: PoolData = ILOCKtokenERC20.pooldata.get(pool_accounts[6]).unwrap();
+            let test_pool6: PoolData = ILOCKtokenERC20.pooldata.get(TEST_POOLS[6]).unwrap();
             assert_eq!(test_pool6.name, "advisors");
-            assert_eq!(test_pool6.tokens, 25_000_000 * DECIMALS_TOTAL);
+            assert_eq!(test_pool6.tokens, 25_000_000 * DECIMALS_POWER10);
             assert_eq!(test_pool6.vests, 24);
             assert_eq!(test_pool6.cliff, 1);
 
-            assert_eq!(ILOCKtokenERC20.poolcount, 12);
             assert_eq!(ILOCKtokenERC20.monthspassed, 0);
-            assert_eq!(ILOCKtokenERC20.onemonth, 2_592_000);
             assert_eq!(ILOCKtokenERC20.TGEtriggered, false);
 
         }
@@ -929,111 +939,124 @@ pub mod ilocktoken {
         /// test if name getter does its job
         #[ink::test]
         fn name_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             assert_eq!(ILOCKtokenERC20.name(), "Interlock Network");
         }
 
         /// test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+
+
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             assert_eq!(ILOCKtokenERC20.symbol(), "ILOCK");
         }
         
         /// test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+
+
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             assert_eq!(ILOCKtokenERC20.decimals(), 18);
         }
 
         /// test if total supply getter does its job
         #[ink::test]
         fn totalsupply_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
-            assert_eq!(ILOCKtokenERC20.total_supply(), SUPPLY * DECIMALS_TOTAL);
+
+
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
+            assert_eq!(ILOCKtokenERC20.total_supply(), SUPPLY_CAP);
         }
 
         /// test if balance getter does its job
         #[ink::test]
         fn balance_of_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice owns all the tokens on contract instantiation
-            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), SUPPLY * DECIMALS_TOTAL);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), SUPPLY_CAP);
 
             // Bob does not own tokens
             assert_eq!(ILOCKtokenERC20.balance_of(accounts.bob), 0);
@@ -1042,23 +1065,25 @@ pub mod ilocktoken {
         /// test if allowance getter does its job
         #[ink::test]
         fn allowance_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice has not yet approved Bob
@@ -1074,36 +1099,38 @@ pub mod ilocktoken {
         /// test if the transfer doer does its job
         #[ink::test]
         fn transfer_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice transfers tokens to Bob
             assert_eq!(ILOCKtokenERC20.transfer(accounts.bob, 10), true);
 
             // Alice balance reflects transfer
-            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), SUPPLY * DECIMALS_TOTAL - 10);
+            assert_eq!(ILOCKtokenERC20.balance_of(accounts.alice), SUPPLY_CAP - 10);
 
             // Bob balance reflects transfer
             assert_eq!(ILOCKtokenERC20.balance_of(accounts.bob), 10);
 
             // Alice attempts transfer too large
-            assert_eq!(ILOCKtokenERC20.transfer(accounts.bob, SUPPLY * DECIMALS_TOTAL), false);
+            assert_eq!(ILOCKtokenERC20.transfer(accounts.bob, SUPPLY_CAP), false);
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -1112,8 +1139,8 @@ pub mod ilocktoken {
             // check the transfer event relating to the actual trasfer
             assert_transfer_event(
                 &emitted_events[2],
-                Some(AccountId::from([0x01; 32])),
-                Some(AccountId::from([0x02; 32])),
+                Some(AccountId::from([0x01; ID_LENGTH])),
+                Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
             );
         }
@@ -1121,23 +1148,25 @@ pub mod ilocktoken {
         /// test if the approve does does its job
         #[ink::test]
         fn approve_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
@@ -1153,8 +1182,8 @@ pub mod ilocktoken {
             // check the approval event relating to the actual approval
             assert_approval_event(
                 &emitted_events[2],
-                Some(AccountId::from([0x01; 32])),
-                Some(AccountId::from([0x02; 32])),
+                Some(AccountId::from([0x01; ID_LENGTH])),
+                Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
             );
         }
@@ -1162,23 +1191,25 @@ pub mod ilocktoken {
         /// test if the transfer-from doer does its job
         #[ink::test]
         fn transfer_from_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves Bob for token transfers on her behalf
@@ -1196,7 +1227,7 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenERC20.balance_of(accounts.eve), 10);
 
             // Bob attempts a transferfrom too large
-            assert_eq!(ILOCKtokenERC20.transfer_from(accounts.alice, accounts.eve, SUPPLY * DECIMALS_TOTAL), false);
+            assert_eq!(ILOCKtokenERC20.transfer_from(accounts.alice, accounts.eve, SUPPLY_CAP), false);
 
             // check all events that happened during the previous callsd
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -1205,8 +1236,8 @@ pub mod ilocktoken {
             // check that Transfer event was emitted        
             assert_transfer_event(
                 &emitted_events[4],
-                Some(AccountId::from([0x01; 32])),
-                Some(AccountId::from([0x05; 32])),
+                Some(AccountId::from([0x01; ID_LENGTH])),
+                Some(AccountId::from([0x05; ID_LENGTH])),
                 10,
             );
         }
@@ -1214,39 +1245,41 @@ pub mod ilocktoken {
         /// test if check_time function does what it's supposed to
         #[ink::test]
         fn distribute_pools_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             ILOCKtokenERC20.distribute_pools();
 
             for pool in 0..12 {
 
-                let this_pool: PoolData = ILOCKtokenERC20.pooldata.get(pool_accounts[pool]).unwrap();
+                let this_pool: PoolData = ILOCKtokenERC20.pooldata.get(TEST_POOLS[pool]).unwrap();
 
                 assert_eq!(ILOCKtokenERC20
                     .balance_of(
-                        pool_accounts[pool]),
+                        TEST_POOLS[pool]),
                         this_pool.tokens,
                 );
                 assert_eq!(ILOCKtokenERC20
                     .allowance(
-                        pool_accounts[pool], accounts.alice),
+                        TEST_POOLS[pool], accounts.alice),
                         this_pool.tokens,
                 );
             }
@@ -1254,80 +1287,84 @@ pub mod ilocktoken {
 
         /// test if wallet registration function works as intended 
         #[ink::test]
-        fn register_member_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+        fn register_stakeholder_works() {
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
-            // bob's member data
+            // bob's stakeholder data
             let owes: u128 = 14_000;
             let share: u128 = 1_000_000;
             let pool: u128 = 3;
 
             // call registration function
-            ILOCKtokenERC20.register_member(accounts.bob, owes, share, pool);
+            ILOCKtokenERC20.register_stakeholder(accounts.bob, owes, share, pool);
 
             // verify registration stuck
-            let this_member = ILOCKtokenERC20.memberdata.get(accounts.bob).unwrap();
-            assert_eq!(this_member.owes, owes);
-            assert_eq!(this_member.paid, 0);
-            assert_eq!(this_member.share, share);
-            assert_eq!(this_member.pool, pool);
-            assert_eq!(this_member.payouts, 0);
+            let this_stakeholder = ILOCKtokenERC20.stakeholderdata.get(accounts.bob).unwrap();
+            assert_eq!(this_stakeholder.owes, owes);
+            assert_eq!(this_stakeholder.paid, 0);
+            assert_eq!(this_stakeholder.share, share);
+            assert_eq!(this_stakeholder.pool, pool);
+            assert_eq!(this_stakeholder.payouts, 0);
 
         }
         
         /// test if claim_tokens function does what it's supposed to
         #[ink::test]
         fn claim_tokens_works() {
-            let pool_accounts: [AccountId; 12] = [
-                AccountId::from([0x11; 32]),
-                AccountId::from([0x12; 32]),
-                AccountId::from([0x13; 32]),
-                AccountId::from([0x14; 32]),
-                AccountId::from([0x15; 32]),
-                AccountId::from([0x16; 32]),
-                AccountId::from([0x17; 32]),
-                AccountId::from([0x18; 32]),
-                AccountId::from([0x19; 32]),
-                AccountId::from([0x1a; 32]),
-                AccountId::from([0x1b; 32]),
-                AccountId::from([0x1c; 32]),
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+
             // construct contract and initialize accounts
-            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(pool_accounts);
+            let mut ILOCKtokenERC20 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
 
-            // bob's member data
+            // bob's stakeholder data
             let owes: u128 = 0;
             let share: u128 = 1_000_000;
             let pool: u128 = 8;
 
             // call registration function for bob
-            ILOCKtokenERC20.register_member(accounts.bob, owes, share, pool);
+            ILOCKtokenERC20.register_stakeholder(accounts.bob, owes, share, pool);
 
 
             ILOCKtokenERC20.distribute_pools();
 
-            let this_pool: PoolData = ILOCKtokenERC20.pooldata.get(pool_accounts[pool as usize]).unwrap();
-            let this_member: MemberData = ILOCKtokenERC20.memberdata.get(accounts.bob).unwrap();
+            let this_pool: PoolData = ILOCKtokenERC20.pooldata.get(TEST_POOLS[pool as usize]).unwrap();
+            let this_stakeholder: StakeholderData = ILOCKtokenERC20.stakeholderdata.get(accounts.bob).unwrap();
 
             for monthspassed in 0..86 {
 
@@ -1349,14 +1386,14 @@ pub mod ilocktoken {
                     assert_eq!(ILOCKtokenERC20
                         .balance_of(
                             accounts.bob),
-                            this_member.share,
+                            this_stakeholder.share,
                     );
                 } else {
 
                     assert_eq!(ILOCKtokenERC20
                         .balance_of(
                             accounts.bob),
-                            (this_member.share / this_pool.vests) * (monthspassed - this_pool.cliff + 1),
+                            (this_stakeholder.share / this_pool.vests) * (monthspassed - this_pool.cliff + 1),
                     );
                     ink_env::debug_println!("3.{:?}", ILOCKtokenERC20.balance_of(accounts.bob));
 
