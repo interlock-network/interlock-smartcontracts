@@ -63,10 +63,10 @@ mod ilockrewards {
 
         /// reward the user for browsing
         #[ink(message)]
-        pub fn reward_user(&mut self, reward: u128, user: AccountId) -> (u128, u128) {
+        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> (u128, u128) {
 
             // get total amount rewarded overall and to user so far
-            let mut totalUserRewarded: u128 = self.contract_ilockrewardsdata.rewardedUser(user);
+            let mut totalUserRewarded: Balance = self.contract_ilockrewardsdata.rewardedUser(user);
 
             // update total amount rewarded to user
             totalUserRewarded += reward;
@@ -78,7 +78,7 @@ mod ilockrewards {
             let rewards_pool = self.contract_ilocktoken.rewards_pool();
 
             // transfer reward tokens from rewards pool to user
-            self.contract_ilocktoken.transfer_from(rewards_pool, user, reward);
+            self.contract_ilocktoken.transfer_from(rewards_pool, user, reward).unwrap();
 
             // update state for user and total amounts rewarded
             self.contract_ilockrewardsdata.mut_rewardedUser(user, reward);

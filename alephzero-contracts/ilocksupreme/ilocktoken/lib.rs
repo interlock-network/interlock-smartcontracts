@@ -38,13 +38,13 @@ pub mod ilocktoken {
 
 //// state /////////////////////////////////////////////////////////////
 
-    /// magic numbers
+    /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
     pub const MEMBER_COUNT: usize = 1000;                           // number of vesting stakeholders
     pub const ONE_MONTH: u128 = 2592000;                                // seconds in 30 days
 
-    /// token data
+    /// . token data
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
     pub const DECIMALS_POWER10: u128 = 1_000_000_000_000_000_000;   // 10^18
     pub const SUPPLY_CAP: u128 = TOKEN_CAP * DECIMALS_POWER10;      // 10^27
@@ -52,7 +52,7 @@ pub mod ilocktoken {
     pub const TOKEN_DECIMALS: u8 = 18;
     pub const TOKEN_SYMBOL: &str = "ILOCK";
 
-    /// pool data
+    /// . pool data
     pub const POOL_NAMES: [&str; POOL_COUNT] = [
                     "early_backers+venture_capital",
                     "presale_1",
@@ -110,7 +110,7 @@ pub mod ilocktoken {
                     0,
                 ];
 
-    /// PoolData struct contains all pertinant information about the various token pools
+    /// . PoolData struct contains all pertinant information about the various token pools
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
     feature = "std",
@@ -124,8 +124,8 @@ pub mod ilocktoken {
         cliff: u8,
     }
 
-    /// StakeholderData struct contains all pertinent information for each stakeholder
-    /// (Besides balance and allowance mappings)
+    /// . StakeholderData struct contains all pertinent information for each stakeholder
+    ///   (Besides balance and allowance mappings)
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
     feature = "std",
@@ -140,7 +140,7 @@ pub mod ilocktoken {
         payouts: u8,
     }
 
-    /// ILOCKtoken struct contains overall storage data for contract
+    /// . ILOCKtoken struct contains overall storage data for contract
     #[derive(SpreadAllocate)]
     #[ink(storage)]
     pub struct ILOCKtoken {
@@ -159,7 +159,7 @@ pub mod ilocktoken {
 
 //// PSP22 events /////////////////////////////////////////////////////////////
 
-    /// specify transfer event
+    /// . specify transfer event
     #[ink(event)]
     pub struct Transfer {
         #[ink(topic)]
@@ -169,7 +169,7 @@ pub mod ilocktoken {
         amount: Balance,
     }
 
-    /// specify approve event
+    /// . specify approve event
     #[ink(event)]
     pub struct Approval {
         #[ink(topic)]
@@ -181,7 +181,7 @@ pub mod ilocktoken {
 
 //// PSP22 errors /////////////////////////////////////////////////////////////
 
-    /// PSP22 error types, per standard
+    /// . PSP22 error types, per standard
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum PSP22Error {
@@ -201,7 +201,7 @@ pub mod ilocktoken {
 
     // NEED TO FIGURE OUT HOW TO IMPLEMENT RECEIVER
 
-    /// PSP22 receiver error type, per standard
+    /// . PSP22 receiver error type, per standard
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum PSP22ReceiverError {
@@ -209,7 +209,7 @@ pub mod ilocktoken {
         TransferRejected(String),
     }
 
-    /// Other contract error types
+    /// . Other contract error types
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum OtherError {
@@ -234,21 +234,20 @@ pub mod ilocktoken {
     }
 
     // NEED TO FIND OUT IF THESE CUSTOM RESULT TYPES RETURN Result<T, xxxx> OR IF ResultXxxx<T>
-    // INSTEAD
+    // INSTEAD...IF LATTER, MAY NOT SATISFY SPS22 STANDARD INTERFACE
 
-    /// The PSP22Error result type.
+    /// . PSP22Error result type.
     pub type ResultPSP22<T> = core::result::Result<T, PSP22Error>;
 
-    /// The PSP22ReceiverError result type.
+    /// . PSP22ReceiverError result type.
     pub type ResultPSP22Receiver<T> = core::result::Result<T, PSP22ReceiverError>;
 
-    /// The OtherError result type.
+    /// . OtherError result type.
     pub type ResultOther<T> = core::result::Result<T, OtherError>;
 
+/////// init /////////////////////////////////////////////////////////////
 
     impl ILOCKtoken {
-
-/////// init /////////////////////////////////////////////////////////////
 
         /// . constructor to initialize contract
         /// . note: pool contracts must be created prior to construction (for args)
@@ -361,7 +360,7 @@ pub mod ilocktoken {
 
 /////// PSP22 getters ///////////////////////////////////////////////////////////
 
-        /// token decimal count getter
+        /// . token name getter
         #[ink(message)]
         pub fn name(
             &self,
@@ -370,7 +369,7 @@ pub mod ilocktoken {
             Some(TOKEN_NAME.to_string())
         }
 
-        /// token decimal count getter
+        /// . token symbol getter
         #[ink(message)]
         pub fn symbol(
             &self,
@@ -379,7 +378,7 @@ pub mod ilocktoken {
             Some(TOKEN_SYMBOL.to_string())
         }
 
-        /// token decimal count getter
+        /// . token decimal count getter
         #[ink(message)]
         pub fn decimals(
             &self,
@@ -388,7 +387,7 @@ pub mod ilocktoken {
             TOKEN_DECIMALS
         }
 
-        /// total supply getter
+        /// . total circulating supply getter
         #[ink(message)]
         pub fn total_supply(
             &self,
@@ -397,7 +396,7 @@ pub mod ilocktoken {
             self.circulatingsupply
         }
 
-        /// account balance getter
+        /// . account balance getter
         #[ink(message)]
         pub fn balance_of(
             &self,
@@ -407,7 +406,7 @@ pub mod ilocktoken {
             self.balances.get(account).unwrap_or(0)
         }
 
-        /// account allowance getter
+        /// . account allowance getter
         #[ink(message)]
         pub fn allowance(
             &self,
@@ -420,7 +419,7 @@ pub mod ilocktoken {
         
 /////// PSP22 doers /////////////////////////////////////////////////////////////
 
-        /// transfer method
+        /// . transfer method
         #[ink(message)]
         pub fn transfer(
             &mut self,
@@ -460,7 +459,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// approve method
+        /// . approve method
         #[ink(message)]
         pub fn approve(
             &mut self,
@@ -492,7 +491,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// transfer from method
+        /// . transfer from method
         #[ink(message)]
         pub fn transfer_from(
             &mut self,
@@ -549,7 +548,8 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// increase allowance method
+        /// . increase allowance method
+        /// . this is to mitigate frontrunning
         #[ink(message)]
         pub fn increase_allowance(
             &mut self,
@@ -583,7 +583,8 @@ pub mod ilocktoken {
             Ok(())
         }
         
-        /// decrease allowance method
+        /// . decrease allowance method
+        /// . this is to mitigate frontrunning
         #[ink(message)]
         pub fn decrease_allowance(
             &mut self,
@@ -687,7 +688,7 @@ pub mod ilocktoken {
 
 /////// timing /////////////////////////////////////////////////////////////
 
-        /// function to check if enough time has passed to collect next payout
+        /// . function to check if enough time has passed to collect next payout
         #[ink(message)]
         pub fn check_time(
             &mut self,
@@ -709,7 +710,7 @@ pub mod ilocktoken {
 
 /////// registration  /////////////////////////////////////////////////////////////
 
-        /// function that registers a stakeholder's wallet and vesting info
+        /// . function that registers a stakeholder's wallet and vesting info
         #[ink(message)]
         pub fn register_stakeholder(
             &mut self,
@@ -747,7 +748,7 @@ pub mod ilocktoken {
 
 /////// claiming /////////////////////////////////////////////////////////////
 
-        /// function for user to claim the token share they are currently entitled to
+        /// . function to transfer the token share a stakeholder is currently entitled to
         #[ink(message)]
         pub fn claim_tokens(
             &mut self,
@@ -835,7 +836,7 @@ pub mod ilocktoken {
 
 /////// vesting ////////////////////////////////////////////////////////////
 
-        /// function that returns a stakeholder's vesting status
+        /// . function that returns a stakeholder's vesting status
         #[ink(message)]
         pub fn vesting_status(
             &self,
@@ -893,7 +894,7 @@ pub mod ilocktoken {
 
 //// misc  //////////////////////////////////////////////////////////////////////
         
-        /// function to provide rewards pool address to ilockrewards contract
+        /// . function to provide rewards pool address to ilockrewards contract
         #[ink(message)]
         pub fn months_passed(
             &self,
@@ -902,7 +903,7 @@ pub mod ilocktoken {
             self.monthspassed
         }
 
-        /// function to provide rewards pool address to ilockrewards contract
+        /// . function to provide rewards pool address to ilockrewards contract
         #[ink(message)]
         pub fn rewards_pool(
             &self,
@@ -911,7 +912,7 @@ pub mod ilocktoken {
             self.pools[7]
         }
 
-        /// function to increment circulatingsupply after reward issue or stakeholder payment
+        /// . function to increment circulatingsupply after reward issue or stakeholder payment
         #[ink(message)]
         pub fn increment_circulation(
             &mut self,
@@ -926,7 +927,7 @@ pub mod ilocktoken {
             true
         }
 
-        /// function to decrement circulatingsupply after burn or reward reclaim
+        /// . function to decrement circulatingsupply after burn or reward reclaim
         #[ink(message)]
         pub fn decrement_circulation(
             &mut self,
@@ -941,7 +942,7 @@ pub mod ilocktoken {
             true
         }
 
-        /// function to increment monthspassed for testing
+        /// . function to increment monthspassed for testing
         #[ink(message)]
         pub fn TESTING_increment_month(
             &mut self,
@@ -950,7 +951,9 @@ pub mod ilocktoken {
             self.monthspassed += 1;
             true
         }
-/*
+
+/*      // THIS IS TO DETERMINE COST TO REGISTER 1000 STAKEHOLDERS
+
         /// function to increment monthspassed for testing
         #[ink(message)]
         pub fn TESTING_register_1000_stakeholders(
@@ -980,7 +983,7 @@ pub mod ilocktoken {
 
 
 */
-        /// function to change contract owners
+        /// . function to change contract owners
         #[ink(message)]
         pub fn change_owner(
             &mut self,
@@ -996,7 +999,8 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// function to disown contract
+        /// . function to disown contract
+        /// . upgrade and disown if Interlock Foundation goes under
         #[ink(message)]
         pub fn disown(
             &mut self,
@@ -1011,7 +1015,36 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// function to receive dues from investors in form of AZERO
+        /// . burn function to permanently remove tokens from circulation / supply
+        #[ink(message)]
+        pub fn burn(
+            &mut self,
+            donor: AccountId,
+            amount: Balance,
+        ) -> ResultOther<()> {
+
+            // make sure owner is caller
+            if !self.is_owner() {
+                return Err(OtherError::CallerNotOwner)
+            }
+
+            // burn the tokens
+            let donor_balance: Balance = self.balances.get(donor).unwrap();
+            self.balances.insert(donor, &(donor_balance - amount));
+
+            // emit transfer event
+            Self::env().emit_event(Transfer {
+                from: Some(donor),
+                to: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
+                amount: amount,
+            });
+
+            Ok(())
+        }
+
+
+        /// . function to receive dues from investors in form of AZERO
+        /// . amount owed determined by AZERO price at TGE
         #[ink(message)]
         pub fn pay_azero(
             &mut self,
@@ -1031,7 +1064,9 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// function to receive dues from investors in form of other currencies
+/*      // THIS MAY BE SCRAPPED IF NO OTHER MODES OF PAYMENT ARE AVAILABLE
+ 
+        /// . function to receive dues from investors in form of other currencies
         #[ink(message)]
         pub fn pay_other(
             &mut self,
@@ -1052,8 +1087,31 @@ pub mod ilocktoken {
 
             Ok(())
         }
+*/
 
+        /// . modifies the code which is used to execute calls to this contract address
+        /// . this upgrades the token contract logic while using old state
+        #[ink(message)]
+        pub fn set_code(
+            &mut self,
+            code_hash: [u8; 32]
+        ) -> ResultOther<()> {
 
+            // make sure caller is owner
+            if !self.is_owner() {
+                return Err(OtherError::CallerNotOwner)
+            }
+
+            // takes code hash of updates contract and modifies preexisting logic to match
+            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+                panic!(
+                    "Failed to `set_code_hash` to {:?} due to {:?}",
+                    code_hash, err
+                )
+            });
+
+            Ok(())
+        }
     }
 
 //// tests //////////////////////////////////////////////////////////////////////
