@@ -51,25 +51,28 @@ mod ilockrewards {
 
         /// get total amount rewarded to date
         #[ink(message)]
-        pub fn totalRewarded(&self) -> u128 {
+        pub fn total_rewarded(&self) -> u128 {
             self.contract_ilockrewardsdata.rewardedTotal()
         }
 
         /// get amount rewarded to user to date
         #[ink(message)]
-        pub fn totalRewardedUser(&self, user: AccountId) -> u128 {
+        pub fn total_rewarded_user(&self, user: AccountId) -> u128 {
             self.contract_ilockrewardsdata.rewardedUser(user)
         }
 
         /// reward the user for browsing
         #[ink(message)]
-        pub fn rewardUser(&mut self, reward: u128, user: AccountId) -> (u128, u128) {
+        pub fn reward_user(&mut self, reward: u128, user: AccountId) -> (u128, u128) {
 
             // get total amount rewarded overall and to user so far
             let mut totalUserRewarded: u128 = self.contract_ilockrewardsdata.rewardedUser(user);
 
             // update total amount rewarded to user
             totalUserRewarded += reward;
+
+            // update token circulation
+            self.contract_ilocktoken.increment_circulation(reward);
 
             // get rewards pool address
             let rewards_pool = self.contract_ilocktoken.rewards_pool();

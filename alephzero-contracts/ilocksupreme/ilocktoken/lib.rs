@@ -41,7 +41,7 @@ pub mod ilocktoken {
     /// magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
-    pub const MEMBER_COUNT: usize = 1000;                            // number of vesting stakeholders
+    pub const MEMBER_COUNT: usize = 1000;                           // number of vesting stakeholders
     pub const MONTH: u128 = 2592000;                                // seconds in 30 days
 
     /// token data
@@ -152,6 +152,7 @@ pub mod ilocktoken {
         pools: [AccountId; POOL_COUNT], // this is pattern to iterate through pooldata mapping
         monthspassed: u128,
         nextpayout: u128,
+        circulatingsupply: u128,
         TGEtriggered: bool,
     }
 
@@ -219,6 +220,7 @@ pub mod ilocktoken {
                 contract.owner = caller;
                 contract.balances.insert(Self::env().account_id(), &SUPPLY_CAP);
                 contract.allowances.insert((Self::env().account_id(), Self::env().caller()), &SUPPLY_CAP);
+                contract.circulatingsupply = 0;
 
                 // emit mint Transfer event
                 Self::env().emit_event(Transfer {
@@ -322,7 +324,7 @@ pub mod ilocktoken {
             &self,
         ) -> u128 {
 
-            SUPPLY_CAP
+            self.circulatingsupply
         }
 
         /// account balance getter
@@ -481,22 +483,32 @@ pub mod ilocktoken {
                 self.transfer_from(
                     self.env().account_id(),
                     self.pools[pool],
-                    this_pool.tokens,
+                    this_pool.tokens * DECIMALS_POWER10,
                 );
 
                 // adjust owner's allowance
                 self.allowances.insert(
                     (self.pools[pool], self.env().caller()), 
-                    &this_pool.tokens,
+                    &(this_pool.tokens * DECIMALS_POWER10),
                 );
 
                 // emit mint Approval event
                 Self::env().emit_event(Approval {
                     owner: Some(self.pools[pool]),
                     spender: Some(self.env().caller()),
-                    amount: this_pool.tokens,
+                    amount: this_pool.tokens * DECIMALS_POWER10,
                 });
             }
+
+            // add whitelist and public sale to circulating supply
+            // may need to remove whitelist if vesting schedule dictates
+            // -- need to get from Rick whether or not whitelisters vest
+            //
+            // whitelist
+            self.increment_circulation(POOL_TOKENS[10] * DECIMALS_POWER10);
+            // public sale
+            self.increment_circulation(POOL_TOKENS[11] * DECIMALS_POWER10);
+
 
             // TGE is now complete
             // this must only happen once
@@ -626,7 +638,7 @@ pub mod ilocktoken {
             }
 
             // now calculate the payout owed
-            let mut payout: u128 = (this_stakeholder.share / this_pool.vests)*payments;
+            let mut payout: u128 = (this_stakeholder.share / this_pool.vests) * payments;
 
             // if this is final payment, add token remainder to payout
             if this_stakeholder.share - this_stakeholder.paid - payout < this_stakeholder.share/this_pool.vests {
@@ -647,6 +659,9 @@ pub mod ilocktoken {
                 to: Some(stakeholder),
                 amount: payout,
             });
+
+            // update circulating supply
+            self.increment_circulation(payout);
 
             // finally update stakeholder data struct state
             this_stakeholder.payouts += payments;
@@ -740,6 +755,36 @@ pub mod ilocktoken {
         ) -> AccountId {
 
             self.pools[7]
+        }
+
+        /// function to increment circulatingsupply after reward issue or stakeholder payment
+        #[ink(message)]
+        pub fn increment_circulation(
+            &mut self,
+            amount: u128,
+        ) -> bool {
+
+            if !self.is_owner() {
+                return false
+            }
+
+            self.circulatingsupply += amount;
+            true
+        }
+
+        /// function to decrement circulatingsupply after burn or reward reclaim
+        #[ink(message)]
+        pub fn decrement_circulation(
+            &mut self,
+            amount: u128,
+        ) -> bool {
+
+            if !self.is_owner() {
+                return false
+            }
+
+            self.circulatingsupply -= amount;
+            true
         }
 
         /// function to increment monthspassed for testing

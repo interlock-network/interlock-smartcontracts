@@ -26,8 +26,6 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 
 ilockpool = { path = "../ilockpool", default-features = false, features = ["ink-as-dependency"]}
 
-libmath = "0.2.1"
-
 [lib]
 name = "ilocktoken"
 path = "lib.rs"
