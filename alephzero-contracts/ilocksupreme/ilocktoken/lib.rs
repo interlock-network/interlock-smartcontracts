@@ -984,7 +984,6 @@ pub mod ilocktoken {
             assert_eq!(test_pool6.cliff, 1);
 
             assert_eq!(ILOCKtokenPSP22.monthspassed, 0);
-
         }
 
         /// test if name getter does its job
