@@ -51,19 +51,19 @@ mod ilockrewards {
 
         /// get total amount rewarded to date
         #[ink(message)]
-        pub fn total_rewarded(&self) -> u128 {
+        pub fn total_rewarded(&self) -> Balance {
             self.contract_ilockrewardsdata.rewardedTotal()
         }
 
         /// get amount rewarded to user to date
         #[ink(message)]
-        pub fn total_rewarded_user(&self, user: AccountId) -> u128 {
+        pub fn total_rewarded_user(&self, user: AccountId) -> Balance {
             self.contract_ilockrewardsdata.rewardedUser(user)
         }
 
         /// reward the user for browsing
         #[ink(message)]
-        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> (u128, u128) {
+        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> Balance {
 
             // get total amount rewarded overall and to user so far
             let mut totalUserRewarded: Balance = self.contract_ilockrewardsdata.rewardedUser(user);
@@ -85,7 +85,7 @@ mod ilockrewards {
             self.contract_ilockrewardsdata.mut_rewardedTotal(reward);
 
             // this returns user total and reward amount for extension display purposes
-            (totalUserRewarded, reward)
+            totalUserRewarded
         }
     }
 }
