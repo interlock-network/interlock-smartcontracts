@@ -234,7 +234,7 @@ pub mod ilocktoken {
     }
 
     // NEED TO FIND OUT IF THESE CUSTOM RESULT TYPES RETURN Result<T, xxxx> OR IF ResultXxxx<T>
-    // INSTEAD...IF LATTER, MAY NOT SATISFY SPS22 STANDARD INTERFACE
+    // ...IF LATTER, MAY NOT SATISFY SPS22 STANDARD INTERFACE
 
     /// . PSP22Error result type.
     pub type ResultPSP22<T> = core::result::Result<T, PSP22Error>;
@@ -450,7 +450,7 @@ pub mod ilocktoken {
             self.balances.insert(recipient, &(recipient_balance + amount));
 
             // emit Transfer event
-            Self::env().emit_event(Transfer {
+            self.env().emit_event(Transfer {
                 from: Some(sender),
                 to: Some(recipient),
                 amount: amount,
@@ -539,7 +539,7 @@ pub mod ilocktoken {
             });
 
             // emit Transfer event
-            Self::env().emit_event(Transfer {
+            self.env().emit_event(Transfer {
                 from: Some(from),
                 to: Some(to),
                 amount: amount,
@@ -623,7 +623,9 @@ pub mod ilocktoken {
             Ok(())
         }
 
-/////// distributing /////////////////////////////////////////////////////////////
+/////// pool distribution /////////////////////////////////////////////////////////////
+
+        // MOVE DISTRIBUTE_POOLS INTO CONTSTRUCTOR
 
         /// . function to distribute tokens to respective pools
         /// . TGE is complete when distribute_pools() completes
@@ -662,7 +664,7 @@ pub mod ilocktoken {
                 );
 
                 // emit mint Approval event
-                Self::env().emit_event(Approval {
+                self.env().emit_event(Approval {
                     owner: Some(self.pools[pool]),
                     spender: Some(self.env().caller()),
                     amount: this_pool.tokens,
@@ -746,11 +748,11 @@ pub mod ilocktoken {
         }
 
 
-/////// claiming /////////////////////////////////////////////////////////////
+/////// token distribution /////////////////////////////////////////////////////////////
 
         /// . function to transfer the token share a stakeholder is currently entitled to
         #[ink(message)]
-        pub fn claim_tokens(
+        pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
         ) -> ResultOther<()> {
@@ -784,17 +786,21 @@ pub mod ilocktoken {
                 return Err(OtherError::CliffNotPassed)
             }
 
+
+            // REMOVE LOGIC RELATED TO 'OWES' AND ONLY ACCEPT INVESTOR PAYMENTS PRIOR TO TGE???
+            // SIMPLEST OPTION...
+
             // determine the number of payments stakeholder is entitled to
             let payments: u8;
             if this_pool.cliff + this_pool.vests <= self.monthspassed {
-            // for first case, stakeholder waited until all payments are available
+            // for first case, stakeholder investor waited to pay dues until all payments are available
             // This is if investor waits to pay until after vesting ends (extreme case)
 
                 // payments owed are payments remaining 
                 payments = this_pool.vests - this_stakeholder.payouts;
 
             } else {
-            // for second case, stakeholder did not wait and is claiming only a portion of payments
+            // for second case, stakeholder did not pay until 
                 
                 // factor of one to line everything up right
                 payments = 1 + self.monthspassed - this_stakeholder.payouts - this_pool.cliff;
@@ -817,7 +823,7 @@ pub mod ilocktoken {
             self.balances.insert(stakeholder, &(balance_recipient + payout));
 
             // emit transfer event
-            Self::env().emit_event(Transfer {
+            self.env().emit_event(Transfer {
                 from: Some(self.pools[this_stakeholder.pool as usize]),
                 to: Some(stakeholder),
                 amount: payout,
@@ -894,7 +900,7 @@ pub mod ilocktoken {
 
 //// misc  //////////////////////////////////////////////////////////////////////
         
-        /// . function to provide rewards pool address to ilockrewards contract
+        /// . function to get the number of months passed for contract
         #[ink(message)]
         pub fn months_passed(
             &self,
@@ -1033,7 +1039,7 @@ pub mod ilocktoken {
             self.balances.insert(donor, &(donor_balance - amount));
 
             // emit transfer event
-            Self::env().emit_event(Transfer {
+            self.env().emit_event(Transfer {
                 from: Some(donor),
                 to: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
                 amount: amount,
@@ -1042,6 +1048,9 @@ pub mod ilocktoken {
             Ok(())
         }
 
+
+        // IF TAKING PAYMENT ONLY PRIOR CONSTRUCTION/TGE, THEN WILL NOT NEED
+        // THE FOLLOWING TWO PAY FUNCTIONS
 
         /// . function to receive dues from investors in form of AZERO
         /// . amount owed determined by AZERO price at TGE
@@ -1588,9 +1597,9 @@ pub mod ilocktoken {
 
 /*      IGNORE THIS FOR NOW
 
-        /// test if claim_tokens function does what it's supposed to
+        /// test if distribute_tokens function does what it's supposed to
         #[ink::test]
-        fn claim_tokens_works() {
+        fn distribute_tokens_works() {
 
         let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
