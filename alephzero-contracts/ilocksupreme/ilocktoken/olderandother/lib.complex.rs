@@ -35,7 +35,7 @@ pub mod ilocktoken {
         },
     };
 
-//// constants /////////////////////////////////////////////////////////////
+//// state /////////////////////////////////////////////////////////////
 
     /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
@@ -109,8 +109,6 @@ pub mod ilocktoken {
                     0,
                 ];
 
-//// structured data /////////////////////////////////////////////////////////////
-
     /// . PoolData struct contains all pertinant information about the various token pools
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
     #[cfg_attr(
@@ -134,9 +132,11 @@ pub mod ilocktoken {
     )]
     #[derive(Debug)]
     pub struct StakeholderData {
+        owes: Balance,
         paid: Balance,
         share: Balance,
         pool: u8,
+        payouts: u8,
     }
 
     /// . ILOCKtoken struct contains overall storage data for contract
@@ -152,7 +152,9 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: u128,
         circulatingsupply: Balance,
+        TGEtriggered: bool,
     }
+
 
 //// PSP22 events /////////////////////////////////////////////////////////////
 
@@ -212,12 +214,22 @@ pub mod ilocktoken {
     pub enum OtherError {
         /// Returned if caller is not contract owner
         CallerNotOwner,
+        /// Returned if stakeholder is not yet registered with contract
+        StakeholderNotRegistered,
         /// Returned if stakeholder share is entirely paid out
         StakeholderSharePaid,
+        /// Returned if owner attempts to distribute tokens to pool another time
+        AlreadyTriggeredTGE,
+        /// Returned if stakeholder still owes Interlock money
+        StakeholderStillOwes,
         /// Returned if stakeholder has not yet passed cliff
         CliffNotPassed,
         /// Returned if it is too soon to payout for month
         PayoutTooEarly,
+        /// Returned if stakeholder investor pays Interlock too much for share
+        PaidTooMuch,
+
+
     }
 
     // NEED TO FIND OUT IF THESE CUSTOM RESULT TYPES RETURN Result<T, xxxx> OR IF ResultXxxx<T>
@@ -264,44 +276,30 @@ pub mod ilocktoken {
 
                     // push current pool into pooldata map
                     contract.pooldata.insert(pools[pool], &this_pool);
-
-                    // charge pool with tokens
-                    contract.balances.insert(pools[pool], &this_pool.tokens);
-
-                    // give owner control over pool
-                    contract.allowances.insert((pools[pool], caller), &this_pool.tokens);
-
-                    // emit mint Transfer event
-                    Self::env().emit_event(Transfer {
-                        from: None,
-                        to: Some(pools[pool]),
-                        amount: this_pool.tokens,
-                    });
-
-                    // emit mint Approval event
-                    Self::env().emit_event(Approval {
-                        owner: Some(pools[pool]),
-                        spender: Some(caller),
-                        amount: this_pool.tokens,
-                    });
-
                 }
 
                 // set initial data
                 contract.monthspassed = 0;
                 contract.nextpayout = Self::env().block_timestamp() as u128 + ONE_MONTH;
+                contract.TGEtriggered = false;
                 contract.owner = caller;
-                
-                // reflect initial circulation
-                // ...these may be inappropriate, as we may increment circulation
-                // every time we pay a whitelister, or every time somebody buys tokens during
-                // public sale...
+                contract.balances.insert(Self::env().account_id(), &SUPPLY_CAP);
+                contract.allowances.insert((Self::env().account_id(), Self::env().caller()), &SUPPLY_CAP);
+                contract.circulatingsupply = 0;
 
-                // whitelist
-                contract.increment_circulation(POOL_TOKENS[10] * DECIMALS_POWER10);
-                // public sale
-                contract.increment_circulation(POOL_TOKENS[11] * DECIMALS_POWER10);
+                // emit mint Transfer event
+                Self::env().emit_event(Transfer {
+                    from: None,
+                    to: Some(Self::env().account_id()),
+                    amount: SUPPLY_CAP,
+                });
 
+                // emit mint Approval event
+                Self::env().emit_event(Approval {
+                    owner: Some(Self::env().account_id()),
+                    spender: Some(Self::env().caller()),
+                    amount: SUPPLY_CAP,
+                });
             })
         }
 
@@ -309,31 +307,31 @@ pub mod ilocktoken {
 
         /// . make sure caller is owner
         /// . returns true if caller is owner
-        pub fn not_owner(
+        pub fn is_owner(
             &self,
         ) -> bool {
-            self.env().caller() != self.owner
+            self.env().caller() == self.owner
         }
 
         /// . make sure transfer amount is available
         /// . returns true if token holder has enough
-        pub fn not_enough(
+        pub fn has_enough(
             &self,
             holder: AccountId,
             amount: Balance,
         ) -> bool {
-            self.balances.get(holder).unwrap() < amount
+            self.balances.get(holder).unwrap() >= amount
         }
 
         /// . make sure allowance is sufficient
         /// . returns true if token spender has sufficient allowance
-        pub fn not_allowed(
+        pub fn allowed_enough(
             &self,
             holder: AccountId,
             spender: AccountId,
             amount: Balance,
         ) -> bool {
-            self.allowance(holder, spender) < amount
+            self.allowance(holder, spender) >= amount
         }
 
         /// . make sure account is not zero account
@@ -344,6 +342,20 @@ pub mod ilocktoken {
         ) -> bool {
             account == ink_env::AccountId::from([0_u8; ID_LENGTH])
         }
+
+        /// . protect against reentrancy
+        pub fn no_reentery(
+            &mut self,
+        ) -> bool {
+
+            // reentrancy modifier code here
+            // I do not believe we need this modifier
+            // because none of these contracts call other contracts.
+            // This may change if we implement Receiver, so I don't know.
+
+            true
+        }
+
 
 /////// PSP22 getters ///////////////////////////////////////////////////////////
 
@@ -419,7 +431,7 @@ pub mod ilocktoken {
             let sender_balance = self.balance_of(sender);
 
             // make sure balance is adequate
-            if self.not_enough(sender, amount) {
+            if !self.has_enough(sender, amount) {
                 return Err(PSP22Error::InsufficientBalance)
             }
 
@@ -487,16 +499,16 @@ pub mod ilocktoken {
             amount: Balance,
         ) -> ResultPSP22<()> {
 
-            // get caller information
-            let caller = self.env().caller();
+            // get owner balance
+            let from_balance = self.balance_of(from);
 
             // make sure balance is adequate
-            if self.not_enough(from, amount) {
+            if !self.has_enough(from, amount) {
                 return Err(PSP22Error::InsufficientBalance)
             }
 
             // make sure allowance is adequate
-            if self.not_allowed(from, caller, amount) {
+            if !self.allowed_enough(from, self.env().caller(), amount) {
                 return Err(PSP22Error::InsufficientAllowance)
             }
 
@@ -508,15 +520,13 @@ pub mod ilocktoken {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
 
-            // get owner balance
-            let from_balance = self.balance_of(from);
-
             // update balances
             self.balances.insert(from, &(from_balance - amount));
             let to_balance = self.balance_of(to);
             self.balances.insert(to, &(to_balance + amount));
 
             // update allowances
+            let caller = self.env().caller();
             let caller_allowance = self.allowance(from, caller);
             self.allowances.insert((from, caller), &(caller_allowance - amount));
 
@@ -524,7 +534,7 @@ pub mod ilocktoken {
             self.env().emit_event(Approval {
                 owner: Some(from),
                 spender: Some(caller),
-                amount: caller_allowance - amount,
+                amount: amount,
             });
 
             // emit Transfer event
@@ -557,7 +567,6 @@ pub mod ilocktoken {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
 
-            // get prior allowance
             let allowance: Balance = self.allowances.get((owner, spender)).unwrap();
 
             // add/update approval amount
@@ -594,12 +603,10 @@ pub mod ilocktoken {
             }
 
             // make sure spender has enough allowance to decrease by delta
-            if self.not_allowed(owner, spender, delta) {
+            if !self.allowed_enough(owner, spender, delta) {
                 return Err(PSP22Error::InsufficientAllowance)
             }
-            // if insufficient, should allowance go to zero instead of returning?
 
-            // get prior allowance
             let allowance: Balance = self.allowances.get((owner, spender)).unwrap();
 
             // add/update approval amount
@@ -615,10 +622,74 @@ pub mod ilocktoken {
             Ok(())
         }
 
+/////// pool distribution /////////////////////////////////////////////////////////////
+
+        // MOVE DISTRIBUTE_POOLS INTO CONTSTRUCTOR
+
+        /// . function to distribute tokens to respective pools
+        /// . TGE is complete when distribute_pools() completes
+        #[ink(message)]
+        pub fn distribute_pools(
+            &mut self,
+        ) -> ResultOther<()> {
+
+            // this must only happen once
+            if self.TGEtriggered {
+                return Err(OtherError::AlreadyTriggeredTGE)
+            }
+
+            // only owner can call
+            if !self.is_owner() {
+                return Err(OtherError::CallerNotOwner)
+            }
+
+            // iterate through all pools
+            for pool in 0..POOL_COUNT {
+
+                // get pooldata struct for given pool
+                let this_pool = self.pooldata.get(self.pools[pool]).unwrap();
+                    
+                // transfer tokens to pool
+                self.transfer_from(
+                    self.env().account_id(),
+                    self.pools[pool],
+                    this_pool.tokens,
+                ).unwrap();
+
+                // adjust owner's allowance
+                self.allowances.insert(
+                    (self.pools[pool], self.env().caller()), 
+                    &this_pool.tokens,
+                );
+
+                // emit mint Approval event
+                self.env().emit_event(Approval {
+                    owner: Some(self.pools[pool]),
+                    spender: Some(self.env().caller()),
+                    amount: this_pool.tokens,
+                });
+            }
+
+            // add whitelist and public sale to circulating supply
+            // may need to remove whitelist if vesting schedule dictates
+            // -- need to get from Rick whether or not whitelisters vest
+            //
+            // whitelist
+            self.increment_circulation(POOL_TOKENS[10]);
+            // public sale
+            self.increment_circulation(POOL_TOKENS[11]);
+
+
+            // TGE is now complete
+            // this must only happen once
+            self.TGEtriggered = true;
+        
+            Ok(())
+        }
+
 /////// timing /////////////////////////////////////////////////////////////
 
         /// . function to check if enough time has passed to collect next payout
-        /// . this function ensures Interlock cannot rush the vesting schedule
         #[ink(message)]
         pub fn check_time(
             &mut self,
@@ -641,26 +712,32 @@ pub mod ilocktoken {
 /////// registration  /////////////////////////////////////////////////////////////
 
         /// . function that registers a stakeholder's wallet and vesting info
-        /// . used to calculate monthly payouts and track net paid
-        /// . stakeholder data also used for stakeholder to verify their place in vesting schedule
         #[ink(message)]
         pub fn register_stakeholder(
             &mut self,
             stakeholder: AccountId,
+            owes: Balance,
             share: Balance,
             pool: u8,
         ) -> ResultOther<()> {
 
+            // stakeholders must be added before TGE
+            if self.TGEtriggered {
+                return Err(OtherError::AlreadyTriggeredTGE)
+            }
+
             // only owner can call
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
             // create stakeholder struct
             let this_stakeholder = StakeholderData {
+                owes: owes,
                 paid: 0,
                 share: share,
                 pool: pool,
+                payouts: 0,
             };
 
             // insert stakeholder struct into mapping
@@ -673,16 +750,19 @@ pub mod ilocktoken {
 /////// token distribution /////////////////////////////////////////////////////////////
 
         /// . function to transfer the token share a stakeholder is currently entitled to
-        /// . this is called once per stakeholder by Interlock, Interlock paying fees
-        /// . pools are guaranteed to have enough tokens for all stakeholders
         #[ink(message)]
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
         ) -> ResultOther<()> {
 
+            // make sure TGE is complete
+            if !self.TGEtriggered {
+                return Err(OtherError::AlreadyTriggeredTGE)
+            }
+
             // make sure caller is owner
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
@@ -690,25 +770,49 @@ pub mod ilocktoken {
             let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
             let this_pool = self.pooldata.get(self.pools[this_stakeholder.pool as usize]).unwrap();
 
-            // require cliff to have been surpassed
-            if self.monthspassed < this_pool.cliff {
-                return Err(OtherError::CliffNotPassed)
-            }
-
             // require share has not been completely paid out
             if this_stakeholder.paid == this_stakeholder.share {
                 return Err(OtherError::StakeholderSharePaid)
             }
 
-            // calculate the payout owed
-            let mut payout: Balance = this_stakeholder.share / this_pool.vests as Balance;
+            // require if investor, to pay due first
+            if this_stakeholder.owes > 0 {
+                return Err(OtherError::StakeholderStillOwes)
+            }
+
+            // require cliff to have been surpassed
+            if self.monthspassed < this_pool.cliff {
+                return Err(OtherError::CliffNotPassed)
+            }
+
+
+            // REMOVE LOGIC RELATED TO 'OWES' AND ONLY ACCEPT INVESTOR PAYMENTS PRIOR TO TGE???
+            // SIMPLEST OPTION...
+
+            // determine the number of payments stakeholder is entitled to
+            let payments: u8;
+            if this_pool.cliff + this_pool.vests <= self.monthspassed {
+            // for first case, stakeholder investor waited to pay dues until all payments are available
+            // This is if investor waits to pay until after vesting ends (extreme case)
+
+                // payments owed are payments remaining 
+                payments = this_pool.vests - this_stakeholder.payouts;
+
+            } else {
+            // for second case, stakeholder did not pay until 
+                
+                // factor of one to line everything up right
+                payments = 1 + self.monthspassed - this_stakeholder.payouts - this_pool.cliff;
+            }
+
+            // now calculate the payout owed
+            let mut payout: Balance = (this_stakeholder.share / this_pool.vests as u128) * payments as u128;
 
             // if this is final payment, add token remainder to payout
-            // (this is to compensate for floor division that calculates payamount)
-            if this_stakeholder.share - this_stakeholder.paid - payout < this_stakeholder.share / this_pool.vests as Balance {
+            if this_stakeholder.share - this_stakeholder.paid - payout < this_stakeholder.share / this_pool.vests as u128 {
 
                 // add remainder
-                payout += this_stakeholder.share % this_pool.vests as Balance;
+                payout += this_stakeholder.share % this_pool.vests as u128;
             }
 
             // now transfer tokens
@@ -728,26 +832,49 @@ pub mod ilocktoken {
             self.increment_circulation(payout);
 
             // finally update stakeholder data struct state
+            this_stakeholder.payouts += payments;
             this_stakeholder.paid += payout;
             self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             Ok(())
         }
 
-/////// stakeholder data ////////////////////////////////////////////////////////////
+/////// vesting ////////////////////////////////////////////////////////////
 
-        /// . function that returns a stakeholder's payout data
-        /// . this will allow stakeholders to verify their stake from explorer if so motivated
-        /// . returns tuple (paidout, payremaining, payamount, poolnumber)
+        /// . function that returns a stakeholder's vesting status
         #[ink(message)]
-        pub fn stakeholder_data(
+        pub fn vesting_status(
             &self,
-            stakeholder: AccountId,
-        ) -> (Balance, Balance, Balance, u8) {
+            vestee: AccountId,
+        ) -> (u128, Balance, Balance, Balance, Balance) {
 
             // get pool and stakeholder data structs first
-            let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+            let this_stakeholder = self.stakeholderdata.get(vestee).unwrap();
             let this_pool = self.pooldata.get(self.pools[this_stakeholder.pool as usize]).unwrap();
+
+            // first we need to compute how long until the next payout is available
+            let timeleft: u128;
+            if self.monthspassed >= this_pool.vests + this_pool.cliff {
+            // what happens when time surpasses vests and cliff? vv
+
+                // it's time for everything to payout, no more timer
+                timeleft = 0;
+
+            } else if self.monthspassed < this_pool.cliff {
+            // what happens if cliff hasn't been surpassed yet?
+
+                // timeleft is time til next month plus time left on cliff
+                timeleft = (this_pool.cliff - self.monthspassed - 1) as u128 * ONE_MONTH +
+                    self.nextpayout - self.env().block_timestamp() as u128;
+
+            } else {
+            // during vesting period, time left is always time until nextpayout
+                
+                timeleft = self.nextpayout - self.env().block_timestamp() as u128;
+            }
+
+            // how much does investor still owe in dues?
+            let stillowes: Balance = this_stakeholder.owes;
 
             // how much has stakeholder already claimed?
             let paidout: Balance = this_stakeholder.paid;
@@ -755,32 +882,20 @@ pub mod ilocktoken {
             // how much does stakeholder have yet to collect?
             let payremaining: Balance = this_stakeholder.share - this_stakeholder.paid;
 
-            // how much does stakeholder get each month?
-            let payamount: Balance = this_stakeholder.share / this_pool.vests as Balance;
+            // now compute the tokens available to claim at next payout
+            let nextpayment: Balance = this_stakeholder.share / this_pool.vests as u128;
 
             return (
+                timeleft,
+                stillowes,
                 paidout,
                 payremaining,
-                payamount,
-                this_stakeholder.pool,
+                nextpayment
             )
         }
 
-/////// pool data ////////////////////////////////////////////////////////////
 
-        /// . function that returns pool data
-        /// . this will allow observers to verify vesting parameters for each pool (esp. theirs)
-        /// . observers may verify pool data from explorer if so motivated
-        /// . pool numbers range from 0-11
-        #[ink(message)]
-        pub fn pool_data(
-            &self,
-            pool: u8,
-        ) -> PoolData {
-        
-            // just grab up and send it out
-            return self.pooldata.get(self.pools[pool as usize]).unwrap()
-        }
+    
 
 //// misc  //////////////////////////////////////////////////////////////////////
         
@@ -809,7 +924,7 @@ pub mod ilocktoken {
             amount: u128,
         ) -> bool {
 
-            if self.not_owner() {
+            if !self.is_owner() {
                 return false
             }
 
@@ -824,7 +939,7 @@ pub mod ilocktoken {
             amount: u128,
         ) -> bool {
 
-            if self.not_owner() {
+            if !self.is_owner() {
                 return false
             }
 
@@ -842,6 +957,37 @@ pub mod ilocktoken {
             true
         }
 
+/*      // THIS IS TO DETERMINE COST TO REGISTER 1000 STAKEHOLDERS
+
+        /// function to increment monthspassed for testing
+        #[ink(message)]
+        pub fn TESTING_register_1000_stakeholders(
+            &mut self,
+        ) -> bool {
+
+            let mut new_address: [u8; 32] = [0; 32];
+
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[0] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[1] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[2] += 1;
+            }
+            for _stakeholder in 0..256 {
+                self.register_stakeholder(AccountId::from(new_address), 1000, 1000000, 2);
+                new_address[3] += 1;
+            }
+            true
+        }
+
+
+*/
         /// . function to change contract owners
         #[ink(message)]
         pub fn change_owner(
@@ -849,7 +995,7 @@ pub mod ilocktoken {
             newowner: AccountId,
         ) -> ResultOther<()> {
 
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
@@ -865,7 +1011,7 @@ pub mod ilocktoken {
             &mut self,
         ) -> ResultOther<()> {
 
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
@@ -883,7 +1029,7 @@ pub mod ilocktoken {
         ) -> ResultOther<()> {
 
             // make sure owner is caller
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
@@ -901,6 +1047,56 @@ pub mod ilocktoken {
             Ok(())
         }
 
+
+        // IF TAKING PAYMENT ONLY PRIOR CONSTRUCTION/TGE, THEN WILL NOT NEED
+        // THE FOLLOWING TWO PAY FUNCTIONS
+
+        /// . function to receive dues from investors in form of AZERO
+        /// . amount owed determined by AZERO price at TGE
+        #[ink(message)]
+        pub fn pay_azero(
+            &mut self,
+            stakeholder: AccountId,
+        ) -> ResultOther<()> {
+
+            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+
+            if self.env().transferred_value() > this_stakeholder.owes {
+                return Err(OtherError::PaidTooMuch)
+            }
+            
+            this_stakeholder.owes -= self.env().transferred_value();
+
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
+
+            Ok(())
+        }
+
+/*      // THIS MAY BE SCRAPPED IF NO OTHER MODES OF PAYMENT ARE AVAILABLE
+ 
+        /// . function to receive dues from investors in form of other currencies
+        #[ink(message)]
+        pub fn pay_other(
+            &mut self,
+            stakeholder: AccountId,
+            amount: u128,
+        ) -> ResultOther<()> {
+
+
+            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+
+            if amount > this_stakeholder.owes {
+                return Err(OtherError::PaidTooMuch)
+            }
+            
+            this_stakeholder.owes -= amount;
+
+            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
+
+            Ok(())
+        }
+*/
+
         /// . modifies the code which is used to execute calls to this contract address
         /// . this upgrades the token contract logic while using old state
         #[ink(message)]
@@ -910,7 +1106,7 @@ pub mod ilocktoken {
         ) -> ResultOther<()> {
 
             // make sure caller is owner
-            if self.not_owner() {
+            if !self.is_owner() {
                 return Err(OtherError::CallerNotOwner)
             }
 
@@ -972,10 +1168,22 @@ pub mod ilocktoken {
 
             // check events
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(24, emitted_events.len());
+            assert_eq!(2, emitted_events.len());
+            assert_transfer_event(
+                &emitted_events[0],
+                None,
+                Some(ILOCKtokenPSP22.env().account_id()),
+                SUPPLY_CAP,
+            );
+            assert_approval_event(
+                &emitted_events[1],
+                Some(ILOCKtokenPSP22.env().account_id()),
+                Some(ILOCKtokenPSP22.owner),
+                SUPPLY_CAP,
+            );
 
             assert_eq!(ILOCKtokenPSP22.owner, ILOCKtokenPSP22.env().caller());
-            assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.env().account_id()), 0);
+            assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.env().account_id()), SUPPLY_CAP);
 
             let test_pool6: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[6]).unwrap();
             assert_eq!(test_pool6.name, "advisors");
@@ -984,6 +1192,7 @@ pub mod ilocktoken {
             assert_eq!(test_pool6.cliff, 1);
 
             assert_eq!(ILOCKtokenPSP22.monthspassed, 0);
+            assert_eq!(ILOCKtokenPSP22.TGEtriggered, false);
 
         }
 
@@ -1079,7 +1288,7 @@ pub mod ilocktoken {
 
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
-            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10);
+            assert_eq!(ILOCKtokenPSP22.total_supply(), 0);
         }
 
         /// test if balance getter does its job
@@ -1107,7 +1316,7 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice owns all the tokens on contract instantiation
-            assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.pools[6]), 25_000_000 * DECIMALS_POWER10);
+            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), SUPPLY_CAP);
 
             // Bob does not own tokens
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), 0);
@@ -1171,17 +1380,11 @@ pub mod ilocktoken {
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
-            // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
-
-            // alice transfers tokens to bob
+            // Alice transfers tokens to Bob
             assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 10), Ok(()));
 
-            // alice new balance
-            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 90);
-
             // Alice balance reflects transfer
-            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 90);
+            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), SUPPLY_CAP - 10);
 
             // Bob balance reflects transfer
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), 10);
@@ -1191,11 +1394,11 @@ pub mod ilocktoken {
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 25);
+            assert_eq!(emitted_events.len(), 3);
 
             // check the transfer event relating to the actual trasfer
             assert_transfer_event(
-                &emitted_events[24],
+                &emitted_events[2],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
@@ -1234,11 +1437,11 @@ pub mod ilocktoken {
 
             // check all events that happened during previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 25);
+            assert_eq!(emitted_events.len(), 3);
 
             // check the approval event relating to the actual approval
             assert_approval_event(
-                &emitted_events[24],
+                &emitted_events[2],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
@@ -1269,9 +1472,6 @@ pub mod ilocktoken {
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
-            // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
-
             // Alice approves Bob for token transfers on her behalf
             assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
 
@@ -1292,20 +1492,63 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.eve), 10);
 
             // Bob attempts a transferfrom too large
-            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 100),
+            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, SUPPLY_CAP),
                         Err(PSP22Error::InsufficientBalance));
 
             // check all events that happened during the previous callsd
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 27);
+            assert_eq!(emitted_events.len(), 5);
 
             // check that Transfer event was emitted        
             assert_transfer_event(
-                &emitted_events[26],
+                &emitted_events[4],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x05; ID_LENGTH])),
                 10,
             );
+        }
+
+        /// test if check_time function does what it's supposed to
+        #[ink::test]
+        fn distribute_pools_works() {
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+
+            // construct contract and initialize accounts
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            ILOCKtokenPSP22.distribute_pools().unwrap();
+
+            for pool in 0..12 {
+
+                let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[pool]).unwrap();
+
+                assert_eq!(ILOCKtokenPSP22
+                    .balance_of(
+                        TEST_POOLS[pool]),
+                        this_pool.tokens,
+                );
+                assert_eq!(ILOCKtokenPSP22
+                    .allowance(
+                        TEST_POOLS[pool], accounts.alice),
+                        this_pool.tokens,
+                );
+            }
         }
 
         /// test if wallet registration function works as intended 
@@ -1333,20 +1576,102 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // bob's stakeholder data
+            let owes: u128 = 14_000;
             let share: u128 = 1_000_000;
             let pool: u8 = 3;
 
             // call registration function
-            ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
+            ILOCKtokenPSP22.register_stakeholder(accounts.bob, owes, share, pool).unwrap();
 
             // verify registration stuck
             let this_stakeholder = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+            assert_eq!(this_stakeholder.owes, owes);
             assert_eq!(this_stakeholder.paid, 0);
             assert_eq!(this_stakeholder.share, share);
             assert_eq!(this_stakeholder.pool, pool);
+            assert_eq!(this_stakeholder.payouts, 0);
 
         }
        
+
+/*      IGNORE THIS FOR NOW
+
+        /// test if distribute_tokens function does what it's supposed to
+        #[ink::test]
+        fn distribute_tokens_works() {
+
+        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+
+            // construct contract and initialize accounts
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+
+            // bob's stakeholder data
+            let owes: u128 = 0;
+            let share: u128 = 1_000_000;
+            let pool: u8 = 8;
+
+            // call registration function for bob
+            ILOCKtokenPSP22.register_stakeholder(accounts.bob, owes, share, pool).unwrap();
+
+
+            ILOCKtokenPSP22.distribute_pools().unwrap();
+
+            let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[pool as usize]).unwrap();
+            let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+
+            for monthspassed in 0..86 {
+
+                ILOCKtokenPSP22.monthspassed = monthspassed;
+                ILOCKtokenPSP22.claim_tokens(accounts.bob).unwrap();
+
+
+                if monthspassed < this_pool.cliff {
+
+                    ink_env::debug_println!("{:?}", this_pool.cliff);
+                    ink_env::debug_println!("1.{:?}", ILOCKtokenPSP22.balance_of(accounts.bob));
+                    assert_eq!(ILOCKtokenPSP22
+                        .balance_of(
+                            accounts.bob),
+                            0,
+                    );
+                } else if monthspassed >= this_pool.cliff + this_pool.vests - 1 {
+                    ink_env::debug_println!("2.{:?}", ILOCKtokenPSP22.balance_of(accounts.bob));
+                    assert_eq!(ILOCKtokenPSP22
+                        .balance_of(
+                            accounts.bob),
+                            this_stakeholder.share,
+                    );
+                } else {
+
+                    assert_eq!(ILOCKtokenPSP22
+                        .balance_of(
+                            accounts.bob),
+                            (this_stakeholder.share / this_pool.vests as u128) * (monthspassed - this_pool.cliff + 1) as u128,
+                    );
+                    ink_env::debug_println!("3.{:?}", ILOCKtokenPSP22.balance_of(accounts.bob));
+
+                }
+            }
+        }
+
+    */
+
 /////// testing helpers  //////////////////////////////////////////////////////////////////////
 
         /// check that a transfer event is good
