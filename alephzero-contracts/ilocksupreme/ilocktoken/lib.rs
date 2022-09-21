@@ -2,12 +2,11 @@
 //
 // INTERLOCK NETWORK
 //
-// blairmunroakusa@0903Fri.09Sep22.anch.AK:br
-//
 // !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 //
 // NOTE: To enable unsigned integer division, overflow_checks
 // has been turned 'off' in Cargo.toml file.
+// However, this was for ink 3.0.1. This may be rectified in 3.3.1
 //
 /////////////////////////////////////////////////////////////////
 
@@ -337,11 +336,11 @@ pub mod ilocktoken {
 
         /// . make sure account is not zero account
         /// . returns true if not zero account
-        pub fn not_zero(
+        pub fn is_zero(
             &self,
             account: AccountId,
         ) -> bool {
-            account != ink_env::AccountId::from([0_u8; ID_LENGTH])
+            account == ink_env::AccountId::from([0_u8; ID_LENGTH])
         }
 
         /// . protect against reentrancy
@@ -352,7 +351,7 @@ pub mod ilocktoken {
             // reentrancy modifier code here
             // I do not believe we need this modifier
             // because none of these contracts call other contracts.
-            // This may change if we implement Receiver.
+            // This may change if we implement Receiver, so I don't know.
 
             true
         }
@@ -437,10 +436,10 @@ pub mod ilocktoken {
             }
 
             // make sure no zero address
-            if !self.not_zero(recipient) {
+            if self.is_zero(recipient) {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
-            if !self.not_zero(sender) {
+            if self.is_zero(sender) {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
 
@@ -471,10 +470,10 @@ pub mod ilocktoken {
             let owner = self.env().caller();
 
             // make sure no zero address
-            if !self.not_zero(spender) {
+            if self.is_zero(spender) {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
-            if !self.not_zero(owner) {
+            if self.is_zero(owner) {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
 
@@ -514,10 +513,10 @@ pub mod ilocktoken {
             }
 
             // make sure no zero address
-            if !self.not_zero(from) {
+            if self.is_zero(from) {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
-            if !self.not_zero(to) {
+            if self.is_zero(to) {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
 
@@ -561,10 +560,10 @@ pub mod ilocktoken {
             let owner = self.env().caller();
 
             // make sure no zero address
-            if !self.not_zero(spender) {
+            if self.is_zero(spender) {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
-            if !self.not_zero(owner) {
+            if self.is_zero(owner) {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
 
@@ -596,10 +595,10 @@ pub mod ilocktoken {
             let owner = self.env().caller();
 
             // make sure no zero address
-            if !self.not_zero(spender) {
+            if self.is_zero(spender) {
                 return Err(PSP22Error::ZeroRecipientAddress)
             }
-            if !self.not_zero(owner) {
+            if self.is_zero(owner) {
                 return Err(PSP22Error::ZeroSenderAddress)
             }
 
