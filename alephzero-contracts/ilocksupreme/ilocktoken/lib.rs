@@ -38,8 +38,7 @@ pub mod ilocktoken {
     /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
-    pub const MEMBER_COUNT: usize = 1000;                           // number of vesting stakeholders
-    pub const ONE_MONTH: u128 = 2592000;                                // seconds in 30 days
+    pub const ONE_MONTH: u128 = 2592000;                            // seconds in 30 days
 
     /// . token data
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
@@ -115,7 +114,7 @@ pub mod ilocktoken {
     feature = "std",
     derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
     )]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     pub struct PoolData {
         name: String,
         tokens: u128,
@@ -488,14 +487,14 @@ pub mod ilocktoken {
             // get caller information
             let caller = self.env().caller();
 
-            // make sure balance is adequate
-            if self.not_enough(from, amount) {
-                return Err(PSP22Error::InsufficientBalance)
-            }
-
             // make sure allowance is adequate
             if self.not_allowed(from, caller, amount) {
                 return Err(PSP22Error::InsufficientAllowance)
+            }
+
+            // make sure balance is adequate
+            if self.not_enough(from, amount) {
+                return Err(PSP22Error::InsufficientBalance)
             }
 
             // make sure no zero address
@@ -888,6 +887,7 @@ pub mod ilocktoken {
             // burn the tokens
             let donor_balance: Balance = self.balances.get(donor).unwrap();
             self.balances.insert(donor, &(donor_balance - amount));
+            self.decrement_circulation(amount);
 
             // emit transfer event
             self.env().emit_event(Transfer {
@@ -926,15 +926,15 @@ pub mod ilocktoken {
 
 //// tests //////////////////////////////////////////////////////////////////////
 
-//// To view debug prints and assertion failures run test via
-//// cargo nightly+ test -- --nocapture
+// . To view debug prints and assertion failures run test via:
+// cargo nightly+ test -- --nocapture
+// . To view debug for specific method run test via:
+// cargo nightly+ test <test_function_here> -- --nocapture
 
     #[cfg(test)]
     mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
-        use super::*;
 
-        /// Imports `ink_lang` so we can use `#[ink::test]`.
+        use super::*;
         use ink_lang as ink;
         use ink_env::Clear;
         use ink_env::topics::PrefixedValue;
@@ -942,13 +942,11 @@ pub mod ilocktoken {
 
         type Event = <ILOCKtoken as ::ink_lang::reflect::ContractEventBase>::Type;
 
-
-
-        /// test if the default constructor does its job
+        /// . test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -964,28 +962,43 @@ pub mod ilocktoken {
             ];
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
-            // check events
+            // check event number is correct
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
             assert_eq!(24, emitted_events.len());
 
-            assert_eq!(ILOCKtokenPSP22.owner, ILOCKtokenPSP22.env().caller());
-            assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.env().account_id()), 0);
+            // header for debug print table
+            ink_env::debug_println!("tokens:\t\t\t\tvests:\tcliff:\tname:");
 
-            let test_pool6: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[6]).unwrap();
-            assert_eq!(test_pool6.name, "advisors");
-            assert_eq!(test_pool6.tokens, 25_000_000 * DECIMALS_POWER10);
-            assert_eq!(test_pool6.vests, 24);
-            assert_eq!(test_pool6.cliff, 1);
+            // iterate through pools to check balances and allowances
+            for pool in 0..POOL_COUNT {
 
+                // check pool balance
+                assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.pools[pool]),
+                    POOL_TOKENS[pool] * DECIMALS_POWER10);
+
+                // check owner allowance
+                assert_eq!(ILOCKtokenPSP22.allowance(ILOCKtokenPSP22.pools[pool], ILOCKtokenPSP22.owner),
+                    POOL_TOKENS[pool] * DECIMALS_POWER10);
+
+                // print all PoolData entries (if debug print on)
+                let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[pool]).unwrap();
+                ink_env::debug_println!("{:?}\t{:?}\t{:?}\t{:?}",
+                    this_pool.tokens, this_pool.vests, this_pool.cliff, this_pool.name); 
+            }
+
+            // the rest
+            assert_eq!(ILOCKtokenPSP22.owner, accounts.alice);
             assert_eq!(ILOCKtokenPSP22.monthspassed, 0);
+            assert_eq!(ILOCKtokenPSP22.nextpayout, ILOCKtokenPSP22.env().block_timestamp() as u128 + ONE_MONTH);
         }
 
-        /// test if name getter does its job
+        /// . test if name getter does its job
         #[ink::test]
         fn name_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1004,11 +1017,11 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.name(), Some("Interlock Network".to_string()));
         }
 
-        /// test if symbol getter does its job
+        /// . test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1023,16 +1036,15 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
             let ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             assert_eq!(ILOCKtokenPSP22.symbol(), Some("ILOCK".to_string()));
         }
         
-        /// test if decimals getter does its job
+        /// . test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1052,11 +1064,11 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.decimals(), 18);
         }
 
-        /// test if total supply getter does its job
+        /// . test if total supply getter does its job
         #[ink::test]
         fn totalsupply_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1076,11 +1088,11 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10);
         }
 
-        /// test if balance getter does its job
+        /// . test if balance getter does its job
         #[ink::test]
         fn balance_of_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1095,23 +1107,15 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
-            // construct contract and initialize accounts
             let ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            // Alice owns all the tokens on contract instantiation
             assert_eq!(ILOCKtokenPSP22.balance_of(ILOCKtokenPSP22.pools[6]), 25_000_000 * DECIMALS_POWER10);
-
-            // Bob does not own tokens
-            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), 0);
         }
 
-        /// test if allowance getter does its job
+        /// . test if allowance getter does its job
         #[ink::test]
         fn allowance_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1126,8 +1130,6 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
-            // construct contract and initialize accounts
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
@@ -1141,11 +1143,11 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
         }
 
-        /// test if the transfer doer does its job
+        /// . test if the transfer doer does its job
         #[ink::test]
         fn transfer_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1160,7 +1162,6 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
             // construct contract and initialize accounts
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
@@ -1171,9 +1172,6 @@ pub mod ilocktoken {
             // alice transfers tokens to bob
             assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 10), Ok(()));
 
-            // alice new balance
-            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 90);
-
             // Alice balance reflects transfer
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 90);
 
@@ -1181,7 +1179,7 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), 10);
 
             // Alice attempts transfer too large
-            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, SUPPLY_CAP), Err(PSP22Error::InsufficientBalance));
+            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 100), Err(PSP22Error::InsufficientBalance));
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -1196,11 +1194,11 @@ pub mod ilocktoken {
             );
         }
 
-        /// test if the approve does does its job
+        /// . test if the approve does does its job
         #[ink::test]
         fn approve_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1215,8 +1213,6 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
-            // construct contract and initialize accounts
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
@@ -1239,11 +1235,11 @@ pub mod ilocktoken {
             );
         }
 
-        /// test if the transfer-from doer does its job
+        /// . test if the transfer-from doer does its job
         #[ink::test]
         fn transfer_from_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1258,8 +1254,6 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
-
-            // construct contract and initialize accounts
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
@@ -1269,7 +1263,7 @@ pub mod ilocktoken {
             // Alice approves Bob for token transfers on her behalf
             assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
 
-            // set the contract as callee and Bob as caller
+            // set the contract owner as callee and Bob as caller
             let contract = ink_env::account_id::<ink_env::DefaultEnvironment>();
             ink_env::test::set_callee::<ink_env::DefaultEnvironment>(contract);
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(accounts.bob);
@@ -1277,6 +1271,7 @@ pub mod ilocktoken {
             // Check Bob's allowance
             assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
 
+            // and Bob is caller now
             assert_eq!(ILOCKtokenPSP22.env().caller(), accounts.bob);
 
             // Bob transfers tokens from Alice to Eve
@@ -1287,7 +1282,7 @@ pub mod ilocktoken {
 
             // Bob attempts a transferfrom too large
             assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 100),
-                        Err(PSP22Error::InsufficientBalance));
+                        Err(PSP22Error::InsufficientAllowance));
 
             // check all events that happened during the previous callsd
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -1302,11 +1297,11 @@ pub mod ilocktoken {
             );
         }
 
-        /// test if wallet registration function works as intended 
+        /// . test if increase allowance does does its job
         #[ink::test]
-        fn register_stakeholder_works() {
+        fn increase_allowance_works() {
 
-        let TEST_POOLS: [AccountId; POOL_COUNT] = [
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
                 AccountId::from([0x11; ID_LENGTH]),
                 AccountId::from([0x12; ID_LENGTH]),
                 AccountId::from([0x13; ID_LENGTH]),
@@ -1321,13 +1316,81 @@ pub mod ilocktoken {
                 AccountId::from([0x1c; ID_LENGTH]),
             ];
 
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
-            // construct contract and initialize accounts
+            // Alice approves bob to spend tokens
+            assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
+
+            // Bob is approved to spend tokens owned by Alice
+            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
+
+            // Alice increases Bobs allowance
+            assert_eq!(ILOCKtokenPSP22.increase_allowance(accounts.bob, 10), Ok(()));
+
+            // Bob is approved to spend extra tokens owned by Alice
+            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 20);
+        }
+
+        /// . test if decrease allowance does does its job
+        #[ink::test]
+        fn decrease_allowance_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // Alice approves bob to spend tokens
+            assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
+
+            // Bob is approved to spend tokens owned by Alice
+            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
+
+            // Alice increases Bobs allowance
+            assert_eq!(ILOCKtokenPSP22.decrease_allowance(accounts.bob, 5), Ok(()));
+
+            // Bob is approved to spend extra tokens owned by Alice
+            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 5);
+        }
+
+        /// . test if wallet registration function works as intended 
+        #[ink::test]
+        fn register_stakeholder_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // bob's stakeholder data
-            let share: u128 = 1_000_000;
+            let share: Balance = 1_000_000;
             let pool: u8 = 3;
 
             // call registration function
@@ -1338,12 +1401,294 @@ pub mod ilocktoken {
             assert_eq!(this_stakeholder.paid, 0);
             assert_eq!(this_stakeholder.share, share);
             assert_eq!(this_stakeholder.pool, pool);
-
         }
        
+        /// . test if the approve does does its job
+        #[ink::test]
+        fn distribute_tokens_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // bob's stakeholder data
+            let share: Balance = 1_000_000;
+
+            // register bob, 6 month cliff, 36 vests (pool 4)
+            ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, 4).unwrap();
+
+            // debug println header (if no capture is on)
+            ink_env::debug_println!("POOL 4, 36 MONTH VESTING PERIOD, 6 MONTH CLIFF");
+            // run distribution over 44 months (6 + 36 + 2)
+            let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[4]).unwrap();
+            for _month in 0..44 {
+
+                // get bob his monthly tokens
+                ILOCKtokenPSP22.distribute_tokens(accounts.bob).ok();
+
+                // print everything and check balances at each iteration
+                let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+                ink_env::debug_println!("month: {:?}\tpaid: {:?}", ILOCKtokenPSP22.monthspassed, this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(TEST_POOLS[4]), this_pool.tokens - this_stakeholder.paid);
+
+                // make time go on
+                ILOCKtokenPSP22.TESTING_increment_month();
+            }
+
+            // reset time
+            ILOCKtokenPSP22.monthspassed = 0;
+
+            // register bob, 1 month cliff, 18 vests (pool 1)
+            ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, 1).unwrap();
+            ILOCKtokenPSP22.balances.insert(accounts.bob, &0);
+
+            // debug println header (if no capture is on)
+            ink_env::debug_println!("POOL 1, 18 MONTH VESTING PERIOD, 1 MONTH CLIFF");
+            // run distribution over 44 months (1 + 18 + 2)
+            let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[1]).unwrap();
+            for _month in 0..21 {
+
+                // get bob his monthly tokens
+                ILOCKtokenPSP22.distribute_tokens(accounts.bob).ok();
+
+                // print everything and check balances at each iteration
+                let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+                ink_env::debug_println!("month: {:?}\tpaid: {:?}", ILOCKtokenPSP22.monthspassed, this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(TEST_POOLS[1]), this_pool.tokens - this_stakeholder.paid);
+
+                // make time go on
+                ILOCKtokenPSP22.TESTING_increment_month();
+            }
+
+            // reset time
+            ILOCKtokenPSP22.monthspassed = 0;
+
+            // register bob, 0 month cliff, 48 vests (pool 10)
+            ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, 10).unwrap();
+            ILOCKtokenPSP22.balances.insert(accounts.bob, &0);
+
+            // debug println header (if no capture is on)
+            ink_env::debug_println!("POOL 10, 48 MONTH VESTING PERIOD, 0 MONTH CLIFF");
+            // run distribution over 44 months (0 + 48 + 2)
+            let this_pool: PoolData = ILOCKtokenPSP22.pooldata.get(TEST_POOLS[10]).unwrap();
+            for _month in 0..50 {
+
+                // get bob his monthly tokens
+                ILOCKtokenPSP22.distribute_tokens(accounts.bob).ok();
+
+                // print everything and check balances at each iteration
+                let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+                ink_env::debug_println!("month: {:?}\tpaid: {:?}", ILOCKtokenPSP22.monthspassed, this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(TEST_POOLS[10]), this_pool.tokens - this_stakeholder.paid);
+
+                // make time go on
+                ILOCKtokenPSP22.TESTING_increment_month();
+            }
+        }
+
+        /// . test if pool data getter does its job
+        #[ink::test]
+        fn pool_data_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            assert_eq!(ILOCKtokenPSP22.pool_data(1), ILOCKtokenPSP22.pooldata.get(TEST_POOLS[1]).unwrap());
+        }
+
+        /// . test if months passed getter does its job
+        #[ink::test]
+        fn months_passed_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            ILOCKtokenPSP22.monthspassed = 99;
+            assert_eq!(ILOCKtokenPSP22.months_passed(), 99);
+        }
+
+        /// . test if circulation incrementor does its job
+        #[ink::test]
+        fn increment_circulation_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+
+            ILOCKtokenPSP22.increment_circulation(100);
+            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 + 100);
+        }
+
+        /// . test if circulation decrementor does its job
+        #[ink::test]
+        fn decrement_circulation_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+
+            ILOCKtokenPSP22.decrement_circulation(100);
+            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
+        }
+
+        /// . test if change owner does its job
+        #[ink::test]
+        fn change_owner_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            assert_eq!(accounts.alice, ILOCKtokenPSP22.owner);
+            ILOCKtokenPSP22.change_owner(accounts.bob).unwrap();
+            assert_eq!(accounts.bob, ILOCKtokenPSP22.owner);
+        }
+
+        /// . test if disowner does its job
+        #[ink::test]
+        fn disown_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            assert_eq!(accounts.alice, ILOCKtokenPSP22.owner);
+            ILOCKtokenPSP22.disown().unwrap();
+            assert_eq!(AccountId::from([0_u8; ID_LENGTH]), ILOCKtokenPSP22.owner);
+        }
+
+        /// . test if burn does its job
+        #[ink::test]
+        fn burn_works() {
+
+            let TEST_POOLS: [AccountId; POOL_COUNT] = [
+                AccountId::from([0x11; ID_LENGTH]),
+                AccountId::from([0x12; ID_LENGTH]),
+                AccountId::from([0x13; ID_LENGTH]),
+                AccountId::from([0x14; ID_LENGTH]),
+                AccountId::from([0x15; ID_LENGTH]),
+                AccountId::from([0x16; ID_LENGTH]),
+                AccountId::from([0x17; ID_LENGTH]),
+                AccountId::from([0x18; ID_LENGTH]),
+                AccountId::from([0x19; ID_LENGTH]),
+                AccountId::from([0x1a; ID_LENGTH]),
+                AccountId::from([0x1b; ID_LENGTH]),
+                AccountId::from([0x1c; ID_LENGTH]),
+            ];
+
+            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token(TEST_POOLS);
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // charge alice's account
+            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
+
+            // alice has her tokens burned by contract owner (herself in this case)
+            ILOCKtokenPSP22.burn(accounts.alice, 100).unwrap();
+
+            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 0);
+            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
+        }
+
 /////// testing helpers  //////////////////////////////////////////////////////////////////////
 
-        /// check that a transfer event is good
+        /// . check that a transfer event is good
         fn assert_transfer_event(
             event: &ink_env::test::EmittedEvent,
             expected_from: Option<AccountId>,
@@ -1400,7 +1745,7 @@ pub mod ilocktoken {
             }
         }
 
-        /// check that an approval event is good
+        /// . check that an approval event is good
         fn assert_approval_event(
             event: &ink_env::test::EmittedEvent,
             expected_owner: Option<AccountId>,
@@ -1455,7 +1800,7 @@ pub mod ilocktoken {
             }
         }
 
-        /// this is a painful hashing function for use in event assert functions
+        /// . this is a painful hashing function for use in event assert functions
         fn encoded_into_hash<T>(entity: &T) -> Hash
         where
             T: scale::Encode,
