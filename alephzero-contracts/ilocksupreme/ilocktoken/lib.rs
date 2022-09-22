@@ -1,14 +1,12 @@
-/////////////////////////////////////////////////////////////////
 //
-// INTERLOCK NETWORK
+// INTERLOCK NETWORK - PSP22 ILOCK TOKEN CONTRACT
 //
-// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
+// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
-// NOTE: To enable unsigned integer division, overflow_checks
-// has been turned 'off' in Cargo.toml file.
-// However, this was for ink 3.0.1. This may be rectified in 3.3.1
-//
-/////////////////////////////////////////////////////////////////
+// This is a standard ERC20-style token contract
+// with provisions for enforcing a token distribution
+// vesting schedule.
+
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -931,9 +929,6 @@ pub mod ilocktoken {
 //// To view debug prints and assertion failures run test via
 //// cargo nightly+ test -- --nocapture
 
-    /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    /// module and test functions are marked with a `#[test]` attribute.
-    /// The below code is technically just normal Rust code.
     #[cfg(test)]
     mod tests {
         /// Imports all the definitions from the outer scope so we can use them here.
