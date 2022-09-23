@@ -1,12 +1,12 @@
-// INTERLOCK NETWORK - MVP rewards contract
+//
+// INTERLOCK NETWORK - MVP REWARDS CONTRACT
+//
+// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 // This is simple contract that links the MVP browser extension
 // with the ERC20 ILOCK token contract. This contract is responsible
 // for doling out rewards as users browse the internet.
-//
-// blairmunroakusa@1719Thu.08Sep22.anch.AK:south
 
-// !!!!! INCOMPLETE AND FLAWED, WARNING !!!!!
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
