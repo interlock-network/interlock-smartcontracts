@@ -4,8 +4,17 @@
 // !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 // This is simple contract that links the MVP browser extension
-// with the ERC20 ILOCK token contract. This contract is responsible
+// with the PSP22 ILOCK token contract. This contract is responsible
 // for doling out rewards as users browse the internet.
+
+
+// TO FIX / TO IMPROVE
+// . cross contract calls not working...I believe it is because I am using contract Refs instead of per
+//   RainboDAO reverence implementation, (instead of just the implementations themselves)...
+//   ...I believe the contract refs may only appropriate when instantiating contract from
+//   code hashes. If I am correct, then there is no need for ilockrewardsdata (besides custom event hack)
+//      ~ implementing (hopeful) fix in separate branch, note here for A0 review team
+
 
 
 #![cfg_attr(not(feature = "std"), no_std)]
