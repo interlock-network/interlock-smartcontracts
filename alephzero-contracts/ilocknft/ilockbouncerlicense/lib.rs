@@ -12,7 +12,10 @@
 
 #[openbrush::contract]
 pub mod ilockbouncerlicense {
-    use ink_storage::traits::SpreadAllocate;
+    use ink_storage::{
+        traits::SpreadAllocate,
+        Mapping,
+    };
     use openbrush::{
         contracts::{
             psp34::extensions::{
@@ -21,7 +24,6 @@ pub mod ilockbouncerlicense {
             },
             ownable::*,
             pausable::*,
-            access_control::*,
         },
         modifiers,
         traits::Storage,
@@ -35,21 +37,19 @@ pub mod ilockbouncerlicense {
         #[storage_field]
         metadata: metadata::Data,
         #[storage_field]
-        access: access_control::Data,
-        #[storage_field]
         ownable: ownable::Data,
         #[storage_field]
         pause: pausable::Data,
-        next_id: u8,
+        next_license_id: u16,
+        next_membership_id: u16,
+        authenticated: Mapping<(AccountId, u16), bool>,
     }
 
     impl PSP34          for ILOCKbouncerLicense {}
     impl PSP34Mintable  for ILOCKbouncerLicense {}
     impl PSP34Metadata  for ILOCKbouncerLicense {}
-    impl AccessControl  for ILOCKbouncerLicense {}
     impl Ownable        for ILOCKbouncerLicense {}
     impl Pausable       for ILOCKbouncerLicense {}
-
 
     impl ILOCKbouncerLicense {
 
