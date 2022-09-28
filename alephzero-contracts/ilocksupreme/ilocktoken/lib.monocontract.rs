@@ -250,6 +250,22 @@ pub mod ilocktoken {
                 contract.nextpayout = Self::env().block_timestamp() as u128 + ONE_MONTH;
                 contract.owner = caller;
                 contract.rewardedtotal = 0;
+                contract.balances.insert(Self::env().account_id(), &SUPPLY_CAP);
+                contract.allowances.insert((Self::env().account_id(), caller), &SUPPLY_CAP);
+
+                // emit Transfer event
+                Self::env().emit_event(Transfer {
+                    from: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
+                    to: Some(Self::env().account_id()),
+                    amount: SUPPLY_CAP,
+                });
+
+                // emit Approval event
+                Self::env().emit_event(Approval {
+                    owner: Some(Self::env().account_id()),
+                    spender: Some(caller),
+                    amount: SUPPLY_CAP,
+                });
 
                 // reflect initial circulation
                 // ...these may be inappropriate, as we may increment circulation
@@ -260,6 +276,7 @@ pub mod ilocktoken {
                 contract.increment_circulation(POOL_TOKENS[10] * DECIMALS_POWER10);
                 // public sale
                 contract.increment_circulation(POOL_TOKENS[11] * DECIMALS_POWER10);
+                contract.rewardspoolbalance = POOL_TOKENS[7] * DECIMALS_POWER10;
 
             })
         }
@@ -722,6 +739,7 @@ pub mod ilocktoken {
         /// . this will allow observers to verify vesting parameters for each pool (esp. theirs)
         /// . observers may verify pool data from explorer if so motivated
         /// . pool numbers range from 0-11
+        /// . returns (name, tokens, vests, cliff)
         #[ink(message)]
         pub fn pool_data(
             &self,
@@ -1048,11 +1066,11 @@ pub mod ilocktoken {
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 1);
+            assert_eq!(emitted_events.len(), 3);
 
             // check the transfer event relating to the actual trasfer
             assert_transfer_event(
-                &emitted_events[0],
+                &emitted_events[2],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
@@ -1074,11 +1092,11 @@ pub mod ilocktoken {
 
             // check all events that happened during previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 1);
+            assert_eq!(emitted_events.len(), 3);
 
             // check the approval event relating to the actual approval
             assert_approval_event(
-                &emitted_events[0],
+                &emitted_events[2],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x02; ID_LENGTH])),
                 10,
@@ -1121,11 +1139,11 @@ pub mod ilocktoken {
 
             // check all events that happened during the previous callsd
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 3);
+            assert_eq!(emitted_events.len(), 5);
 
             // check that Transfer event was emitted        
             assert_transfer_event(
-                &emitted_events[2],
+                &emitted_events[4],
                 Some(AccountId::from([0x01; ID_LENGTH])),
                 Some(AccountId::from([0x05; ID_LENGTH])),
                 10,
@@ -1214,17 +1232,17 @@ pub mod ilocktoken {
             for _month in 0..44 {
 
                 // get bob his monthly tokens
-               // ILOCKtokenPSP22.distribute_tokens(accounts.bob).ok();
+                ILOCKtokenPSP22.distribute_tokens(accounts.bob).ok();
 
                 // print everything and check balances at each iteration
-                //let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
-                //ink_env::debug_println!("month: {:?}\tpaid: {:?}", ILOCKtokenPSP22.monthspassed, this_stakeholder.paid);
-                //assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), this_stakeholder.paid);
+                let this_stakeholder: StakeholderData = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+                ink_env::debug_println!("month: {:?}\tpaid: {:?}", ILOCKtokenPSP22.monthspassed, this_stakeholder.paid);
+                assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), this_stakeholder.paid);
 
                 // make time go on
                 ILOCKtokenPSP22.TESTING_increment_month();
             }
-/*
+
             // reset time
             ILOCKtokenPSP22.monthspassed = 0;
 
@@ -1275,7 +1293,7 @@ pub mod ilocktoken {
 
                 // make time go on
                 ILOCKtokenPSP22.TESTING_increment_month();
-            }*/
+            }
         }
 
         /// . test if pool data getter does its job

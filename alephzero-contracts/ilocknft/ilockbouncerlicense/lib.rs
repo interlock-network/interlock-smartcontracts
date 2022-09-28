@@ -57,7 +57,12 @@ pub mod ilockbouncerlicense {
         pub fn new(
         ) -> Self {
 
-            ink_lang::codegen::initialize_contract(|_contract: &mut Self| {})
+            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
+                
+                contract.next_license_id = 0;
+                contract.next_membership_id = 5000;
+            })
         }
+
     }
 }
