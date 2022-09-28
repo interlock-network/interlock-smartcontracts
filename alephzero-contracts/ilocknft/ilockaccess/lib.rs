@@ -1,21 +1,28 @@
 //
-// INTERLOCK NETWORK - PSP34 BOUNCER LICENSE CONTRACT
+// INTERLOCK NETWORK - PSP34 ACCESS CONTRACT
+//
+// INCLUDES:
+// - BOUNCER LICENSE NFT CLASS
+// - VIP MEMBERSHIP NFT CLASS
+// - ...
 //
 // !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 // This is a standard ERC721-style token contract
 // with provisions for enforcing proof of Bouncer
-// NFT license ownership.
+// NFT license ownership, proof of VIP membership,
+// and other access features in future upgrades.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
 
 #[openbrush::contract]
-pub mod ilockbouncerlicense {
+pub mod ilockaccess {
     use ink_storage::{
         traits::SpreadAllocate,
         Mapping,
     };
+    use ink_prelude::string::String;
     use openbrush::{
         contracts::{
             psp34::extensions::{
@@ -31,7 +38,7 @@ pub mod ilockbouncerlicense {
 
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
-    pub struct ILOCKbouncerLicense {
+    pub struct ILOCKaccess {
         #[storage_field]
         psp34: psp34::Data,
         #[storage_field]
@@ -40,18 +47,18 @@ pub mod ilockbouncerlicense {
         ownable: ownable::Data,
         #[storage_field]
         pause: pausable::Data,
-        next_license_id: u16,
-        next_membership_id: u16,
-        authenticated: Mapping<(AccountId, u16), bool>,
+        next_bouncerlicense_id: u32,
+        next_vipmembership_id: u32,
+        authenticated: Mapping<(AccountId, u32), bool>,
     }
 
-    impl PSP34          for ILOCKbouncerLicense {}
-    impl PSP34Mintable  for ILOCKbouncerLicense {}
-    impl PSP34Metadata  for ILOCKbouncerLicense {}
-    impl Ownable        for ILOCKbouncerLicense {}
-    impl Pausable       for ILOCKbouncerLicense {}
+    impl PSP34          for ILOCKaccess {}
+    impl PSP34Mintable  for ILOCKaccess {}
+    impl PSP34Metadata  for ILOCKaccess {}
+    impl Ownable        for ILOCKaccess {}
+    impl Pausable       for ILOCKaccess {}
 
-    impl ILOCKbouncerLicense {
+    impl ILOCKaccess {
 
         #[ink(constructor)]
         pub fn new(
@@ -59,16 +66,28 @@ pub mod ilockbouncerlicense {
 
             ink_lang::codegen::initialize_contract(|contract: &mut Self| {
                 
-                contract.next_license_id = 0;
-                contract.next_membership_id = 5000;
+                contract._init_with_owner(contract.env().caller());
+                contract.next_bouncerlicense_id = 0;
+                contract.next_vipmembership_id = 10_000;
+
+				let collection_id = contract.collection_id();
+				contract._set_attribute(
+                    collection_id.clone(),
+                    String::from("name").into_bytes(),
+                    String::from("Interlock Access").into_bytes());
+				contract._set_attribute(
+                    collection_id,
+                    String::from("symbol").into_bytes(),
+                    String::from("ILOCKACCESS").into_bytes());
             })
         }
 
+        #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn mint_license(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
+        pub fn mint_bouncerlicense(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, psp34::Id::U16(self.next_license_id));
-            self.next_license_id += 1;
+            self._mint_to(recipient, psp34::Id::U32(self.next_bouncerlicense_id));
+            self.next_bouncerlicense_id += 1;
 
             Ok(())
         }
