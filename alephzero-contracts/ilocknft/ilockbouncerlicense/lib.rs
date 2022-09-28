@@ -64,5 +64,13 @@ pub mod ilockbouncerlicense {
             })
         }
 
+        #[ink(message)]
+        pub fn mint_license(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
+
+            self._mint_to(recipient, psp34::Id::U16(self.next_license_id));
+            self.next_license_id += 1;
+
+            Ok(())
+        }
     }
 }
