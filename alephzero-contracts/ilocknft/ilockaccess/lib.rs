@@ -32,7 +32,6 @@ pub mod ilockaccess {
             ownable::*,
             pausable::*,
         },
-        modifiers,
         traits::Storage,
     };
 
@@ -92,7 +91,7 @@ pub mod ilockaccess {
         #[ink(message)]
         pub fn mint_bouncerlicense(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, psp34::Id::U32(self.next_bouncerlicense_id));
+            self._mint_to(recipient, psp34::Id::U32(self.next_bouncerlicense_id))?;
             self._set_attribute(
                 psp34::Id::U32(self.next_bouncerlicense_id),
                 ACCESS_CLASS.as_bytes().to_vec(),
@@ -107,7 +106,7 @@ pub mod ilockaccess {
         #[ink(message)]
         pub fn mint_vipmembership(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership_id));
+            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership_id))?;
             self._set_attribute(
                 psp34::Id::U32(self.next_vipmembership_id),
                 ACCESS_CLASS.as_bytes().to_vec(),
