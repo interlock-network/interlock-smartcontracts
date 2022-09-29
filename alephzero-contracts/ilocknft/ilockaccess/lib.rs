@@ -91,5 +91,15 @@ pub mod ilockaccess {
 
             Ok(())
         }
+
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn mint_vipmembership(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
+
+            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership));
+            self.next_vipmembership += 1;
+
+            Ok(())
+        }
     }
 }
