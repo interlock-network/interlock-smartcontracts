@@ -114,6 +114,23 @@ pub mod ilockaccess {
             );
             self.next_vipmembership_id += 1;
 
+            Ok(())
+        }
+
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn set_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
+
+            self.authenticated.insert((holder, id), &true);
+
+            Ok(())
+        }
+
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn set_not_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
+
+            self.authenticated.insert((holder, id), &false);
 
             Ok(())
         }
