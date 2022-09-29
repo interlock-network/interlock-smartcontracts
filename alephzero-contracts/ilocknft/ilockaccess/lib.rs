@@ -56,7 +56,17 @@ pub mod ilockaccess {
     }
 
     impl PSP34          for ILOCKaccess {}
-    impl PSP34Mintable  for ILOCKaccess {}
+    impl PSP34Mintable  for ILOCKaccess {
+        
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        fn mint(&mut self, recipient: AccountId, id: Id) -> Result<(), PSP34Error> {
+
+            self._mint_to(recipient, id)?;
+
+            Ok(())
+        }
+    }
     impl PSP34Metadata  for ILOCKaccess {}
     impl Ownable        for ILOCKaccess {}
     impl Pausable       for ILOCKaccess {}
@@ -86,6 +96,8 @@ pub mod ilockaccess {
                 );
             })
         }
+
+
 
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
