@@ -36,6 +36,10 @@ pub mod ilockaccess {
         traits::Storage,
     };
 
+    pub const ACCESS_CLASS: &str = "ACCESS_CLASS";
+    pub const BOUNCER_LICENSE: &str = "BOUNCER_LICENSE";
+    pub const VIP_MEMBERSHIP: &str = "VIP_MEMBERSHIP";
+
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
     pub struct ILOCKaccess {
@@ -74,11 +78,13 @@ pub mod ilockaccess {
 				contract._set_attribute(
                     collection_id.clone(),
                     String::from("name").into_bytes(),
-                    String::from("Interlock Access").into_bytes());
+                    String::from("Interlock Access NFTs").into_bytes(),
+                );
 				contract._set_attribute(
                     collection_id,
                     String::from("symbol").into_bytes(),
-                    String::from("ILOCKACCESS").into_bytes());
+                    String::from("ILOCKACCESS").into_bytes(),
+                );
             })
         }
 
@@ -87,6 +93,11 @@ pub mod ilockaccess {
         pub fn mint_bouncerlicense(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
 
             self._mint_to(recipient, psp34::Id::U32(self.next_bouncerlicense_id));
+            self._set_attribute(
+                psp34::Id::U32(self.next_bouncerlicense_id),
+                ACCESS_CLASS.as_bytes().to_vec(),
+                BOUNCER_LICENSE.as_bytes().to_vec(),
+            );
             self.next_bouncerlicense_id += 1;
 
             Ok(())
@@ -96,8 +107,14 @@ pub mod ilockaccess {
         #[ink(message)]
         pub fn mint_vipmembership(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership));
-            self.next_vipmembership += 1;
+            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership_id));
+            self._set_attribute(
+                psp34::Id::U32(self.next_vipmembership_id),
+                ACCESS_CLASS.as_bytes().to_vec(),
+                VIP_MEMBERSHIP.as_bytes().to_vec(),
+            );
+            self.next_vipmembership_id += 1;
+
 
             Ok(())
         }
