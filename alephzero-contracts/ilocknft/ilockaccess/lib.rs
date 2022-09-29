@@ -30,7 +30,6 @@ pub mod ilockaccess {
                 mintable::*,
             },
             ownable::*,
-            pausable::*,
         },
         traits::Storage,
     };
@@ -48,16 +47,17 @@ pub mod ilockaccess {
         metadata: metadata::Data,
         #[storage_field]
         ownable: ownable::Data,
-        #[storage_field]
-        pause: pausable::Data,
         next_bouncerlicense_id: u32,
         next_vipmembership_id: u32,
         authenticated: Mapping<(AccountId, u32), bool>,
     }
 
     impl PSP34          for ILOCKaccess {}
+    impl PSP34Metadata  for ILOCKaccess {}
+    impl Ownable        for ILOCKaccess {}
     impl PSP34Mintable  for ILOCKaccess {
         
+        /// . mint general NFT
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         fn mint(&mut self, recipient: AccountId, id: Id) -> Result<(), PSP34Error> {
@@ -67,9 +67,6 @@ pub mod ilockaccess {
             Ok(())
         }
     }
-    impl PSP34Metadata  for ILOCKaccess {}
-    impl Ownable        for ILOCKaccess {}
-    impl Pausable       for ILOCKaccess {}
 
     impl ILOCKaccess {
 
@@ -97,8 +94,7 @@ pub mod ilockaccess {
             })
         }
 
-
-
+        /// . mint an NFT Bouncer license
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn mint_bouncerlicense(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
@@ -114,6 +110,7 @@ pub mod ilockaccess {
             Ok(())
         }
 
+        /// . mint an NFT VIP membership certificate
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn mint_vipmembership(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
@@ -129,6 +126,7 @@ pub mod ilockaccess {
             Ok(())
         }
 
+        /// . grant 'authenticated' status to interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
@@ -138,6 +136,7 @@ pub mod ilockaccess {
             Ok(())
         }
 
+        /// . revoke 'authenticated' status from interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_not_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
@@ -146,5 +145,6 @@ pub mod ilockaccess {
 
             Ok(())
         }
+
     }
 }
