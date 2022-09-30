@@ -1,5 +1,5 @@
 //
-// INTERLOCK NETWORK - PSP34 ACCESS CONTRACT
+// INTERLOCK NETWORK - PSP34 ACCESS CONTRACT (No. 1)
 //
 // INCLUDES:
 // - BOUNCER LICENSE NFT CLASS
@@ -17,7 +17,7 @@
 #![feature(min_specialization)]
 
 #[openbrush::contract]
-pub mod ilockaccess {
+pub mod ilockaccess1 {
     use ink_storage::{
         traits::SpreadAllocate,
         Mapping,
@@ -42,7 +42,7 @@ pub mod ilockaccess {
 
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
-    pub struct ILOCKaccess {
+    pub struct ILOCKaccess1 {
         #[storage_field]
         psp34: psp34::Data,
         #[storage_field]
@@ -54,10 +54,10 @@ pub mod ilockaccess {
         authenticated: Mapping<(AccountId, u32), bool>,
     }
 
-    impl PSP34          for ILOCKaccess {}
-    impl PSP34Metadata  for ILOCKaccess {}
-    impl Ownable        for ILOCKaccess {}
-    impl PSP34Mintable  for ILOCKaccess {
+    impl PSP34          for ILOCKaccess1 {}
+    impl PSP34Metadata  for ILOCKaccess1 {}
+    impl Ownable        for ILOCKaccess1 {}
+    impl PSP34Mintable  for ILOCKaccess1 {
         
         /// . mint general NFT
         /// . overrides extention mint() to enforce only_owner modifier
@@ -71,7 +71,7 @@ pub mod ilockaccess {
         }
     }
 
-    impl ILOCKaccess {
+    impl ILOCKaccess1 {
 
         #[ink(constructor)]
         pub fn new(
@@ -154,6 +154,26 @@ pub mod ilockaccess {
         pub fn authentication_status(&mut self, holder: AccountId, id: u32) -> Result<bool, PSP34Error> {
 
             Ok(self.authenticated.get((holder, id)).unwrap())
+        }
+
+        /// . modifies the code which is used to execute calls to this contract address
+        /// . this upgrades the token contract logic while using old state
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn upgrade_contract(
+            &mut self,
+            code_hash: [u8; 32]
+        ) -> Result<(), PSP34Error> {
+
+            // takes code hash of updates contract and modifies preexisting logic to match
+            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+                panic!(
+                    "Failed to `set_code_hash` to {:?} due to {:?}",
+                    code_hash, err
+                )
+            });
+
+            Ok(())
         }
     }
 }
