@@ -34,6 +34,8 @@ pub mod ilockaccess {
         traits::Storage,
     };
 
+    /// . ACCESS_CLASS is metadata attribute id
+    /// . BOUNCER_LICENSE and VIP_MEMBERSHIP are attributes of ACCESS_CLASS
     pub const ACCESS_CLASS: &str = "ACCESS_CLASS";
     pub const BOUNCER_LICENSE: &str = "BOUNCER_LICENSE";
     pub const VIP_MEMBERSHIP: &str = "VIP_MEMBERSHIP";
@@ -58,6 +60,7 @@ pub mod ilockaccess {
     impl PSP34Mintable  for ILOCKaccess {
         
         /// . mint general NFT
+        /// . overrides extention mint() to enforce only_owner modifier
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         fn mint(&mut self, recipient: AccountId, id: Id) -> Result<(), PSP34Error> {
@@ -146,5 +149,11 @@ pub mod ilockaccess {
             Ok(())
         }
 
+        /// . get authentication status for NFT
+        #[ink(message)]
+        pub fn authentication_status(&mut self, holder: AccountId, id: u32) -> Result<bool, PSP34Error> {
+
+            Ok(self.authenticated.get((holder, id)).unwrap())
+        }
     }
 }
