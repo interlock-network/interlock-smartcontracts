@@ -1,27 +1,19 @@
 //
-// INTERLOCK NETWORK - PSP34 ACCESS CONTRACT (No. 1)
-//
-// INCLUDES:
-// - BOUNCER LICENSE NFT CLASS
-// - VIP MEMBERSHIP NFT CLASS
-// - ...
+// INTERLOCK NETWORK - 
+// PSP34 ACCESS CONTRACT - VIP MEMBERSHIP
 //
 // !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 // This is a standard ERC721-style token contract
-// with provisions for enforcing proof of Bouncer
-// NFT license ownership, proof of VIP membership,
-// and other access features in future upgrades.
+// with provisions for enforcing proof of VIP membership,
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
 
 #[openbrush::contract]
-pub mod ilockaccess1 {
-    use ink_storage::{
-        traits::SpreadAllocate,
-        Mapping,
-    };
+pub mod vipmembership {
+
+    use ink_storage::traits::SpreadAllocate;
     use ink_prelude::string::String;
     use openbrush::{
         contracts::{
@@ -34,30 +26,22 @@ pub mod ilockaccess1 {
         traits::Storage,
     };
 
-    /// . ACCESS_CLASS is metadata attribute id
-    /// . BOUNCER_LICENSE and VIP_MEMBERSHIP are attributes of ACCESS_CLASS
-    pub const ACCESS_CLASS: &str = "ACCESS_CLASS";
-    pub const BOUNCER_LICENSE: &str = "BOUNCER_LICENSE";
-    pub const VIP_MEMBERSHIP: &str = "VIP_MEMBERSHIP";
-
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
-    pub struct ILOCKaccess1 {
+    pub struct VIPmembership {
         #[storage_field]
         psp34: psp34::Data,
         #[storage_field]
         metadata: metadata::Data,
         #[storage_field]
         ownable: ownable::Data,
-        next_bouncerlicense_id: u32,
-        next_vipmembership_id: u32,
-        authenticated: Mapping<(AccountId, u32), bool>,
+        next_vipmembership_id: u16,
     }
 
-    impl PSP34          for ILOCKaccess1 {}
-    impl PSP34Metadata  for ILOCKaccess1 {}
-    impl Ownable        for ILOCKaccess1 {}
-    impl PSP34Mintable  for ILOCKaccess1 {
+    impl PSP34          for VIPmembership {}
+    impl PSP34Metadata  for VIPmembership {}
+    impl Ownable        for VIPmembership {}
+    impl PSP34Mintable  for VIPmembership {
         
         /// . mint general NFT
         /// . overrides extention mint() to enforce only_owner modifier
@@ -71,8 +55,9 @@ pub mod ilockaccess1 {
         }
     }
 
-    impl ILOCKaccess1 {
+    impl VIPmembership {
 
+        /// . initialize contract
         #[ink(constructor)]
         pub fn new(
         ) -> Self {
@@ -80,50 +65,52 @@ pub mod ilockaccess1 {
             ink_lang::codegen::initialize_contract(|contract: &mut Self| {
                 
                 contract._init_with_owner(contract.env().caller());
-                contract.next_bouncerlicense_id = 0;
-                contract.next_vipmembership_id = 10_000;
+                contract.next_vipmembership_id = 0;
 
 				let collection_id = contract.collection_id();
 				contract._set_attribute(
                     collection_id.clone(),
                     String::from("name").into_bytes(),
-                    String::from("Interlock Access NFTs").into_bytes(),
+                    String::from("Interlock Access NFT").into_bytes(),
                 );
 				contract._set_attribute(
-                    collection_id,
+                    collection_id.clone(),
                     String::from("symbol").into_bytes(),
                     String::from("ILOCKACCESS").into_bytes(),
                 );
+				contract._set_attribute(
+                    collection_id,
+                    String::from("ACCESS_CLASS").into_bytes(),
+                    String::from("VIP_MEMBERSHIP").into_bytes(),
+                );
             })
-        }
-
-        /// . mint an NFT Bouncer license
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn mint_bouncerlicense(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
-
-            self._mint_to(recipient, psp34::Id::U32(self.next_bouncerlicense_id))?;
-            self._set_attribute(
-                psp34::Id::U32(self.next_bouncerlicense_id),
-                ACCESS_CLASS.as_bytes().to_vec(),
-                BOUNCER_LICENSE.as_bytes().to_vec(),
-            );
-            self.next_bouncerlicense_id += 1;
-
-            Ok(())
         }
 
         /// . mint an NFT VIP membership certificate
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn mint_vipmembership(&mut self, recipient: AccountId) -> Result<(), PSP34Error> {
+        pub fn mint_vipmembership(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, psp34::Id::U32(self.next_vipmembership_id))?;
+            // mint next token id
+            self._mint_to(recipient, psp34::Id::U16(self.next_vipmembership_id))?;
+
+            // set metadata specific to token
+            
+            // where this jpeg lives
             self._set_attribute(
-                psp34::Id::U32(self.next_vipmembership_id),
-                ACCESS_CLASS.as_bytes().to_vec(),
-                VIP_MEMBERSHIP.as_bytes().to_vec(),
+                psp34::Id::U16(self.next_vipmembership_id),
+                String::from("JPEG").into_bytes(),
+                jpeg_url.into_bytes(),
             );
+
+            // initial authentication status is false
+            self._set_attribute(
+                psp34::Id::U16(self.next_vipmembership_id),
+                String::from("AUTHENTICATED").into_bytes(),
+                [0_u8; 1].to_vec(),
+            );
+
+            // setup for next mint
             self.next_vipmembership_id += 1;
 
             Ok(())
@@ -132,9 +119,13 @@ pub mod ilockaccess1 {
         /// . grant 'authenticated' status to interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn set_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
+        pub fn set_authenticated(&mut self, id: u16) -> Result<(), PSP34Error> {
 
-            self.authenticated.insert((holder, id), &true);
+            self._set_attribute(
+                psp34::Id::U16(id),
+                String::from("AUTHENTICATED").into_bytes(),
+                [1_u8; 1].to_vec(),
+            );
 
             Ok(())
         }
@@ -142,18 +133,15 @@ pub mod ilockaccess1 {
         /// . revoke 'authenticated' status from interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn set_not_authenticated(&mut self, holder: AccountId, id: u32) -> Result<(), PSP34Error> {
+        pub fn set_not_authenticated(&mut self, id: u16) -> Result<(), PSP34Error> {
 
-            self.authenticated.insert((holder, id), &false);
+            self._set_attribute(
+                psp34::Id::U16(id),
+                String::from("AUTHENTICATED").into_bytes(),
+                [0_u8; 1].to_vec(),
+            );
 
             Ok(())
-        }
-
-        /// . get authentication status for NFT
-        #[ink(message)]
-        pub fn authentication_status(&mut self, holder: AccountId, id: u32) -> Result<bool, PSP34Error> {
-
-            Ok(self.authenticated.get((holder, id)).unwrap())
         }
 
         /// . modifies the code which is used to execute calls to this contract address

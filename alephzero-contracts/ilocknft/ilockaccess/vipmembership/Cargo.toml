@@ -1,5 +1,5 @@
 [package]
-name = "ilockaccess1"
+name = "vipmembership"
 version = "0.1.0"
 authors = ["Interlock Network <blairmunroakusa@wp.computer>"]
 edition = "2021"
@@ -20,7 +20,7 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 openbrush = { version = "~2.2.0", default-features = false, features = ["psp34", "access_control", "ownable", "pausable"] }
 
 [lib]
-name = "ilockaccess1"
+name = "vipmembership"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
