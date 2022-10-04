@@ -15,6 +15,8 @@ pub mod bouncerlicense {
 
     use ink_storage::traits::SpreadAllocate;
     use ink_prelude::string::String;
+    use ink_prelude::vec::Vec;
+    use ink_prelude::vec;
     use openbrush::{
         contracts::{
             psp34::extensions::{
@@ -38,10 +40,28 @@ pub mod bouncerlicense {
         next_bouncerlicense_id: u16,
     }
 
-    impl PSP34          for BouncerLicense {}
-    impl PSP34Metadata  for BouncerLicense {}
-    impl Ownable        for BouncerLicense {}
-    impl PSP34Mintable  for BouncerLicense {
+    impl PSP34 for BouncerLicense {
+
+        /// . override transfer function to reset each NFT to 'not authenticated' on transfer
+        #[ink(message)]
+        fn transfer(&mut self, to: AccountId, id: Id, data: Vec<u8>) -> Result<(), PSP34Error> {
+
+            self._transfer_token(to, id.clone(), data)?;
+            self._set_attribute(
+                id,
+                String::from("AUTHENTICATED").into_bytes(),
+                vec![0],
+            );
+
+            Ok(())
+        }
+
+        // no transfer from function for PSP34
+    }
+
+    impl PSP34Metadata for BouncerLicense {}
+    impl Ownable for BouncerLicense {}
+    impl PSP34Mintable for BouncerLicense {
         
         /// . mint general NFT
         /// . overrides extention mint() to enforce only_owner modifier
@@ -107,7 +127,7 @@ pub mod bouncerlicense {
             self._set_attribute(
                 psp34::Id::U16(self.next_bouncerlicense_id),
                 String::from("AUTHENTICATED").into_bytes(),
-                [0_u8; 1].to_vec(),
+                vec![0],
             );
 
             // setup for next mint
@@ -119,12 +139,12 @@ pub mod bouncerlicense {
         /// . grant 'authenticated' status to interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn set_authenticated(&mut self, id: u16) -> Result<(), PSP34Error> {
+        pub fn set_authenticated(&mut self, id: Id) -> Result<(), PSP34Error> {
 
             self._set_attribute(
-                psp34::Id::U16(id),
+                id,
                 String::from("AUTHENTICATED").into_bytes(),
-                [1_u8; 1].to_vec(),
+                vec![1],
             );
 
             Ok(())
@@ -133,12 +153,12 @@ pub mod bouncerlicense {
         /// . revoke 'authenticated' status from interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn set_not_authenticated(&mut self, id: u16) -> Result<(), PSP34Error> {
+        pub fn set_not_authenticated(&mut self, id: Id) -> Result<(), PSP34Error> {
 
             self._set_attribute(
-                psp34::Id::U16(id),
+                id,
                 String::from("AUTHENTICATED").into_bytes(),
-                [0_u8; 1].to_vec(),
+                vec![0],
             );
 
             Ok(())
