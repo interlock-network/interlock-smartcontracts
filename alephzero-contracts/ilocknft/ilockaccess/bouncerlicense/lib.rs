@@ -14,9 +14,11 @@
 pub mod bouncerlicense {
 
     use ink_storage::traits::SpreadAllocate;
-    use ink_prelude::string::String;
-    use ink_prelude::vec::Vec;
-    use ink_prelude::vec;
+    use ink_prelude::{
+        string::String,
+        vec::Vec,
+        vec,
+    };
     use openbrush::{
         contracts::{
             psp34::extensions::{
@@ -56,7 +58,7 @@ pub mod bouncerlicense {
             Ok(())
         }
 
-        // no transfer from function for PSP34
+        // no transfer_from function for PSP34
     }
 
     impl PSP34Metadata for BouncerLicense {}
