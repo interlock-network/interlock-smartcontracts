@@ -19,8 +19,6 @@ bigtable-writer.json
 target
 
 # misc stuff
-ethereum-contracts/ERC20-mint/contracts
-solana-contracts/ilocksupreme_client/src/*.js
 migrations
 build
 test
