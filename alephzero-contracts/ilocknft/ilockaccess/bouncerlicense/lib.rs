@@ -108,7 +108,7 @@ pub mod bouncerlicense {
             })
         }
 
-        /// . mint an NFT VIP membership certificate
+        /// . mint an NFT bouncer license certificate
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn mint_bouncerlicense(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
@@ -185,6 +185,116 @@ pub mod bouncerlicense {
 
             Ok(())
         }
+    }
+
+//// tests //////////////////////////////////////////////////////////////////////
+
+// . To view debug prints and assertion failures run test via:
+// cargo nightly+ test -- --nocapture
+// . To view debug for specific method run test via:
+// cargo nightly+ test <test_function_here> -- --nocapture
+
+    #[cfg(test)]
+    mod tests {
+
+        use super::*;
+        use ink_lang as ink;
+
+        /// . test if the default constructor does its job
+        #[ink::test]
+        fn constructor_works() {
+
+            let bouncerlicense = BouncerLicense::new();
+
+            // check collection metadata -- unwrap() OK in this testing context
+            assert_eq!(
+                bouncerlicense.get_attribute(bouncerlicense.collection_id(), String::from("name").into_bytes()).unwrap(),
+                String::from("Interlock Access NFT").into_bytes()
+            );
+            assert_eq!(
+                bouncerlicense.get_attribute(bouncerlicense.collection_id(), String::from("symbol").into_bytes()).unwrap(),
+                String::from("ILOCKACCESS").into_bytes()
+            );
+            assert_eq!(
+                bouncerlicense.get_attribute(bouncerlicense.collection_id(), String::from("ACCESS_CLASS").into_bytes()).unwrap(),
+                String::from("BOUNCER_LICENSE").into_bytes()
+            );
+            assert_eq!(bouncerlicense.next_bouncerlicense_id, 0);
+        }
+
+        /// . test if the vip mint function does its job
+        #[ink::test]
+        fn mint_bouncerlicense_works() {
+
+            let mut bouncerlicense = BouncerLicense::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            bouncerlicense.mint_bouncerlicense(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // check nft metadata -- unwrap() OK in this testing context
+            assert_eq!(bouncerlicense.balance_of(accounts.bob), 1);
+            assert_eq!(bouncerlicense.next_bouncerlicense_id, 1);
+            assert_eq!(
+                bouncerlicense.get_attribute(psp34::Id::U16(0), String::from("JPEG").into_bytes()).unwrap(),
+                String::from("https://www.test.com").into_bytes()
+            );
+            assert_eq!(
+                bouncerlicense.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [0]
+            );
+            assert_eq!(bouncerlicense.owner_of(psp34::Id::U16(0)).unwrap(), accounts.bob);
+        }
+
+        /// . test if the set authenticated funtion does its job
+        #[ink::test]
+        fn set_authenticated_works() {
+
+            let mut bouncerlicense = BouncerLicense::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            bouncerlicense.mint_bouncerlicense(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // set authenticated -- unwrap() OK in this testing context
+            bouncerlicense.set_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // verify authentication
+            assert_eq!(
+                bouncerlicense.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [1]
+            );
+        }
+
+        /// . test if the set not authenticated funtion does its job
+        #[ink::test]
+        fn set_not_authenticated_works() {
+
+            let mut bouncerlicense = BouncerLicense::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            bouncerlicense.mint_bouncerlicense(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // set authenticated -- unwrap() OK in this testing context
+            bouncerlicense.set_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // set not authenticated -- unwrap() OK in this testing context
+            bouncerlicense.set_not_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // verify authentication
+            assert_eq!(
+                bouncerlicense.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [0]
+            );
+        }
+
+        // . test if the overridden transfer funtion does its job
+        // .   . AUTHENTICATED flips to zero on transfer, verified on testnet
+        //
+        // . test if contract upgrade function does its job
+        // .   . logic upgrades on contract set_code_hash, verified on testnet
+
     }
 }
 

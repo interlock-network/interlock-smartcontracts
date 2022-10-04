@@ -29,6 +29,7 @@ crate-type = [
 default = ["std"]
 std = [
     "ink_metadata/std",
+
     "scale-info/std",
 
     "openbrush/std",

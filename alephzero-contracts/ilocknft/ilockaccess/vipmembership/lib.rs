@@ -186,4 +186,115 @@ pub mod vipmembership {
             Ok(())
         }
     }
+
+//// tests //////////////////////////////////////////////////////////////////////
+
+// . To view debug prints and assertion failures run test via:
+// cargo nightly+ test -- --nocapture
+// . To view debug for specific method run test via:
+// cargo nightly+ test <test_function_here> -- --nocapture
+
+    #[cfg(test)]
+    mod tests {
+
+        use super::*;
+        use ink_lang as ink;
+
+        /// . test if the default constructor does its job
+        #[ink::test]
+        fn constructor_works() {
+
+            let vipmembership = VIPmembership::new();
+
+            // check collection metadata -- unwrap() OK in this testing context
+            assert_eq!(
+                vipmembership.get_attribute(vipmembership.collection_id(), String::from("name").into_bytes()).unwrap(),
+                String::from("Interlock Access NFT").into_bytes()
+            );
+            assert_eq!(
+                vipmembership.get_attribute(vipmembership.collection_id(), String::from("symbol").into_bytes()).unwrap(),
+                String::from("ILOCKACCESS").into_bytes()
+            );
+            assert_eq!(
+                vipmembership.get_attribute(vipmembership.collection_id(), String::from("ACCESS_CLASS").into_bytes()).unwrap(),
+                String::from("VIP_MEMBERSHIP").into_bytes()
+            );
+            assert_eq!(vipmembership.next_vipmembership_id, 0);
+        }
+
+        /// . test if the vip mint function does its job
+        #[ink::test]
+        fn mint_vipmembership_works() {
+
+            let mut vipmembership = VIPmembership::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // check nft metadata -- unwrap() OK in this testing context
+            assert_eq!(vipmembership.balance_of(accounts.bob), 1);
+            assert_eq!(vipmembership.next_vipmembership_id, 1);
+            assert_eq!(
+                vipmembership.get_attribute(psp34::Id::U16(0), String::from("JPEG").into_bytes()).unwrap(),
+                String::from("https://www.test.com").into_bytes()
+            );
+            assert_eq!(
+                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [0]
+            );
+            assert_eq!(vipmembership.owner_of(psp34::Id::U16(0)).unwrap(), accounts.bob);
+        }
+
+        /// . test if the set authenticated funtion does its job
+        #[ink::test]
+        fn set_authenticated_works() {
+
+            let mut vipmembership = VIPmembership::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // set authenticated -- unwrap() OK in this testing context
+            vipmembership.set_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // verify authentication
+            assert_eq!(
+                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [1]
+            );
+        }
+
+        /// . test if the set not authenticated funtion does its job
+        #[ink::test]
+        fn set_not_authenticated_works() {
+
+            let mut vipmembership = VIPmembership::new();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // mint vip nft -- unwrap() OK in this testing context
+            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
+
+            // set authenticated -- unwrap() OK in this testing context
+            vipmembership.set_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // set not authenticated -- unwrap() OK in this testing context
+            vipmembership.set_not_authenticated(psp34::Id::U16(0)).unwrap();
+
+            // verify authentication
+            assert_eq!(
+                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
+                [0]
+            );
+        }
+
+        // . test if the overridden transfer funtion does its job
+        // .    . AUTHENTICATED flips to zero on transfer, verified on testnet
+        //
+        // . test if contract upgrade function does its job
+        // .    . logic upgrades on contract set_code_hash, verified on testnet
+
+    }
 }
+
