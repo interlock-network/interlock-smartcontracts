@@ -2,7 +2,7 @@
 
 Welcome! In this repository, we host development of all smart contracts that actualize our **token model** and **DeSec** infrastructure. Contracts are written in **ink!** on the Aleph Zero blockchain. These contracts are contained withing the `alephzero-contracts` directory. This directory contains an NFT mint that we are using to license our Discord security bot called **Bouncer**, and additionally grant membership for VIP interlockers. It also contains `ilockmvp` which is the collection of PSP22 token and interlocker rewards functionality, comprising the heart of Interlock blockchain activity. Alongside these two directories is one dedicated to client-side scripts.
 
-Before our move to Aleph Zero, we were developing for an Ethereum-Wormhole-Solana blockchain stack. All this work is available in `ARCHIVE, for transparency and future reference.
+Before our move to Aleph Zero, we were developing for an Ethereum-Wormhole-Solana blockchain stack. All this work is available in `ARCHIVE`, for transparency and future reference.
 
 The purpose of all this is to be transparent about our contract development.
 
