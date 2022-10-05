@@ -13,20 +13,24 @@
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(min_specialization)]
 
 pub use self::ilocktoken::{
     ILOCKtoken,
     ILOCKtokenRef,
 };
 
-use ink_lang as ink;
-
-#[ink::contract]
+#[openbrush::contract]
 pub mod ilocktoken {
 
-    use ink_lang::utils::initialize_contract;
-    use ink_prelude::string::String;
-    use ink_prelude::string::ToString;
+    use ink_lang::{
+        codegen::{EmitEvent, Env},
+        reflect::ContractEventBase,
+    };
+    use ink_prelude::{
+        format,
+        string::{String, ToString},
+    };
     use ink_storage::{
         Mapping,
         traits::{
@@ -34,6 +38,10 @@ pub mod ilocktoken {
             SpreadLayout,
             SpreadAllocate,
         },
+    };
+    use openbrush::{
+        contracts::psp22::*,
+        traits::Storage,
     };
 
 //// constants /////////////////////////////////////////////////////////////
@@ -126,12 +134,12 @@ pub mod ilocktoken {
     }
 
     /// . ILOCKtoken struct contains overall storage data for contract
-    #[derive(SpreadAllocate)]
     #[ink(storage)]
+    #[derive(Default, SpreadAllocate, Storage)]
     pub struct ILOCKtoken {
+        #[storage_field]
+        psp22: psp22::Data,
         owner: AccountId,
-        balances: Mapping<AccountId, Balance>,
-        allowances: Mapping<(AccountId, AccountId), Balance>,
         stakeholderdata: Mapping<AccountId, StakeholderData>,
         rewardeduser: Mapping<AccountId, Balance>,
         rewardedtotal: Balance,
@@ -171,36 +179,6 @@ pub mod ilocktoken {
         amount: Balance,
     }
 
-//// PSP22 errors /////////////////////////////////////////////////////////////
-
-    /// . PSP22 error types, per standard
-    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum PSP22Error {
-        /// Custom error
-        Custom(String),
-        /// Returned if not enough balance to fulfill a request
-        InsufficientBalance,
-        /// Returned if not enough allowance to fulfill a request
-        InsufficientAllowance,
-        /// Returned if recipient is zero address
-        ZeroRecipientAddress,
-        /// Returned if sender is zero address
-        ZeroSenderAddress,
-        /// Returned if receiving contract does not accept tokens
-        SafeTransferCheckFailed(String),
-    }
-
-    // DO WE NEED TO FIGURE OUT HOW TO IMPLEMENT RECEIVER?
-
-    /// . PSP22 receiver error type, per standard
-    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum PSP22ReceiverError {
-        /// Returned if a transfer is rejected.
-        TransferRejected(String),
-    }
-
     /// . Other contract error types
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -209,6 +187,8 @@ pub mod ilocktoken {
         CallerNotOwner,
         /// Returned if stakeholder share is entirely paid out
         StakeholderSharePaid,
+        /// Returned if the stakeholder doesn't exist
+        StakeholderNotFound,
         /// Returned if stakeholder has not yet passed cliff
         CliffNotPassed,
         /// Returned if it is too soon to payout for month
@@ -217,19 +197,51 @@ pub mod ilocktoken {
         RewardTooLarge,
     }
 
-    // NEED TO FIND OUT IF THESE CUSTOM RESULT TYPES RETURN Result<T, xxxx> OR IF ResultXxxx<T>
-    // ...IF LATTER, MAY NOT SATISFY SPS22 STANDARD INTERFACE
+    impl Into<PSP22Error> for OtherError {
+        fn into(self) -> PSP22Error {
+            PSP22Error::Custom(format!("{:?}", self))
+        }
+    }
 
-    /// . PSP22Error result type.
-    pub type ResultPSP22<T> = core::result::Result<T, PSP22Error>;
-
-    /// . PSP22ReceiverError result type.
-    pub type ResultPSP22Receiver<T> = core::result::Result<T, PSP22ReceiverError>;
+    pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
     /// . OtherError result type.
     pub type ResultOther<T> = core::result::Result<T, OtherError>;
 
+    pub type Event = <ILOCKtoken as ContractEventBase>::Type;
+
 /////// init /////////////////////////////////////////////////////////////
+
+    impl PSP22 for ILOCKtoken {}
+
+    impl Internal for ILOCKtoken {
+        fn _emit_transfer_event(
+            &self,
+            _from: Option<AccountId>,
+            _to: Option<AccountId>,
+            _amount: Balance,
+        ) {
+            ILOCKtoken::emit_event(
+                self.env(),
+                Event::Transfer(Transfer {
+                    from: _from,
+                    to: _to,
+                    amount: _amount,
+                }),
+            );
+        }
+
+        fn _emit_approval_event(&self, _owner: AccountId, _spender: AccountId, _amount: Balance) {
+            ILOCKtoken::emit_event(
+                self.env(),
+                Event::Approval(Approval {
+                    owner: Some(_owner),
+                    spender: Some(_spender),
+                    amount: _amount,
+                }),
+            );
+        }
+    }
 
     impl ILOCKtoken {
 
@@ -241,7 +253,7 @@ pub mod ilocktoken {
         ) -> Self {
 
             // create contract
-            initialize_contract(|contract: &mut Self| {
+            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
 
                 // define owner as caller
                 let caller = Self::env().caller();
@@ -251,8 +263,11 @@ pub mod ilocktoken {
                 contract.nextpayout = Self::env().block_timestamp() as u128 + ONE_MONTH;
                 contract.owner = caller;
                 contract.rewardedtotal = 0;
-                contract.balances.insert(Self::env().account_id(), &SUPPLY_CAP);
-                contract.allowances.insert((Self::env().account_id(), caller), &SUPPLY_CAP);
+
+                // mint with openbrush:
+                contract._mint(caller, SUPPLY_CAP)
+                        .expect("Failed to mint the initial supply");
+
 
                 // emit Transfer event
                 Self::env().emit_event(Transfer {
@@ -273,6 +288,7 @@ pub mod ilocktoken {
                 // every time we pay a whitelister, or every time somebody buys tokens during
                 // public sale...
 
+                // TODO: handle the error cases here
                 // whitelist
                 contract.increment_circulation(POOL_TOKENS[10] * DECIMALS_POWER10);
                 // public sale
@@ -282,10 +298,13 @@ pub mod ilocktoken {
             })
         }
 
+        pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
+            emitter.emit_event(event);
+        }
+
 /////// modifiers ///////////////////////////////////////////////////////////
 
         /// . make sure caller is owner
-        /// . returns true if caller is owner
         pub fn not_owner(
             &self,
         ) -> bool {
@@ -293,17 +312,15 @@ pub mod ilocktoken {
         }
 
         /// . make sure transfer amount is available
-        /// . returns true if token holder has enough
         pub fn not_enough(
             &self,
             holder: AccountId,
             amount: Balance,
         ) -> bool {
-            self.balances.get(holder).unwrap() < amount
+            self.balance_of(holder) < amount
         }
 
         /// . make sure allowance is sufficient
-        /// . returns true if token spender has sufficient allowance
         pub fn not_allowed(
             &self,
             holder: AccountId,
@@ -314,7 +331,6 @@ pub mod ilocktoken {
         }
 
         /// . make sure account is not zero account
-        /// . returns true if not zero account
         pub fn is_zero(
             &self,
             account: AccountId,
@@ -360,237 +376,6 @@ pub mod ilocktoken {
             self.circulatingsupply
         }
 
-        /// . account balance getter
-        #[ink(message)]
-        pub fn balance_of(
-            &self,
-            account: AccountId,
-        ) -> Balance {
-
-            self.balances.get(account).unwrap_or(0)
-        }
-
-        /// . account allowance getter
-        #[ink(message)]
-        pub fn allowance(
-            &self,
-            owner: AccountId,
-            spender: AccountId,
-        ) -> Balance {
-
-            self.allowances.get((owner, spender)).unwrap_or(0)
-        }
-        
-/////// PSP22 doers /////////////////////////////////////////////////////////////
-
-        /// . transfer method
-        #[ink(message)]
-        pub fn transfer(
-            &mut self,
-            recipient: AccountId,
-            amount: Balance,
-        ) -> ResultPSP22<()> {
-
-            // get caller information
-            let sender = self.env().caller();
-            let sender_balance = self.balance_of(sender);
-
-            // make sure balance is adequate
-            if self.not_enough(sender, amount) {
-                return Err(PSP22Error::InsufficientBalance)
-            }
-
-            // make sure no zero address
-            if self.is_zero(recipient) {
-                return Err(PSP22Error::ZeroRecipientAddress)
-            }
-            if self.is_zero(sender) {
-                return Err(PSP22Error::ZeroSenderAddress)
-            }
-
-            // update balances
-            let recipient_balance = self.balance_of(recipient);
-            self.balances.insert(sender, &(sender_balance - amount));
-            self.balances.insert(recipient, &(recipient_balance + amount));
-
-            // emit Transfer event
-            self.env().emit_event(Transfer {
-                from: Some(sender),
-                to: Some(recipient),
-                amount: amount,
-            });
-
-            Ok(())
-        }
-
-        /// . approve method
-        #[ink(message)]
-        pub fn approve(
-            &mut self,
-            spender: AccountId,
-            amount: Balance,
-        ) -> ResultPSP22<()> {
-
-            // get caller information
-            let owner = self.env().caller();
-
-            // make sure no zero address
-            if self.is_zero(spender) {
-                return Err(PSP22Error::ZeroRecipientAddress)
-            }
-            if self.is_zero(owner) {
-                return Err(PSP22Error::ZeroSenderAddress)
-            }
-
-            // add/update approval amount
-            self.allowances.insert((owner, spender), &amount);
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(owner),
-                spender: Some(spender),
-                amount: amount,
-            });
-
-            Ok(())
-        }
-
-        /// . transfer from method
-        #[ink(message)]
-        pub fn transfer_from(
-            &mut self,
-            from: AccountId,
-            to: AccountId,
-            amount: Balance,
-        ) -> ResultPSP22<()> {
-
-            // get caller information
-            let caller = self.env().caller();
-
-            // make sure allowance is adequate
-            if self.not_allowed(from, caller, amount) {
-                return Err(PSP22Error::InsufficientAllowance)
-            }
-
-            // make sure balance is adequate
-            if self.not_enough(from, amount) {
-                return Err(PSP22Error::InsufficientBalance)
-            }
-
-            // make sure no zero address
-            if self.is_zero(from) {
-                return Err(PSP22Error::ZeroSenderAddress)
-            }
-            if self.is_zero(to) {
-                return Err(PSP22Error::ZeroRecipientAddress)
-            }
-
-            // get owner balance
-            let from_balance = self.balance_of(from);
-
-            // update balances
-            self.balances.insert(from, &(from_balance - amount));
-            let to_balance = self.balance_of(to);
-            self.balances.insert(to, &(to_balance + amount));
-
-            // update allowances
-            let caller_allowance = self.allowance(from, caller);
-            self.allowances.insert((from, caller), &(caller_allowance - amount));
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(from),
-                spender: Some(caller),
-                amount: caller_allowance - amount,
-            });
-
-            // emit Transfer event
-            self.env().emit_event(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount: amount,
-            });
-
-            Ok(())
-        }
-
-        /// . increase allowance method
-        /// . this is to mitigate frontrunning
-        #[ink(message)]
-        pub fn increase_allowance(
-            &mut self,
-            spender: AccountId,
-            delta: Balance,
-        ) -> ResultPSP22<()> {
-
-            // get caller information
-            let owner = self.env().caller();
-
-            // make sure no zero address
-            if self.is_zero(spender) {
-                return Err(PSP22Error::ZeroRecipientAddress)
-            }
-            if self.is_zero(owner) {
-                return Err(PSP22Error::ZeroSenderAddress)
-            }
-
-            // get prior allowance
-            let allowance: Balance = self.allowances.get((owner, spender)).unwrap();
-
-            // add/update approval amount
-            self.allowances.insert((owner, spender), &(allowance + delta));
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(owner),
-                spender: Some(spender),
-                amount: allowance + delta,
-            });
-
-            Ok(())
-        }
-        
-        /// . decrease allowance method
-        /// . this is to mitigate frontrunning
-        #[ink(message)]
-        pub fn decrease_allowance(
-            &mut self,
-            spender: AccountId,
-            delta: Balance,
-        ) -> ResultPSP22<()> {
-
-            // get caller information
-            let owner = self.env().caller();
-
-            // make sure no zero address
-            if self.is_zero(spender) {
-                return Err(PSP22Error::ZeroRecipientAddress)
-            }
-            if self.is_zero(owner) {
-                return Err(PSP22Error::ZeroSenderAddress)
-            }
-
-            // make sure spender has enough allowance to decrease by delta
-            if self.not_allowed(owner, spender, delta) {
-                return Err(PSP22Error::InsufficientAllowance)
-            }
-            // if insufficient, should allowance go to zero instead of returning?
-
-            // get prior allowance
-            let allowance: Balance = self.allowances.get((owner, spender)).unwrap();
-
-            // add/update approval amount
-            self.allowances.insert((owner, spender), &(allowance - delta));
-
-            // emit Approval event
-            self.env().emit_event(Approval {
-                owner: Some(owner),
-                spender: Some(spender),
-                amount: allowance - delta,
-            });
-
-            Ok(())
-        }
 
 /////// timing /////////////////////////////////////////////////////////////
 
@@ -656,25 +441,28 @@ pub mod ilocktoken {
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
-        ) -> ResultOther<()> {
+        ) -> PSP22Result<()> {
 
             // make sure caller is owner
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into());
             }
 
             // get data structs
-            let mut this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+            let mut this_stakeholder = match self.stakeholderdata.get(stakeholder) {
+                Some(s) => s,
+                None => { return Err(OtherError::StakeholderNotFound.into()) },
+            };
             let pool = this_stakeholder.pool;
 
             // require cliff to have been surpassed
             if self.monthspassed < POOL_CLIFFS[pool as usize] {
-                return Err(OtherError::CliffNotPassed)
+                return Err(OtherError::CliffNotPassed.into());
             }
 
             // require share has not been completely paid out
             if this_stakeholder.paid == this_stakeholder.share {
-                return Err(OtherError::StakeholderSharePaid)
+                return Err(OtherError::StakeholderSharePaid.into())
             }
 
             // calculate the payout owed
@@ -690,10 +478,10 @@ pub mod ilocktoken {
             }
 
             // now transfer tokens
-            self.transfer(stakeholder, payout).unwrap();
+            let _ = self.transfer(stakeholder, payout, Default::default())?;
 
             // update circulating supply
-            self.increment_circulation(payout);
+            let _ = self.increment_circulation(payout)?;
 
             // finally update stakeholder data struct state
             this_stakeholder.paid += payout;
@@ -760,26 +548,31 @@ pub mod ilocktoken {
 
         /// . reward the user for browsing
         #[ink(message)]
-        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> ResultOther<Balance> {
+        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> PSP22Result<Balance> {
 
             // make sure caller is owner
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             // update total amount rewarded to user
             self.rewardedtotal += reward;
 
             // update token circulation
-            self.increment_circulation(reward);
+            let _ = self.increment_circulation(reward)?;
 
             // update rewards pool balance
             self.rewardspoolbalance -= reward;
 
             // transfer reward tokens from rewards pool to user
-            self.transfer(user, reward).unwrap();
+            self.transfer(user, reward, Default::default())?;
 
-            let rewardedusertotal: Balance = self.rewardeduser.get(user).unwrap();
+            let rewardedusertotal: Balance = match self.rewardeduser.get(user) {
+                Some(u) => u,
+                None => {
+                    return Err(PSP22Error::Custom(format!("User {:?} not found", user)))
+                },
+            };
             self.rewardeduser.insert(user, &(rewardedusertotal + reward));
 
             // emit Reward event
@@ -794,9 +587,12 @@ pub mod ilocktoken {
 
         /// . get amount rewarded to user to date
         #[ink(message)]
-        pub fn rewarded_user_total(&self, user: AccountId) -> Balance {
+        pub fn rewarded_user_total(&self, user: AccountId) -> PSP22Result<Balance> {
 
-            self.rewardeduser.get(user).unwrap()
+            match self.rewardeduser.get(user) {
+                Some(t) => Ok(t),
+                None => Err(PSP22Error::Custom(format!("User {:?} not found", user))),
+            }
         }
 
         /// . get total amount rewarded to date
@@ -820,7 +616,6 @@ pub mod ilocktoken {
         pub fn months_passed(
             &self,
         ) -> u8 {
-
             self.monthspassed
         }
 
@@ -829,14 +624,14 @@ pub mod ilocktoken {
         pub fn increment_circulation(
             &mut self,
             amount: u128,
-        ) -> bool {
+        ) -> PSP22Result<()> {
 
             if self.not_owner() {
-                return false
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             self.circulatingsupply += amount;
-            true
+            Ok(())
         }
 
         /// . function to decrement circulatingsupply after burn or reward reclaim
@@ -844,14 +639,14 @@ pub mod ilocktoken {
         pub fn decrement_circulation(
             &mut self,
             amount: u128,
-        ) -> bool {
+        ) -> PSP22Result<()> {
 
             if self.not_owner() {
-                return false
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             self.circulatingsupply -= amount;
-            true
+            Ok(())
         }
 
         /// . function to increment monthspassed for testing
@@ -869,10 +664,10 @@ pub mod ilocktoken {
         pub fn change_owner(
             &mut self,
             newowner: AccountId,
-        ) -> ResultOther<()> {
+        ) -> PSP22Result<()> {
 
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             self.owner = newowner;
@@ -885,10 +680,10 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn disown(
             &mut self,
-        ) -> ResultOther<()> {
+        ) -> PSP22Result<()> {
 
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             self.owner = ink_env::AccountId::from([0_u8; ID_LENGTH]);
@@ -902,17 +697,16 @@ pub mod ilocktoken {
             &mut self,
             donor: AccountId,
             amount: Balance,
-        ) -> ResultOther<()> {
+        ) -> PSP22Result<()> {
 
             // make sure owner is caller
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             // burn the tokens
-            let donor_balance: Balance = self.balances.get(donor).unwrap();
-            self.balances.insert(donor, &(donor_balance - amount));
-            self.decrement_circulation(amount);
+            let _ = self._burn_from(donor, amount)?;
+            self.decrement_circulation(amount)?;
 
             // emit transfer event
             self.env().emit_event(Transfer {
@@ -930,11 +724,11 @@ pub mod ilocktoken {
         pub fn set_code(
             &mut self,
             code_hash: [u8; 32]
-        ) -> ResultOther<()> {
+        ) -> PSP22Result<()> {
 
             // make sure caller is owner
             if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
+                return Err(OtherError::CallerNotOwner.into())
             }
 
             // takes code hash of updates contract and modifies preexisting logic to match
@@ -1020,7 +814,7 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.alice, &100);
 
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 100);
         }
@@ -1051,10 +845,10 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.alice, &100);
 
             // alice transfers tokens to bob
-            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 10), Ok(()));
+            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 10, Default::default()), Ok(()));
 
             // Alice balance reflects transfer
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 90);
@@ -1063,7 +857,7 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.bob), 10);
 
             // Alice attempts transfer too large
-            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 100), Err(PSP22Error::InsufficientBalance));
+            assert_eq!(ILOCKtokenPSP22.transfer(accounts.bob, 100, Default::default()), Err(PSP22Error::InsufficientBalance));
 
             // check all events that happened during the previous calls
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
@@ -1112,7 +906,7 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.alice, &100);
 
             // Alice approves Bob for token transfers on her behalf
             assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
@@ -1129,13 +923,13 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.env().caller(), accounts.bob);
 
             // Bob transfers tokens from Alice to Eve
-            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 10), Ok(()));
+            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 10, Default::default()), Ok(()));
 
             // Eve received the tokens
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.eve), 10);
 
             // Bob attempts a transferfrom too large
-            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 100),
+            assert_eq!(ILOCKtokenPSP22.transfer_from(accounts.alice, accounts.eve, 100, Default::default()),
                         Err(PSP22Error::InsufficientAllowance));
 
             // check all events that happened during the previous callsd
@@ -1251,7 +1045,7 @@ pub mod ilocktoken {
 
             // register bob, 1 month cliff, 18 vests (pool 1)
             ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
-            ILOCKtokenPSP22.balances.insert(accounts.bob, &0);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.bob, &0);
 
             // debug println header (if no capture is on)
             ink_env::debug_println!("POOL 1, 18 MONTH VESTING PERIOD, 1 MONTH CLIFF");
@@ -1277,7 +1071,7 @@ pub mod ilocktoken {
 
             // register bob, 0 month cliff, 48 vests (pool 10)
             ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
-            ILOCKtokenPSP22.balances.insert(accounts.bob, &0);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.bob, &0);
 
             // debug println header (if no capture is on)
             ink_env::debug_println!("POOL 10, 48 MONTH VESTING PERIOD, 0 MONTH CLIFF");
@@ -1369,7 +1163,7 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // charge alice's account
-            ILOCKtokenPSP22.balances.insert(accounts.alice, &100);
+            ILOCKtokenPSP22.psp22.balances.insert(&accounts.alice, &100);
 
             // alice has her tokens burned by contract owner (herself in this case)
             ILOCKtokenPSP22.burn(accounts.alice, 100).unwrap();
