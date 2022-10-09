@@ -524,8 +524,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openbrush"
-version = "2.1.0"
-source = "git+https://github.com/Supercolony-net/openbrush-contracts.git?rev=8a20f95#8a20f951feaf8c6ea72c4bf113bf115bad9f158f"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "184f8ffa2e7f0356e0333dea8a390e84c8d26fc478f12ab50a7086549748eb50"
 dependencies = [
  "ink_env",
  "ink_lang",
@@ -541,8 +542,9 @@ dependencies = [
 
 [[package]]
 name = "openbrush_contracts"
-version = "2.1.0"
-source = "git+https://github.com/Supercolony-net/openbrush-contracts.git?rev=8a20f95#8a20f951feaf8c6ea72c4bf113bf115bad9f158f"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c4a3712ccff1d98b6d8fc88d1fc567cb50d237adfb293a43c6a2e4245d25d33"
 dependencies = [
  "ink_env",
  "ink_lang",
@@ -557,8 +559,9 @@ dependencies = [
 
 [[package]]
 name = "openbrush_lang"
-version = "2.1.0"
-source = "git+https://github.com/Supercolony-net/openbrush-contracts.git?rev=8a20f95#8a20f951feaf8c6ea72c4bf113bf115bad9f158f"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8012cc1cb15cdabef9e92008ca1ad027a6d29a854b9a8fbf9dda8ac91d434e48"
 dependencies = [
  "const_format",
  "ink_env",
@@ -574,8 +577,9 @@ dependencies = [
 
 [[package]]
 name = "openbrush_lang_codegen"
-version = "2.1.0"
-source = "git+https://github.com/Supercolony-net/openbrush-contracts.git?rev=8a20f95#8a20f951feaf8c6ea72c4bf113bf115bad9f158f"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "416acd0c65f07be39e305b6d7f68336313297dd7de6694d483282a0d9d5f707b"
 dependencies = [
  "blake2 0.9.2",
  "cargo_metadata",
@@ -593,8 +597,9 @@ dependencies = [
 
 [[package]]
 name = "openbrush_lang_macro"
-version = "2.1.0"
-source = "git+https://github.com/Supercolony-net/openbrush-contracts.git?rev=8a20f95#8a20f951feaf8c6ea72c4bf113bf115bad9f158f"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49d85890893146d270bdb10e7fb1f94a2a93b67f7c8feb76c2e124449457ce6"
 dependencies = [
  "openbrush_lang_codegen",
  "proc-macro2",

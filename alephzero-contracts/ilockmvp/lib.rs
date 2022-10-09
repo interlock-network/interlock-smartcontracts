@@ -40,7 +40,12 @@ pub mod ilocktoken {
         },
     };
     use openbrush::{
-        contracts::psp22::*,
+        contracts::{
+            psp22::{
+                extensions::{metadata::*, burnable::*},
+                Internal,
+            },
+            ownable::*},
         traits::Storage,
     };
 
@@ -139,6 +144,10 @@ pub mod ilocktoken {
     pub struct ILOCKtoken {
         #[storage_field]
         psp22: psp22::Data,
+        #[storage_field]
+		ownable: ownable::Data,
+        #[storage_field]
+        metadata: metadata::Data,
         owner: AccountId,
         stakeholderdata: Mapping<AccountId, StakeholderData>,
         rewardeduser: Mapping<AccountId, Balance>,
@@ -214,6 +223,36 @@ pub mod ilocktoken {
 
     impl PSP22 for ILOCKtoken {}
 
+    impl PSP22Metadata for ILOCKtoken {}
+
+    impl Ownable for ILOCKtoken {}
+
+    impl PSP22Burnable for ILOCKtoken {
+        /// . burn function to permanently remove tokens from circulation / supply
+        #[ink(message)]
+		#[openbrush::modifiers(only_owner)]
+        fn burn(
+            &mut self,
+            donor: AccountId,
+            amount: Balance,
+        ) -> PSP22Result<()> {
+
+            // burn the tokens
+            let _ = self._burn_from(donor, amount)?;
+            self.decrement_circulation(amount)?;
+
+            // TODO: will this happen automatically?
+            // emit transfer event
+            self.env().emit_event(Transfer {
+                from: Some(donor),
+                to: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
+                amount: amount,
+            });
+
+            Ok(())
+        }
+	}
+
     impl Internal for ILOCKtoken {
         fn _emit_transfer_event(
             &self,
@@ -264,6 +303,10 @@ pub mod ilocktoken {
                 contract.owner = caller;
                 contract.rewardedtotal = 0;
 
+                contract.metadata.name = Some(TOKEN_NAME.to_string());
+                contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string());
+                contract.metadata.decimals = TOKEN_DECIMALS;
+
                 // mint with openbrush:
                 contract._mint(caller, SUPPLY_CAP)
                         .expect("Failed to mint the initial supply");
@@ -304,13 +347,6 @@ pub mod ilocktoken {
 
 /////// modifiers ///////////////////////////////////////////////////////////
 
-        /// . make sure caller is owner
-        pub fn not_owner(
-            &self,
-        ) -> bool {
-            self.env().caller() != self.owner
-        }
-
         /// . make sure transfer amount is available
         pub fn not_enough(
             &self,
@@ -340,39 +376,11 @@ pub mod ilocktoken {
 
 /////// PSP22 getters ///////////////////////////////////////////////////////////
 
-        /// . token name getter
-        #[ink(message)]
-        pub fn name(
-            &self,
-        ) -> Option<String> {
-
-            Some(TOKEN_NAME.to_string())
-        }
-
-        /// . token symbol getter
-        #[ink(message)]
-        pub fn symbol(
-            &self,
-        ) -> Option<String> {
-
-            Some(TOKEN_SYMBOL.to_string())
-        }
-
-        /// . token decimal count getter
-        #[ink(message)]
-        pub fn decimals(
-            &self,
-        ) -> u8 {
-
-            TOKEN_DECIMALS
-        }
-
         /// . total circulating supply getter
         #[ink(message)]
         pub fn total_supply(
             &self,
         ) -> Balance {
-
             self.circulatingsupply
         }
 
@@ -406,17 +414,13 @@ pub mod ilocktoken {
         /// . used to calculate monthly payouts and track net paid
         /// . stakeholder data also used for stakeholder to verify their place in vesting schedule
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn register_stakeholder(
             &mut self,
             stakeholder: AccountId,
             share: Balance,
             pool: u8,
-        ) -> ResultOther<()> {
-
-            // only owner can call
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner)
-            }
+        ) -> PSP22Result<()> {
 
             // create stakeholder struct
             let this_stakeholder = StakeholderData {
@@ -438,15 +442,11 @@ pub mod ilocktoken {
         /// . this is called once per stakeholder by Interlock, Interlock paying fees
         /// . pools are guaranteed to have enough tokens for all stakeholders
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
         ) -> PSP22Result<()> {
-
-            // make sure caller is owner
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into());
-            }
 
             // get data structs
             let mut this_stakeholder = match self.stakeholderdata.get(stakeholder) {
@@ -548,12 +548,8 @@ pub mod ilocktoken {
 
         /// . reward the user for browsing
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> PSP22Result<Balance> {
-
-            // make sure caller is owner
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
 
             // update total amount rewarded to user
             self.rewardedtotal += reward;
@@ -621,14 +617,11 @@ pub mod ilocktoken {
 
         /// . function to increment circulatingsupply after reward issue or stakeholder payment
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn increment_circulation(
             &mut self,
             amount: u128,
         ) -> PSP22Result<()> {
-
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
 
             self.circulatingsupply += amount;
             Ok(())
@@ -636,14 +629,11 @@ pub mod ilocktoken {
 
         /// . function to decrement circulatingsupply after burn or reward reclaim
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn decrement_circulation(
             &mut self,
             amount: u128,
         ) -> PSP22Result<()> {
-
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
 
             self.circulatingsupply -= amount;
             Ok(())
@@ -661,75 +651,37 @@ pub mod ilocktoken {
 
         /// . function to change contract owners
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn change_owner(
             &mut self,
             newowner: AccountId,
         ) -> PSP22Result<()> {
 
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
-
             self.owner = newowner;
-
             Ok(())
         }
 
         /// . function to disown contract
         /// . upgrade and disown if Interlock Foundation goes under
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn disown(
             &mut self,
         ) -> PSP22Result<()> {
 
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
-
             self.owner = ink_env::AccountId::from([0_u8; ID_LENGTH]);
-
             Ok(())
         }
 
-        /// . burn function to permanently remove tokens from circulation / supply
-        #[ink(message)]
-        pub fn burn(
-            &mut self,
-            donor: AccountId,
-            amount: Balance,
-        ) -> PSP22Result<()> {
-
-            // make sure owner is caller
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
-
-            // burn the tokens
-            let _ = self._burn_from(donor, amount)?;
-            self.decrement_circulation(amount)?;
-
-            // emit transfer event
-            self.env().emit_event(Transfer {
-                from: Some(donor),
-                to: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
-                amount: amount,
-            });
-
-            Ok(())
-        }
 
         /// . modifies the code which is used to execute calls to this contract address
         /// . this upgrades the token contract logic while using old state
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn set_code(
             &mut self,
             code_hash: [u8; 32]
         ) -> PSP22Result<()> {
-
-            // make sure caller is owner
-            if self.not_owner() {
-                return Err(OtherError::CallerNotOwner.into())
-            }
 
             // takes code hash of updates contract and modifies preexisting logic to match
             ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
@@ -779,7 +731,7 @@ pub mod ilocktoken {
         fn name_works() {
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.name(), Some("Interlock Network".to_string()));
+            assert_eq!(ILOCKtokenPSP22.metadata.name, Some("Interlock Network".to_string()));
         }
 
         /// . test if symbol getter does its job
@@ -787,7 +739,7 @@ pub mod ilocktoken {
         fn symbol_works() {
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.symbol(), Some("ILOCK".to_string()));
+            assert_eq!(ILOCKtokenPSP22.metadata.symbol, Some("ILOCK".to_string()));
         }
         
         /// . test if decimals getter does its job
@@ -795,7 +747,7 @@ pub mod ilocktoken {
         fn decimals_works() {
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.decimals(), 18);
+            assert_eq!(ILOCKtokenPSP22.metadata.decimals, 18);
         }
 
         /// . test if total supply getter does its job
