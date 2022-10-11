@@ -185,6 +185,13 @@ pub mod vipmembership {
 
             Ok(())
         }
+        /// . override transfer function to reset each NFT to 'not authenticated' on transfer
+        #[ink(message)]
+        pub fn test(&self) -> u32 {
+
+            
+            return 10_u32
+        }
     }
 
 //// tests //////////////////////////////////////////////////////////////////////
@@ -289,6 +296,9 @@ pub mod vipmembership {
             );
         }
 
+
+        // no transfer_from function for PSP34
+    
         // . test if the overridden transfer funtion does its job
         // .    . AUTHENTICATED flips to zero on transfer, verified on testnet
         //
