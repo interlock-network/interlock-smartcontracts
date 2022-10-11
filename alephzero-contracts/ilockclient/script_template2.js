@@ -16,16 +16,20 @@ async function main () {
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const ADDRESS = '5CfCiRQtn2Cve6xkHzUsDTsndPqntVy2JsubDFkBwtuquZRs';
-		const CONTRACT = '5G7HRZviWs3XAR18mysFugY1RrVXYCR3nvVwjZmHBSb1z6J6';
+		const CONTRACT = '5HkYNEx7rbSVk1iHLy637ZSJtTupzbny4ikRTyLHGn4HM2Nb';
 		const keyring = new Keyring({type: 'sr25519'});
 		const ALICE = keyring.addFromUri('//Alice', { name: 'Alice default' });
 		const ALICEpair = keyring.getPair(ALICE.address);
+		const MNEMONIC = 'fiber amused more summer huge height eyebrow mean roof motion buffalo small';
+		const OWNERpair = keyring.addFromUri(MNEMONIC);
+		console.log(OWNERpair.address);
+		//const OWNERpair = keyring.getPair(OWNER.address);
 	//	const code = new CodePromise(api, metadata, wasm);
 		
 		// construct contract object
 		const contract = new ContractPromise(api, metadata, CONTRACT);
 
-		const unsub1 = await api.query.system.account(ALICE.address, ({ nonce, data: balance }) => {
+		const unsub1 = await api.query.system.account(OWNERpair.address, ({ nonce, data: balance }) => {
   			console.log(
 			`free balance is ${balance.free} with ${balance.reserved} reserved and a nonce of ${nonce}`);
 		});
@@ -43,9 +47,9 @@ async function main () {
 		//const value = api.registry.createType('Balance', 1000)
 
 
-		await contract.tx
-  			.test({ storageDepositLimit, gasLimit })
-  			.signAndSend(ALICEpair, result => {
+		await contract.tx.mintVipmembership
+  			({ storageDepositLimit, gasLimit }, ADDRESS, 'jpeg')
+  			.signAndSend(OWNERpair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
@@ -53,13 +57,18 @@ async function main () {
     			}
   		});
 
+
+		// THE BELOW CALL AND RESPONSE IS A WORKING GETTER
+
 		// (We perform the send from an account, here using Alice's address)
-		const { gasRequired, storageDeposit, result, output } = await contract.query.test(
-  			ALICEpair.address,
+		const { gasRequired, storageDeposit, result, output } =
+			await contract.query['psp34::balanceOf'](
+  			OWNERpair.address,
   			{
     				gasLimit,
     				storageDepositLimit,
-  			}
+  			},
+			ADDRESS
 		);
 
 		// check if the call was successful
@@ -69,23 +78,6 @@ async function main () {
 		} else {
   			console.error('Error', result.asErr);
 		}
-
-
-		/*const tx = code.tx.new({ gasLimit, storageDepositLimit })
-
-		let address;
-
-		const unsub2 = await tx.signAndSend(alicePair, ({ contract, status }) => {
-  			if (status.isInBlock || status.isFinalized) {
-    				address = contract.address.toString();
-    				unsub2();
-  			}
-		});*/
-
-		//const callValue = await contract.query.test(ALICE.address, {gasLimit: -1});
-
-		// print supply
-		//console.log(`test is ${callValue.toHuman()}.`);
 
 	} catch(error) {
 
