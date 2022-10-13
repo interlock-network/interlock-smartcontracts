@@ -26,6 +26,234 @@ const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 const gasLimit = -1;
 const storageDepositLimit = null;
 
+/////// doers //////////////////////////////////////////////////
+
+async function mintAccessNFT(recipient, jpeg_url, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx.mintAccessNFT
+  			({ storageDepositLimit, gasLimit }, recipient, jpeg_url)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function renounceOwnership(access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx['ownable::renounceOwnership']
+  			({ storageDepositLimit, gasLimit })
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function transferOwnership(newowner, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx['ownable::transferOwnership']
+  			({ storageDepositLimit, gasLimit }, newowner)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function approve(operator, id, approved, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx['psp34::approve']
+  			({ storageDepositLimit, gasLimit }, operator, id, approved)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function transfer(to, id, data, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx['psp34::transfer']
+  			({ storageDepositLimit, gasLimit }, to, id, data)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function setAuthenticated(id, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx.setAuthenticated
+  			({ storageDepositLimit, gasLimit }, id)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function setNotAuthenticated(id, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx.setNotAuthenticated
+  			({ storageDepositLimit, gasLimit }, id)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+async function upgradeContract(codehash, access_selector) {
+
+	try {
+		// choose which contract to access based off access_selector
+		const {access_contract, access_metadata} = checkSelector(access_selector);
+
+		// setup session
+		const api = await ApiPromise.create({ provider: wsProvider });
+		const contract = new ContractPromise(api, access_metadata, access_contract);
+		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+
+		// submit doer transaction request
+		const txhash = await contract.tx.upgradeContract
+  			({ storageDepositLimit, gasLimit }, codehash)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+    			}
+  		});
+
+	} catch(error) {
+
+		console.log(error);
+	}
+}
+
+setAuthenticated(0, 'VIPMEM').then(() => console.log('completed'))
+
 /////// getters ////////////////////////////////////////////////
 
 async function owner(access_selector) {
@@ -308,20 +536,3 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-totalSupply('BOUNCE').then(() => console.log('completed'))
-
-
-/*
-		// THE BELOW CALL AND RESPONSE IS A WORKING DOER
-
-		const txhash = await contract.tx.mintVipmembership
-  			({ storageDepositLimit, gasLimit }, ADDRESS, 'jpeg')
-  			.signAndSend(OWNER_pair, result => {
-    			if (result.status.isInBlock) {
-      				console.log('in a block');
-    			} else if (result.status.isFinalized) {
-      				console.log('finalized');
-    			}
-				
-  		});
-*/
