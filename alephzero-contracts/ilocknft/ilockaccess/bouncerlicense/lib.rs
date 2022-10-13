@@ -111,7 +111,7 @@ pub mod bouncerlicense {
         /// . mint an NFT bouncer license certificate
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn mint_bouncerlicense(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
+        pub fn mint_accessnft(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
 
             // mint next token id
             self._mint_to(recipient, psp34::Id::U16(self.next_bouncerlicense_id))?;
@@ -208,11 +208,15 @@ pub mod bouncerlicense {
 
             // check collection metadata -- unwrap() OK in this testing context
             assert_eq!(
-                bouncerlicense.get_attribute(bouncerlicense.collection_id(), String::from("name").into_bytes()).unwrap(),
+                bouncerlicense.get_attribute(
+                    bouncerlicense.collection_id(),
+                    String::from("name").into_bytes()).unwrap(),
                 String::from("Interlock Access NFT").into_bytes()
             );
             assert_eq!(
-                bouncerlicense.get_attribute(bouncerlicense.collection_id(), String::from("symbol").into_bytes()).unwrap(),
+                bouncerlicense.get_attribute(
+                    bouncerlicense.collection_id(),
+                    String::from("symbol").into_bytes()).unwrap(),
                 String::from("ILOCKACCESS").into_bytes()
             );
             assert_eq!(

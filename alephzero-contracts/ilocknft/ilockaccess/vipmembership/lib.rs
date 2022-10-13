@@ -111,7 +111,7 @@ pub mod vipmembership {
         /// . mint an NFT VIP membership certificate
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn mint_vipmembership(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
+        pub fn mint_accessnft(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
 
             // mint next token id
             self._mint_to(recipient, psp34::Id::U16(self.next_vipmembership_id))?;
