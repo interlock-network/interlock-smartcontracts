@@ -2,6 +2,10 @@
 // THIS IS A WORKBENCH .
 //
 
+// utility functions
+import {
+	balanceOf,
+} from "./ilockaccess.js";
 // import
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
@@ -45,7 +49,9 @@ async function main () {
 		// balance to transfer to the contract account, formerly know as "endowment". 
 		// use only with payable constructors, will fail otherwise. 
 		//const value = api.registry.createType('Balance', 1000)
+		
 
+		// THE BELOW CALL AND RESPONSE IS A WORKING DOER
 
 		await contract.tx.mintVipmembership
   			({ storageDepositLimit, gasLimit }, ADDRESS, 'jpeg')
