@@ -29,6 +29,12 @@
 // getAttribute		(id: u16, key: string) -> string | bytes
 //
 
+// 
+// TODO
+// . determine gas limit
+// . depending on py2js needs, create returns for getters
+//
+
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
