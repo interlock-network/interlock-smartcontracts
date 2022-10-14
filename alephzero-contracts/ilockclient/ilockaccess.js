@@ -125,7 +125,7 @@ async function approve(operator, id, approved, access_selector) {
 
 		// submit doer transaction request
 		const txhash = await contract.tx['psp34::approve']
-  			({ storageDepositLimit, gasLimit }, operator, id, approved)
+  			({ storageDepositLimit, gasLimit }, operator, {u16: id}, approved)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -153,7 +153,7 @@ async function transfer(to, id, data, access_selector) {
 
 		// submit doer transaction request
 		const txhash = await contract.tx['psp34::transfer']
-  			({ storageDepositLimit, gasLimit }, to, id, data)
+  			({ storageDepositLimit, gasLimit }, to, {u16: id}, data)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -181,7 +181,7 @@ async function setAuthenticated(id, access_selector) {
 
 		// submit doer transaction request
 		const txhash = await contract.tx.setAuthenticated
-  			({ storageDepositLimit, gasLimit }, id)
+  			({ storageDepositLimit, gasLimit }, {u16: id})
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -196,6 +196,8 @@ async function setAuthenticated(id, access_selector) {
 	}
 }
 
+setAuthenticated(22, 'VIPMEM').then(() => console.log('completed'))
+
 async function setNotAuthenticated(id, access_selector) {
 
 	try {
@@ -209,7 +211,7 @@ async function setNotAuthenticated(id, access_selector) {
 
 		// submit doer transaction request
 		const txhash = await contract.tx.setNotAuthenticated
-  			({ storageDepositLimit, gasLimit }, id)
+  			({ storageDepositLimit, gasLimit }, {u16: id})
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -251,8 +253,6 @@ async function upgradeContract(codehash, access_selector) {
 		console.log(error);
 	}
 }
-
-setAuthenticated(0, 'VIPMEM').then(() => console.log('completed'))
 
 /////// getters ////////////////////////////////////////////////
 
@@ -303,10 +303,6 @@ async function allowance(owner, operator, id, access_selector) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// condition id
-		var ID = new Uint16Array(1);
-		ID[0] = id;
-
 		// submit getter request
 		const { gasRequired, storageDeposit, result, output } =
 			await contract.query['psp34::allowance'](
@@ -317,8 +313,9 @@ async function allowance(owner, operator, id, access_selector) {
   			},
 			owner,
 			operator,
-			ID[0]
+			{u16: id}
 		);
+
 
 		// check if the call was successful
 		// put stuff here to return
@@ -346,6 +343,7 @@ async function balanceOf(address, access_selector) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
+
 		// submit getter request
 		const { gasRequired, storageDeposit, result, output } =
 			await contract.query['psp34::balanceOf'](
@@ -371,6 +369,7 @@ async function balanceOf(address, access_selector) {
 		console.log(error);
 	}
 }
+
 
 async function collectionId(access_selector) {
 
@@ -419,6 +418,10 @@ async function ownerOf(id, access_selector) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
+		// condition id
+		//var ID = new Uint16Array(1);
+		//ID[0] = id;
+
 		// submit getter request
 		const { gasRequired, storageDeposit, result, output } =
 			await contract.query['psp34::ownerOf'](
@@ -427,8 +430,9 @@ async function ownerOf(id, access_selector) {
     				gasLimit,
     				storageDepositLimit,
   			},
-			id,
+			{u16: id},
 		);
+
 
 		// check if the call was successful
 		// put stuff here to return
