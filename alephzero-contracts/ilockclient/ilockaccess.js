@@ -5,6 +5,30 @@
 // !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 
+// INTERFACE
+//
+// doers
+//
+// mintAccessnft	(recipient: string, jpegurl: string) -> ()
+// renounceOwnership	() -> ()
+// transferOwnership	(newowner: string) -> ()
+// approve		(operator: string, id: u16, approved: bool) -> ()
+// transfer		(to: string, id: u16, data: bytes) -> ()
+// setAuthenticated	(id: u16) -> ()
+// setNotAuthenticated	(id: u16) -> ()
+// upgradeContract	(codehash: hash) -> ()
+//
+// getters
+//
+// owner		() -> address
+// allowance		(owner: string, operator: string, id: u16) -> bool
+// balanceOf		(address: string) -> integer
+// collectionId		() -> bytes
+// ownerOf		(id: u16) -> address
+// totalSupply		() -> integer
+// getAttribute		(id: u16, key: string) -> string | bytes
+//
+
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
@@ -28,7 +52,7 @@ const storageDepositLimit = null;
 
 /////// doers //////////////////////////////////////////////////
 
-async function mintAccessNFT(recipient, jpeg_url, access_selector) {
+async function mintAccessnft(recipient, jpegurl, access_selector) {
 
 	try {
 		// choose which contract to access based off access_selector
@@ -40,8 +64,8 @@ async function mintAccessNFT(recipient, jpeg_url, access_selector) {
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
 		// submit doer transaction request
-		const txhash = await contract.tx.mintAccessNFT
-  			({ storageDepositLimit, gasLimit }, recipient, jpeg_url)
+		const txhash = await contract.tx.mintAccessnft
+  			({ storageDepositLimit, gasLimit }, recipient, jpegurl)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -195,8 +219,6 @@ async function setAuthenticated(id, access_selector) {
 		console.log(error);
 	}
 }
-
-setAuthenticated(22, 'VIPMEM').then(() => console.log('completed'))
 
 async function setNotAuthenticated(id, access_selector) {
 
@@ -485,7 +507,7 @@ async function totalSupply(access_selector) {
 	}
 }
 
-async function getAttribute(access_selector) {
+async function getAttribute(id, key, access_selector) {
 
 	try {
 		// choose which contract to access based off access_selector
@@ -504,7 +526,7 @@ async function getAttribute(access_selector) {
     				gasLimit,
     				storageDepositLimit,
   			},
-			id,
+			{u16: id},
 			key
 		);
 
