@@ -11,6 +11,7 @@ bin
 /mutagen.sh
 venv
 .env
+.mnemonic*
 bigtable-admin.json
 bigtable-writer.json
 
