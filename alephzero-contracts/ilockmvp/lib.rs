@@ -63,63 +63,42 @@ pub mod ilocktoken {
     pub const TOKEN_DECIMALS: u8 = 18;
     pub const TOKEN_SYMBOL: &str = "ILOCK";
 
+    #[derive(Debug)]
+    pub struct PoolData<'a> {
+        name: &'a str,
+        tokens: u128,
+        vests: u8,
+        cliffs: u8,
+    }
+
     /// . pool data
-    pub const POOL_NAMES: [&str; POOL_COUNT] = [
-                    "early_backers+venture_capital",
-                    "presale_1",
-                    "presale_2",
-                    "presale_3",
-                    "team+founders",
-                    "outlier_ventures",
-                    "advisors",
-                    "rewards",
-                    "foundation",
-                    "partners",
-                    "whitelist",
-                    "public_sale",
-                ];
-    pub const POOL_TOKENS: [u128; POOL_COUNT] = [
-                    20_000_000,
-                    48_622_222,
-                    66_666_667,
-                    40_000_000,
-                    200_000_000,
-                    40_000_000,
-                    25_000_000,
-                    285_000_000,
-                    172_711_111,
-                    37_000_000,
-                    15_000_000,
-                    50_000_000,
-                ];
-    pub const POOL_VESTS: [u8; POOL_COUNT] = [
-                    24,
-                    18,
-                    15,
-                    12,
-                    36,
-                    24,
-                    24,
-                    1,
-                    84,
-                    1,
-                    48,
-                    1,
-                ];
-    pub const POOL_CLIFFS: [u8; POOL_COUNT] = [
-                    1,
-                    1,
-                    1,
-                    1,
-                    6,
-                    1,
-                    1,
-                    0,
-                    1,
-                    0,
-                    0,
-                    0,
-                ];
+    pub const POOLS: [PoolData; POOL_COUNT] = [
+        PoolData { name: "early_backers+venture_capital", tokens: 20_000_00,   vests: 24, cliffs: 1, },
+        PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
+        PoolData { name: "presale_2",                     tokens: 66_666_667,  vests: 15, cliffs: 1, },
+        PoolData { name: "presale_3",                     tokens: 40_000_000,  vests: 12, cliffs: 1, },
+        PoolData { name: "team+founders",                 tokens: 200_000_000, vests: 36, cliffs: 6, },
+        PoolData { name: "outlier_ventures",              tokens: 40_000_000,  vests: 24, cliffs: 1, },
+        PoolData { name: "advisors",                      tokens: 25_000_000,  vests: 24, cliffs: 1, },
+        PoolData { name: "rewards",                       tokens: 285_000_000, vests: 1,  cliffs: 0, },
+        PoolData { name: "foundation",                    tokens: 172_711_111, vests: 84, cliffs: 1, },
+        PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
+        PoolData { name: "whitelist",                     tokens: 15_000_000,  vests: 48, cliffs: 0, },
+        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 48, cliffs: 0, },
+    ];
+
+    pub const EARLY_BACKERS: u8 = 0;
+    pub const PRESALE_1: u8 = 1;
+    pub const PRESALE_2: u8 = 2;
+    pub const PRESALE_3: u8 = 3;
+    pub const TEAM_FOUNDERS: u8 = 4;
+    pub const OUTLIER_VENTURES: u8 = 5;
+    pub const ADVISORS: u8 = 6;
+    pub const REWARDS: u8 = 7;
+    pub const FOUNDATION: u8 = 8;
+    pub const PARTNERS: u8 = 9;
+    pub const WHITELIST: u8 = 10;
+    pub const PUBLIC_SALE: u8 = 11;
 
 //// structured data /////////////////////////////////////////////////////////////
 
@@ -334,12 +313,12 @@ pub mod ilocktoken {
 
                 // TODO: handle the error cases here
                 // whitelist
-                contract.increment_circulation(POOL_TOKENS[10] * DECIMALS_POWER10)
+                contract.increment_circulation(POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10)
                         .expect("Failed to increment circulation");
                 // public sale
-                contract.increment_circulation(POOL_TOKENS[11] * DECIMALS_POWER10)
+                contract.increment_circulation(POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10)
                         .expect("Failed to increment circulation");
-                contract.rewardspoolbalance = POOL_TOKENS[7] * DECIMALS_POWER10;
+                contract.rewardspoolbalance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
 
             })
         }
@@ -456,10 +435,10 @@ pub mod ilocktoken {
                 Some(s) => s,
                 None => { return Err(OtherError::StakeholderNotFound.into()) },
             };
-            let pool = this_stakeholder.pool;
+            let pool = &POOLS[this_stakeholder.pool as usize];
 
             // require cliff to have been surpassed
-            if self.monthspassed < POOL_CLIFFS[pool as usize] {
+            if self.monthspassed < pool.cliffs {
                 return Err(OtherError::CliffNotPassed.into());
             }
 
@@ -469,15 +448,15 @@ pub mod ilocktoken {
             }
 
             // calculate the payout owed
-            let mut payout: Balance = this_stakeholder.share / POOL_VESTS[pool as usize] as Balance;
+            let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
 
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
             if this_stakeholder.share - this_stakeholder.paid - payout <
-                this_stakeholder.share / POOL_VESTS[pool as usize] as Balance {
+                this_stakeholder.share / pool.vests as Balance {
 
                 // add remainder
-                payout += this_stakeholder.share % POOL_VESTS[pool as usize] as Balance;
+                payout += this_stakeholder.share % pool.vests as Balance;
             }
 
             // now transfer tokens
@@ -506,7 +485,7 @@ pub mod ilocktoken {
 
             // get pool and stakeholder data structs first
             let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
-            let pool = this_stakeholder.pool;
+            let pool = &POOLS[this_stakeholder.pool as usize];
 
             // how much has stakeholder already claimed?
             let paidout: Balance = this_stakeholder.paid;
@@ -515,13 +494,13 @@ pub mod ilocktoken {
             let payremaining: Balance = this_stakeholder.share - this_stakeholder.paid;
 
             // how much does stakeholder get each month?
-            let payamount: Balance = this_stakeholder.share / POOL_VESTS[pool as usize] as Balance;
+            let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
 
             return (
                 paidout,
                 payremaining,
                 payamount,
-                pool,
+                this_stakeholder.pool,
             )
         }
 
@@ -538,12 +517,13 @@ pub mod ilocktoken {
             pool: u8,
         ) -> (String, u128, u8, u8) {
         
+            let pool = &POOLS[pool as usize];
             // just grab up and send it out
             return (
-                POOL_NAMES[pool as usize].to_string(),
-                POOL_TOKENS[pool as usize],
-                POOL_VESTS[pool as usize],
-                POOL_CLIFFS[pool as usize],
+                pool.name.to_string(),
+                pool.tokens,
+                pool.vests,
+                pool.cliffs,
             )
         }
 
@@ -1059,10 +1039,11 @@ pub mod ilocktoken {
         fn pool_data_works() {
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.pool_data(1), (POOL_NAMES[1].to_string(),
-                                                      POOL_TOKENS[1],
-                                                      POOL_VESTS[1],
-                                                      POOL_CLIFFS[1]));
+            let pool = &POOLS[1];
+            assert_eq!(ILOCKtokenPSP22.pool_data(1), (pool.name.to_string(),
+                                                      pool.tokens,
+                                                      pool.vests,
+                                                      pool.cliffs));
         }
 
         /// . test if months passed getter does its job
