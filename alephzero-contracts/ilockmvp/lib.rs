@@ -636,31 +636,6 @@ pub mod ilocktoken {
             true
         }
 
-        /// . function to change contract owners
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn change_owner(
-            &mut self,
-            newowner: AccountId,
-        ) -> PSP22Result<()> {
-
-            self.owner = newowner;
-            Ok(())
-        }
-
-        /// . function to disown contract
-        /// . upgrade and disown if Interlock Foundation goes under
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn disown(
-            &mut self,
-        ) -> PSP22Result<()> {
-
-            self.owner = ink_env::AccountId::from([0_u8; ID_LENGTH]);
-            Ok(())
-        }
-
-
         /// . modifies the code which is used to execute calls to this contract address
         /// . this upgrades the token contract logic while using old state
         #[ink(message)]
@@ -1073,30 +1048,6 @@ pub mod ilocktoken {
 
             ILOCKtokenPSP22.decrement_circulation(100);
             assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
-        }
-
-        /// . test if change owner does its job
-        #[ink::test]
-        fn change_owner_works() {
-
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            assert_eq!(accounts.alice, ILOCKtokenPSP22.owner);
-            ILOCKtokenPSP22.change_owner(accounts.bob).unwrap();
-            assert_eq!(accounts.bob, ILOCKtokenPSP22.owner);
-        }
-
-        /// . test if disowner does its job
-        #[ink::test]
-        fn disown_works() {
-
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            assert_eq!(accounts.alice, ILOCKtokenPSP22.owner);
-            ILOCKtokenPSP22.disown().unwrap();
-            assert_eq!(AccountId::from([0_u8; ID_LENGTH]), ILOCKtokenPSP22.owner);
         }
 
         /// . test if burn does its job
