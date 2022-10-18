@@ -199,13 +199,22 @@ pub mod ilocktoken {
 
 /////// init /////////////////////////////////////////////////////////////
 
-    impl PSP22 for ILOCKtoken {}
+    impl PSP22 for ILOCKtoken {
+        
+        /// . total supply reflects token in circulation
+        #[ink(message)]
+        fn total_supply(&self) -> Balance {
+
+            self.circulatingsupply
+        }
+    }
 
     impl PSP22Metadata for ILOCKtoken {}
 
     impl Ownable for ILOCKtoken {}
 
     impl PSP22Burnable for ILOCKtoken {
+
         /// . burn function to permanently remove tokens from circulation / supply
         #[ink(message)]
 		#[openbrush::modifiers(only_owner)]
@@ -356,16 +365,7 @@ pub mod ilocktoken {
             account == ink_env::AccountId::from([0_u8; ID_LENGTH])
         }
 
-/////// PSP22 getters ///////////////////////////////////////////////////////////
-
-        /// . total circulating supply getter
-        #[ink(message)]
-        pub fn total_supply(
-            &self,
-        ) -> Balance {
-            self.circulatingsupply
-        }
-
+/////// getters ///////////////////////////////////////////////////////////
 
 /////// timing /////////////////////////////////////////////////////////////
 
@@ -710,14 +710,6 @@ pub mod ilocktoken {
 
             let ILOCKtokenPSP22 = ILOCKtoken::new_token();
             assert_eq!(ILOCKtokenPSP22.metadata.decimals, 18);
-        }
-
-        /// . test if total supply getter does its job
-        #[ink::test]
-        fn totalsupply_works() {
-
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10);
         }
 
         /// . test if balance getter does its job
