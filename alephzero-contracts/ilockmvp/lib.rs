@@ -669,11 +669,7 @@ pub mod ilocktoken {
 
         use super::*;
         use ink_lang as ink;
-        use ink_env::Clear;
-        use ink_env::topics::PrefixedValue;
         use ink_lang::codegen::Env;
-
-        type Event = <ILOCKtoken as ::ink_lang::reflect::ContractEventBase>::Type;
 
         /// . test if the default constructor does its job
         #[ink::test]
@@ -1028,7 +1024,7 @@ pub mod ilocktoken {
 
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
 
-            ILOCKtokenPSP22.increment_circulation(100);
+            ILOCKtokenPSP22.increment_circulation(100).unwrap();
             assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 + 100);
         }
 
@@ -1038,7 +1034,7 @@ pub mod ilocktoken {
 
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
 
-            ILOCKtokenPSP22.decrement_circulation(100);
+            ILOCKtokenPSP22.decrement_circulation(100).unwrap();
             assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
         }
 
@@ -1058,149 +1054,5 @@ pub mod ilocktoken {
             assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 0);
             assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
         }
-
-/////// testing helpers  //////////////////////////////////////////////////////////////////////
-
-        /// . check that a transfer event is good
-        fn assert_transfer_event(
-            event: &ink_env::test::EmittedEvent,
-            expected_from: Option<AccountId>,
-            expected_to: Option<AccountId>,
-            expected_amount: u128,
-        ) {
-
-            // decode Event object
-            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
-                .expect("encountered invalid contract event data buffer");
-
-            // check event is expected transfer event
-            if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
-
-                // make sure accounts match what we expect
-                assert_eq!(from, expected_from, "encountered invalid Transfer.from");
-                assert_eq!(to, expected_to, "encountered invalid Transfer.to");
-                assert_eq!(amount, expected_amount, "encountered invalid Trasfer.amount");
-            } else {
-                panic!("encountered unexpected event kind: expected a Transfer event")
-            }
-
-            // define expected topics for Transfer event
-            let expected_topics = vec![
-                encoded_into_hash(&PrefixedValue {
-                    value: b"ILOCKtoken::Transfer",
-                    prefix: b"",
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Transfer::from",
-                    value: &expected_from,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Transfer::to",
-                    value: &expected_to,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Transfer::amount",
-                    value: &expected_amount,
-                }),
-            ];
-
-            // get actual topics for event
-            let topics = event.topics.clone();
-
-            // check that actual topics match expected topics
-            for (n, (actual_topic, expected_topic)) in
-                topics.iter().zip(expected_topics).enumerate()
-            {
-                let mut topic_hash = Hash::clear();
-                let len = actual_topic.len();
-                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
-                assert_eq!(topic_hash, expected_topic, "encountered invalid topic at {}", n);
-            }
-        }
-
-        /// . check that an approval event is good
-        fn assert_approval_event(
-            event: &ink_env::test::EmittedEvent,
-            expected_owner: Option<AccountId>,
-            expected_spender: Option<AccountId>,
-            expected_amount: u128,
-        ) {
-
-            // decode Event object
-            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
-                .expect("encountered invalid contract event data buffer");
-
-            // check event is expected approval event
-            if let Event::Approval(Approval { owner, spender, amount }) = decoded_event {
-                assert_eq!(owner, expected_owner, "encountered invalid Approval.owner");
-                assert_eq!(spender, expected_spender, "encountered invalid Approval.spender");
-                assert_eq!(amount, expected_amount, "encountered invalid Approval.amount");
-            } else {
-                panic!("encountered unexpected event kind: expected a Approval event")
-            }
-
-            // define expected topics for Approval event
-            let expected_topics = vec![
-                encoded_into_hash(&PrefixedValue {
-                    value: b"ILOCKtoken::Approval",
-                    prefix: b"",
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Approval::owner",
-                    value: &expected_owner,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Approval::spender",
-                    value: &expected_spender,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKtoken::Approval::amount",
-                    value: &expected_amount,
-                }),
-            ];
-
-            // get actual topics for event
-            let topics = event.topics.clone();
-
-            // check that actual topics match expected topics
-            for (n, (actual_topic, expected_topic)) in
-                topics.iter().zip(expected_topics).enumerate()
-            {
-                let mut topic_hash = Hash::clear();
-                let len = actual_topic.len();
-                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
-                assert_eq!(topic_hash, expected_topic, "encountered invalid topic at {}", n);
-            }
-        }
-
-        /// . this is a painful hashing function for use in event assert functions
-        fn encoded_into_hash<T>(entity: &T) -> Hash
-        where
-            T: scale::Encode,
-        {
-            use ink_env::{
-                hash::{
-                    Blake2x256,
-                    CryptoHash,
-                    HashOutput,
-                },
-                Clear,
-            };
-            let mut result = Hash::clear();
-            let len_result = result.as_ref().len();
-            let encoded = entity.encode();
-            let len_encoded = encoded.len();
-            if len_encoded <= len_result {
-                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
-                return result
-            }
-            let mut hash_output =
-                <<Blake2x256 as HashOutput>::Type as Default>::default();
-            <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
-            let copy_len = core::cmp::min(hash_output.len(), len_result);
-            result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
-            result
-        }
     }
-
 }
