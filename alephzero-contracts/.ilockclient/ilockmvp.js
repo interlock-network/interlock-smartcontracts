@@ -1,33 +1,16 @@
 //
 // INTERLOCK NETWORK - 
-// PSP34 ACCESS CLIENT LIBRARY - BOUNCER LICENSE
+// PSP22 AND REWARDS CLIENT LIBRARY
 //
 // !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
 //
 
-//
 // INTERFACE
 //
 // doers
 //
-// mintAccessnft	(recipient: string, jpegurl: string) -> ()
-// renounceOwnership	() -> ()
-// transferOwnership	(newowner: string) -> ()
-// approve		(operator: string, id: u16, approved: bool) -> ()
-// transfer		(to: string, id: u16, data: bytes) -> ()
-// setAuthenticated	(id: u16) -> ()
-// setNotAuthenticated	(id: u16) -> ()
-// upgradeContract	(codehash: hash) -> ()
 //
 // getters
-//
-// owner		() -> address
-// allowance		(owner: string, operator: string, id: u16) -> bool
-// balanceOf		(address: string) -> integer
-// collectionId		() -> bytes
-// ownerOf		(id: u16) -> address
-// totalSupply		() -> integer
-// getAttribute		(id: u16, key: string) -> string | bytes
 //
 
 // 
@@ -39,29 +22,28 @@
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
-//require('dotenv').config();
 
 // constants
 const metadata_VIPMEMBERSHIP = require('../ilocknft/ilockaccess/vipmembership/target/ink/metadata.json');
 const metadata_BOUNCERLICENSE = require('../ilocknft/ilockaccess/bouncerlicense/target/ink/metadata.json');
+//const contract_VIPMEMBERSHIP = '5HkYNEx7rbSVk1iHLy637ZSJtTupzbny4ikRTyLHGn4HM2Nb';
 const contract_VIPMEMBERSHIP = process.env.CONTRACT_VIPMEMBERSHIP;
+//const contract_BOUNCERLICENSE = '5HkYNEx7rbSVk1iHLy637ZSJtTupzbny4ikRTyLHGn4HM2Nb';
 const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
-const OWNER_MNEMONIC = require('./.mnemonic.json');
-const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
+//const OWNER_mnemonic = 'fiber amused more summer huge height eyebrow mean roof motion buffalo small';
+const OWNER_mnemonic = process.env.OWNER_MNEMONIC;
+
+const ADDRESS1 = '5CfCiRQtn2Cve6xkHzUsDTsndPqntVy2JsubDFkBwtuquZRs';
+const ADDRESS2 = '5CqfsS4Le7Si6osL5ysrrX3Mk8F94nSvhiQ6EGYAx3REHtAX';
 
 const keyring = new Keyring({type: 'sr25519'});
 const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 
 // constants
-const gasLimit = 100000;
+const gasLimit = -1;
 const storageDepositLimit = null;
 
 /////// doers //////////////////////////////////////////////////
-
-
-function helloWorld() {
-	console.log("hello world");
-}
 
 async function mintAccessnft(recipient, jpegurl, access_selector) {
 
@@ -231,11 +213,9 @@ async function setAuthenticated(id, access_selector) {
 	}
 }
 
-
 async function setNotAuthenticated(id, access_selector) {
 
 	try {
-
 		// choose which contract to access based off access_selector
 		const {access_contract, access_metadata} = checkSelector(access_selector);
 
@@ -254,7 +234,6 @@ async function setNotAuthenticated(id, access_selector) {
       				console.log('finalized');
     			}
   		});
-
 
 	} catch(error) {
 

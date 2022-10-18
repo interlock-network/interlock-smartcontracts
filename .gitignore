@@ -18,6 +18,7 @@ bigtable-writer.json
 
 # rust stuff
 target
+*.lock
 
 # misc stuff
 migrations

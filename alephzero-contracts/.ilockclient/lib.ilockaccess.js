@@ -37,16 +37,17 @@
 //
 
 // imports
-const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
-const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
+import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
+import { ContractPromise, CodePromise } from '@polkadot/api-contract';
 //require('dotenv').config();
+import fs from 'fs';
 
 // constants
-const metadata_VIPMEMBERSHIP = require('../ilocknft/ilockaccess/vipmembership/target/ink/metadata.json');
-const metadata_BOUNCERLICENSE = require('../ilocknft/ilockaccess/bouncerlicense/target/ink/metadata.json');
+const metadata_VIPMEMBERSHIP = fs.readFileSync('../ilocknft/ilockaccess/vipmembership/target/ink/metadata.json');
+const metadata_BOUNCERLICENSE = fs.readFileSync('../ilocknft/ilockaccess/bouncerlicense/target/ink/metadata.json');
 const contract_VIPMEMBERSHIP = process.env.CONTRACT_VIPMEMBERSHIP;
 const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
-const OWNER_MNEMONIC = require('./.mnemonic.json');
+const OWNER_MNEMONIC = fs.readFileSync('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
 const keyring = new Keyring({type: 'sr25519'});
@@ -59,7 +60,7 @@ const storageDepositLimit = null;
 /////// doers //////////////////////////////////////////////////
 
 
-function helloWorld() {
+export function helloWorld() {
 	console.log("hello world");
 }
 
