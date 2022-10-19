@@ -20,7 +20,7 @@ async function main () {
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const ADDRESS = '5CfCiRQtn2Cve6xkHzUsDTsndPqntVy2JsubDFkBwtuquZRs';
-		const CONTRACT = '5HkYNEx7rbSVk1iHLy637ZSJtTupzbny4ikRTyLHGn4HM2Nb';
+		const CONTRACT = '5HWajiThA41ud6JqdXBnTu7EraJiepjRFAqtTuPP2AF4SfZP';
 		const keyring = new Keyring({type: 'sr25519'});
 		const ALICE = keyring.addFromUri('//Alice', { name: 'Alice default' });
 		const ALICEpair = keyring.getPair(ALICE.address);
@@ -63,6 +63,7 @@ async function main () {
     			}
   		});
 
+		/*
 
 		// THE BELOW CALL AND RESPONSE IS A WORKING GETTER
 
@@ -84,7 +85,7 @@ async function main () {
 		} else {
   			console.error('Error', result.asErr);
 		}
-
+*/
 	} catch(error) {
 
 		console.log(error);
