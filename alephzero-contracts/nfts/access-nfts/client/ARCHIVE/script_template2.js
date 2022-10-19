@@ -2,59 +2,36 @@
 // THIS IS A WORKBENCH .
 //
 
-// utility functions
-import {
-	balanceOf,
-} from "./ilockaccess.js";
-// import
+
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
-const metadata = require('../ilocknft/ilockaccess/vipmembership/target/ink/metadata.json');
-//const wasm = require('../ilocknft/ilockaccess/vipmembership/target/ink/vipmembership.wasm');
+const metadata = require('../vipmembership/target/ink/metadata.json');
 
 async function main () {
 
 	try {
 
-		// construct
+		// setup session
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const ADDRESS = '5CfCiRQtn2Cve6xkHzUsDTsndPqntVy2JsubDFkBwtuquZRs';
 		const CONTRACT = '5HWajiThA41ud6JqdXBnTu7EraJiepjRFAqtTuPP2AF4SfZP';
 		const keyring = new Keyring({type: 'sr25519'});
-		const ALICE = keyring.addFromUri('//Alice', { name: 'Alice default' });
-		const ALICEpair = keyring.getPair(ALICE.address);
+		//const ALICE = keyring.addFromUri('//Alice', { name: 'Alice default' });
+		//const ALICEpair = keyring.getPair(ALICE.address);
 		const MNEMONIC = 'fiber amused more summer huge height eyebrow mean roof motion buffalo small';
 		const OWNERpair = keyring.addFromUri(MNEMONIC);
-		console.log(OWNERpair.address);
-		//const OWNERpair = keyring.getPair(OWNER.address);
-	//	const code = new CodePromise(api, metadata, wasm);
-		
-		// construct contract object
 		const contract = new ContractPromise(api, metadata, CONTRACT);
 
-		const unsub1 = await api.query.system.account(OWNERpair.address, ({ nonce, data: balance }) => {
-  			console.log(
-			`free balance is ${balance.free} with ${balance.reserved} reserved and a nonce of ${nonce}`);
-		});
 
-		// maximum gas to be consumed for the instantiation. if limit is too small the instantiation will fail.
-		const gasLimit = -1;	//100000n * 1000000n
-		// a limit to how much Balance to be used to pay for the storage created by the instantiation
-		// if null is passed, unlimited balance can be used
+		const gasLimit = 100000*1000000;	//100000n * 1000000n
 		const storageDepositLimit = null
-		// used to derive contract address, 
-		// use null to prevent duplicate contracts
-		//const salt = new Uint8Array()
-		// balance to transfer to the contract account, formerly know as "endowment". 
-		// use only with payable constructors, will fail otherwise. 
-		//const value = api.registry.createType('Balance', 1000)
-		
 
 		// THE BELOW CALL AND RESPONSE IS A WORKING DOER
+		// (NOT ANY MORE, C 10/18)
 
-		await contract.tx.mintVipmembership
-  			({ storageDepositLimit, gasLimit }, ADDRESS, 'jpeg')
+		await contract.tx.mintAccessnft
+  			({ storageDepositLimit, gasLimit }, ADDRESS, 'test')
   			.signAndSend(OWNERpair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -63,22 +40,18 @@ async function main () {
     			}
   		});
 
-		/*
-
 		// THE BELOW CALL AND RESPONSE IS A WORKING GETTER
-
-		// (We perform the send from an account, here using Alice's address)
+		// (NOT ANY MORE, C 10/18)
+/*
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query['psp34::balanceOf'](
+			await contract.query['psp34::totalSupply'](
   			OWNERpair.address,
   			{
     				gasLimit,
     				storageDepositLimit,
   			},
-			ADDRESS
 		);
 
-		// check if the call was successful
 		if (result.isOk) {
   			// output the return value
   			console.log('Success', output.toHuman());
@@ -89,7 +62,6 @@ async function main () {
 	} catch(error) {
 
 		console.log(error);
-
 	}
 }
 

@@ -19,20 +19,16 @@ const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
 // constants
 const metadata_VIPMEMBERSHIP = require('../vipmembership/target/ink/metadata.json');
 const metadata_BOUNCERLICENSE = require('../bouncerlicense/target/ink/metadata.json');
-//const contract_VIPMEMBERSHIP = process.env.CONTRACT_VIPMEMBERSHIP;
-//const contract_VIPMEMBERSHIP = '5HWajiThA41ud6JqdXBnTu7EraJiepjRFAqtTuPP2AF4SfZP';
-//rocco
-const contract_VIPMEMBERSHIP = '5GYX77AZHXtMh6p5SA4WHnqn8WkK2rfNz2DrwX72QpBUrmMs';
+const contract_VIPMEMBERSHIP = process.env.CONTRACT_VIPMEMBERSHIP;
 const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
-//const OWNER_MNEMONIC = require('./.mnemonic.json');
-//const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
-const OWNER_mnemonic = 'claim miss relax symbol undo shoe high promote slice observe achieve fragile';
+const OWNER_MNEMONIC = require('./.mnemonic.json');
+const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 const keyring = new Keyring({type: 'sr25519'});
-//const wsProvider = new WsProvider('wss://ws.test.azero.dev');
-const wsProvider = new WsProvider('wss://127.0.0.1');
+const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 
 // constants
-const gasLimit = 100000;
+const MEG = 1_000_000;
+const gasLimit = 10_000;
 const storageDepositLimit = null;
 
 async function mintAccessnft(recipient, jpegurl, access_selector) {

@@ -185,13 +185,6 @@ pub mod vipmembership {
 
             Ok(())
         }
-        /// . override transfer function to reset each NFT to 'not authenticated' on transfer
-        #[ink(message)]
-        pub fn test(&self) -> u32 {
-
-            
-            return 10_u32
-        }
     }
 
 //// tests //////////////////////////////////////////////////////////////////////

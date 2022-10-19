@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.mintAccessnft.js <access_selector> <jpegurl> <recipient>
+// node call.updateContract.js <access_selector> <codehash>
 //
 
 // imports
@@ -32,7 +32,7 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null;
 
-async function mintAccessnft(access_selector, jpegurl, recipient) {
+async function updateContract(access_selector, codehash) {
 
 	try {
 		// choose which contract to access based off access_selector
@@ -47,8 +47,8 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
 		// submit doer transaction request
-		const txhash = await contract.tx.mintAccessnft
-  			({ storageDepositLimit, gasLimit }, recipient, jpegurl)
+		const txhash = await contract.tx.updateContract
+  			({ storageDepositLimit, gasLimit }, codehash)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -79,4 +79,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-mintAccessnft(process.argv[2], process.argv[3], process.argv[4]).then(() => process.exit());
+updateContract(process.argv[2], process.argv[3]).then(() => process.exit());

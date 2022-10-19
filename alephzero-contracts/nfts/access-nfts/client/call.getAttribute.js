@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.mintAccessnft.js <access_selector> <jpegurl> <recipient>
+// node call.getAttribute.js <access_selector> <id> <key>
 //
 
 // imports
@@ -32,35 +32,41 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null;
 
-async function mintAccessnft(access_selector, jpegurl, recipient) {
+async function getAttribute(access_selector, id, key) {
 
 	try {
 		// choose which contract to access based off access_selector
 		const {access_contract, access_metadata} = checkSelector(access_selector);
 
 		// setup session
-		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const contract = new ContractPromise(api, access_metadata, access_contract);
-
-		const keyring = new Keyring({type: 'sr25519'});
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// submit doer transaction request
-		const txhash = await contract.tx.mintAccessnft
-  			({ storageDepositLimit, gasLimit }, recipient, jpegurl)
-  			.signAndSend(OWNER_pair, result => {
-    			if (result.status.isInBlock) {
-      				console.log('in a block');
-    			} else if (result.status.isFinalized) {
-      				console.log('finalized');
-    			}
-  		});
+		// submit getter request
+		const { gasRequired, storageDeposit, result, output } =
+			await contract.query['psp34Metadata::getAttribute'](
+  			OWNER_pair.address,
+  			{
+    				gasLimit,
+    				storageDepositLimit,
+  			},
+			{u16: id},
+			key
+		);
+
+		// check if the call was successful
+		// put stuff here to return
+		if (result.isOk) {
+  			console.log('Success.');
+			console.log('Output:' + output.toHuman());
+		} else {
+  			console.error('Error', result.asErr);
+		}
 
 	} catch(error) {
 
 		console.log(error);
-		process.exit();
 	}
 }
 
@@ -79,4 +85,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-mintAccessnft(process.argv[2], process.argv[3], process.argv[4]).then(() => process.exit());
+getAttribute(process.argv[2], process.argv[3], process.argv[4]).then(() => process.exit());
