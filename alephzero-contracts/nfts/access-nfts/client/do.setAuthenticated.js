@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.setAuthenticated.js <access_selector> <id>
+// node do.setAuthenticated.js <access_selector> <id>
 //
 
 // imports
@@ -40,10 +40,9 @@ async function setAuthenticated(access_selector, id) {
 
 		// setup session
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
+		const keyring = new Keyring({type: 'sr25519'});
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const contract = new ContractPromise(api, access_metadata, access_contract);
-
-		const keyring = new Keyring({type: 'sr25519'});
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
 		// submit doer transaction request

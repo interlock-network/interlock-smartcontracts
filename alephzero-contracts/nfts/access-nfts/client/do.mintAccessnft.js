@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.mintAccessnft.js <access_selector> <jpegurl> <recipient>
+// node do.mintAccessnft.js <access_selector> <jpegurl> <recipient>
 //
 
 // imports
@@ -40,10 +40,9 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 
 		// setup session
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
+		const keyring = new Keyring({type: 'sr25519'});
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const contract = new ContractPromise(api, access_metadata, access_contract);
-
-		const keyring = new Keyring({type: 'sr25519'});
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
 		// submit doer transaction request
@@ -79,4 +78,9 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-mintAccessnft(process.argv[2], process.argv[3], process.argv[4]).then(() => process.exit());
+mintAccessnft(process.argv[2], process.argv[3], process.argv[4]);
+
+setTimeout( function() {
+	console.log('PROCESS EXITED');
+	process.exit();
+}, 15000);

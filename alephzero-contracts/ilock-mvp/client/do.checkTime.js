@@ -7,8 +7,8 @@
 
 //
 // bash calling syntax:
-// node get.owner.js
-//
+// node do.checkTime.js
+// 
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
@@ -26,7 +26,7 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null;
 
-async function owner() {
+async function checkTime() {
 
 	try {
 
@@ -37,29 +37,36 @@ async function owner() {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// submit getter request
-		const { gasRequired, storageDeposit, result, output } =
-			await contract.query['ownable::owner'](
-  			OWNER_pair.address,
-  			{
-    				gasLimit,
-    				storageDepositLimit,
-  			},
-		);
-
-		// check if the call was successful
-		// put stuff here to return
-		if (result.isOk) {
-  			console.log('Success.');
-			console.log('Output:' + output.toHuman());
-		} else {
-  			console.error('Error', result.asErr);
-		}
+		// submit doer transaction request
+		txhash = await contract.tx.checkTime
+  			({ storageDepositLimit, gasLimit })
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
+				//console.log(result.events[5]);
+				for (const key in result.events) {
+  					if (result.events.hasOwnProperty(key)) {
+    						console.log(`${key}: ${result.events[key]}`);
+					}
+  				}
+    			}
+  		});
 
 	} catch(error) {
 
 		console.log(error);
+		process.exit();
 	}
 }
 
-owner();
+checkTime();
+
+
+setTimeout( function() {
+	//txhash;
+	//console.log({txhash});
+	console.log('PROCESS EXITED');
+	//process.exit();
+}, 15000);

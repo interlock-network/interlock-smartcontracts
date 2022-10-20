@@ -7,8 +7,8 @@
 
 //
 // bash calling syntax:
-// node get.owner.js
-//
+// node do.transferFrom.js <from> <to> <value> <data>
+// 
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
@@ -26,7 +26,7 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null;
 
-async function owner() {
+async function transferFrom(from, to, value, data) {
 
 	try {
 
@@ -37,29 +37,33 @@ async function owner() {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// submit getter request
-		const { gasRequired, storageDeposit, result, output } =
-			await contract.query['ownable::owner'](
-  			OWNER_pair.address,
-  			{
-    				gasLimit,
-    				storageDepositLimit,
-  			},
-		);
+		// submit doer transaction request
+		const txhash = await contract.tx['psp22::transferFrom']
+  			({ storageDepositLimit, gasLimit }, from, to, value, data)
+  			.signAndSend(OWNER_pair, result => {
+    			if (result.status.isInBlock) {
+      				console.log('in a block');
+    			} else if (result.status.isFinalized) {
+      				console.log('finalized');
 
-		// check if the call was successful
-		// put stuff here to return
-		if (result.isOk) {
-  			console.log('Success.');
-			console.log('Output:' + output.toHuman());
-		} else {
-  			console.error('Error', result.asErr);
-		}
+				for (const key in result.events.data) {
+  					if (result.events.hasOwnProperty(key)) {
+    						//console.log(`${key}: ${result.events[key]}`);
+						console.log(result.events.toHuman());
+					}
+				}
+				//console.log(result.toHuman());
+  				
+
+    			}
+  		});
 
 	} catch(error) {
 
 		console.log(error);
+		process.exit();
 	}
 }
 
-owner();
+transferFrom(process.argv[2], process.argv[3], process.argv[4], process.argv[5]);
+

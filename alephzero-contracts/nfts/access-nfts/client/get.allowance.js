@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.allowance.js <access_selector> <owner> <operator> <id>
+// node get.allowance.js <access_selector> <owner> <operator> <id>
 //
 
 // imports
@@ -39,6 +39,8 @@ async function allowance(access_selector, owner, operator, id) {
 		const {access_contract, access_metadata} = checkSelector(access_selector);
 
 		// setup session
+		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
+		const keyring = new Keyring({type: 'sr25519'});
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);

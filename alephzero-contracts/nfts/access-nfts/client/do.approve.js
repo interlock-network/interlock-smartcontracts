@@ -11,7 +11,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node call.approve.js <access_selector> <operator> <id> <approved>
+// node do.approve.js <access_selector> <operator> <id> <approved>
 //
 
 // imports
@@ -40,10 +40,9 @@ async function approve(access_selector, operator, id, approved) {
 
 		// setup session
 		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
+		const keyring = new Keyring({type: 'sr25519'});
 		const api = await ApiPromise.create({ provider: wsProvider });
 		const contract = new ContractPromise(api, access_metadata, access_contract);
-
-		const keyring = new Keyring({type: 'sr25519'});
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
 		// submit doer transaction request
