@@ -87,18 +87,18 @@ pub mod ilocktoken {
         PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 48, cliffs: 0, },
     ];
 
-    pub const EARLY_BACKERS: u8 = 0;
-    pub const PRESALE_1: u8 = 1;
-    pub const PRESALE_2: u8 = 2;
-    pub const PRESALE_3: u8 = 3;
-    pub const TEAM_FOUNDERS: u8 = 4;
-    pub const OUTLIER_VENTURES: u8 = 5;
-    pub const ADVISORS: u8 = 6;
-    pub const REWARDS: u8 = 7;
-    pub const FOUNDATION: u8 = 8;
-    pub const PARTNERS: u8 = 9;
-    pub const WHITELIST: u8 = 10;
-    pub const PUBLIC_SALE: u8 = 11;
+    pub const EARLY_BACKERS: u8     = 0;
+    pub const PRESALE_1: u8         = 1;
+    pub const PRESALE_2: u8         = 2;
+    pub const PRESALE_3: u8         = 3;
+    pub const TEAM_FOUNDERS: u8     = 4;
+    pub const OUTLIER_VENTURES: u8  = 5;
+    pub const ADVISORS: u8          = 6;
+    pub const REWARDS: u8           = 7;
+    pub const FOUNDATION: u8        = 8;
+    pub const PARTNERS: u8          = 9;
+    pub const WHITELIST: u8         = 10;
+    pub const PUBLIC_SALE: u8       = 11;
 
 //// structured data /////////////////////////////////////////////////////////////
 
@@ -439,12 +439,18 @@ pub mod ilocktoken {
 
             // require cliff to have been surpassed
             if self.monthspassed < pool.cliffs {
-                return Err(OtherError::CliffNotPassed.into());
+                return Err(OtherError::CliffNotPassed.into())
             }
 
             // require share has not been completely paid out
             if this_stakeholder.paid == this_stakeholder.share {
                 return Err(OtherError::StakeholderSharePaid.into())
+            }
+
+            // require that payout isn't repeatable for this month
+            let payments = this_stakeholder.paid / this_stakeholder.share;
+            if payments > self.monthspassed as u128 {
+                return Err(OtherError::PayoutTooEarly.into())
             }
 
             // calculate the payout owed
