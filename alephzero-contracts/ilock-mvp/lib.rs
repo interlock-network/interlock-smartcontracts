@@ -201,6 +201,7 @@ pub mod ilocktoken {
 
     impl PSP22 for ILOCKtoken {
         
+        /// . override default total_supply getter
         /// . total supply reflects token in circulation
         #[ink(message)]
         fn total_supply(&self) -> Balance {
@@ -215,6 +216,7 @@ pub mod ilocktoken {
 
     impl PSP22Burnable for ILOCKtoken {
 
+        /// . override default burn doer
         /// . burn function to permanently remove tokens from circulation / supply
         #[ink(message)]
 		#[openbrush::modifiers(only_owner)]
@@ -228,7 +230,6 @@ pub mod ilocktoken {
             let _ = self._burn_from(donor, amount)?;
             self.decrement_circulation(amount)?;
 
-            // TODO: will this happen automatically?
             // emit transfer event
             self.env().emit_event(Transfer {
                 from: Some(donor),
@@ -241,6 +242,7 @@ pub mod ilocktoken {
 	}
 
     impl Internal for ILOCKtoken {
+
         fn _emit_transfer_event(
             &self,
             _from: Option<AccountId>,
@@ -257,7 +259,12 @@ pub mod ilocktoken {
             );
         }
 
-        fn _emit_approval_event(&self, _owner: AccountId, _spender: AccountId, _amount: Balance) {
+        fn _emit_approval_event(
+            &self,
+            _owner: AccountId,
+            _spender: AccountId,
+            _amount: Balance
+        ) {
             ILOCKtoken::emit_event(
                 self.env(),
                 Event::Approval(Approval {
@@ -300,18 +307,10 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
-
                 // emit Transfer event
                 Self::env().emit_event(Transfer {
                     from: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
-                    to: Some(Self::env().account_id()),
-                    amount: SUPPLY_CAP,
-                });
-
-                // emit Approval event
-                Self::env().emit_event(Approval {
-                    owner: Some(Self::env().account_id()),
-                    spender: Some(caller),
+                    to: Some(caller),
                     amount: SUPPLY_CAP,
                 });
 
@@ -334,35 +333,6 @@ pub mod ilocktoken {
 
         pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
             emitter.emit_event(event);
-        }
-
-/////// modifiers ///////////////////////////////////////////////////////////
-
-        /// . make sure transfer amount is available
-        pub fn not_enough(
-            &self,
-            holder: AccountId,
-            amount: Balance,
-        ) -> bool {
-            self.balance_of(holder) < amount
-        }
-
-        /// . make sure allowance is sufficient
-        pub fn not_allowed(
-            &self,
-            holder: AccountId,
-            spender: AccountId,
-            amount: Balance,
-        ) -> bool {
-            self.allowance(holder, spender) < amount
-        }
-
-        /// . make sure account is not zero account
-        pub fn is_zero(
-            &self,
-            account: AccountId,
-        ) -> bool {
-            account == ink_env::AccountId::from([0_u8; ID_LENGTH])
         }
 
 /////// getters ///////////////////////////////////////////////////////////
@@ -447,14 +417,15 @@ pub mod ilocktoken {
                 return Err(OtherError::StakeholderSharePaid.into())
             }
 
+            // calculate the payout owed
+            let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
+
             // require that payout isn't repeatable for this month
-            let payments = this_stakeholder.paid / this_stakeholder.share;
-            if payments > self.monthspassed as u128 {
+            let payments = this_stakeholder.paid / payout;
+            if payments >= self.monthspassed as u128 {
                 return Err(OtherError::PayoutTooEarly.into())
             }
 
-            // calculate the payout owed
-            let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
 
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
@@ -538,7 +509,11 @@ pub mod ilocktoken {
         /// . reward the user for browsing
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
-        pub fn reward_user(&mut self, reward: Balance, user: AccountId) -> PSP22Result<Balance> {
+        pub fn reward_user(
+            &mut self,
+            reward: Balance,
+            user: AccountId
+        ) -> PSP22Result<Balance> {
 
             // update total amount rewarded to user
             self.rewardedtotal += reward;
@@ -572,7 +547,10 @@ pub mod ilocktoken {
 
         /// . get amount rewarded to user to date
         #[ink(message)]
-        pub fn rewarded_user_total(&self, user: AccountId) -> PSP22Result<Balance> {
+        pub fn rewarded_user_total(
+            &self,
+            user: AccountId
+        ) -> PSP22Result<Balance> {
 
             match self.rewardeduser.get(user) {
                 Some(t) => Ok(t),
@@ -582,14 +560,18 @@ pub mod ilocktoken {
 
         /// . get total amount rewarded to date
         #[ink(message)]
-        pub fn rewarded_total(&self) -> Balance {
+        pub fn rewarded_total(
+            &self
+        ) -> Balance {
 
             self.rewardedtotal
         }
 
         /// . get current balance of rewards pool
         #[ink(message)]
-        pub fn rewards_pool_balance(&self) -> Balance {
+        pub fn rewards_pool_balance(
+            &self
+        ) -> Balance {
 
             self.rewardspoolbalance
         }
