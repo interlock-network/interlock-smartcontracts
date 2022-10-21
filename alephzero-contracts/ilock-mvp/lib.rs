@@ -628,7 +628,7 @@ pub mod ilocktoken {
         /// . this upgrades the token contract logic while using old state
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
-        pub fn set_code(
+        pub fn update_contract(
             &mut self,
             code_hash: [u8; 32]
         ) -> PSP22Result<()> {
