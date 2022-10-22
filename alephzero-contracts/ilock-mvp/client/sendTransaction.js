@@ -2,16 +2,12 @@
 // INTERLOCK NETWORK - 
 // PSP22 TOKEN & MVP CLIENT SCRIPT
 //
-// !!!!! UNAUDITED, WARNING !!!!!
-//
-
 
 //
 // BASH CALLING SYNTAX:
 //
 // node sendTransaction.js <method> <arg1> <arg2> ...
 //
-
 
 //
 // METHODS:
@@ -88,7 +84,6 @@
 // 	1:	codehash,	bytestring
 //
 
-
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
@@ -105,11 +100,16 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null; // nolimit
 
+// note about gas:
+// Web UI specifies gas in terms of AZERO.
+// Units for polkadot.js RCP calls are specified in microAZERO.
+// Thus, here, specify gas as (AZERO * 10^6).
+
 async function sendTransaction(...args) {
 
 	try {
 
-		// pop off `node` arg, pop off `script` arg, pop off `method` arg
+		// pop off `node` arg, pop off `sendTransaction.js` arg, pop off `method` arg
 		args.shift();
 		args.shift();
 		let method = args.shift();
@@ -145,6 +145,7 @@ async function sendTransaction(...args) {
       					console.log('in a block');
     				} else if (result.status.isFinalized) {
       					console.log('finalized');
+					process.exit();
     				}
   			});
 		}
@@ -157,8 +158,3 @@ async function sendTransaction(...args) {
 }
 
 sendTransaction(...process.argv);
-
-setTimeout( function() {
-	console.log('process exit');
-	process.exit();
-}, 30000);

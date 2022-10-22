@@ -2,16 +2,12 @@
 // INTERLOCK NETWORK - 
 // PSP34 ACCESS NFT CLIENT LIBRARY
 //
-// !!!!! UNAUDITED, WARNING !!!!!
-//
-
 
 //
 // BASH CALLING SYNTAX:
 //
 // node queryContract.js <method> <arg1> <arg2> ...
 //
-
 
 // METHODS:
 //
@@ -79,6 +75,11 @@ const MEG = 1000000;
 const gasLimit = 10000 * MEG;
 const storageDepositLimit = null;
 
+// note about gas:
+// Web UI specifies gas in terms of AZERO.
+// Units for polkadot.js RCP calls are specified in microAZERO.
+// Thus, here, specify gas as (AZERO * 10^6).
+
 async function queryContract(...args) {
 
 	try {
@@ -111,17 +112,14 @@ async function queryContract(...args) {
 			console.log('Result: ' + output.toHuman());
 		} else {
   			console.error('Error: ', result.asErr);
+			process.exit();
 		}
 
 	} catch(error) {
 
 		console.log(error);
+		process.exit()
 	}
 }
 
 queryContract(...process.argv);
-
-setTimeout( function() {
-	console.log('process exit');
-	process.exit();
-}, 30000);

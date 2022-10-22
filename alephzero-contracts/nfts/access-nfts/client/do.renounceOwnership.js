@@ -53,6 +53,7 @@ async function renounceOwnership(access_selector) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
       				console.log('finalized');
+				process.exit();
     			}
   		});
 
@@ -78,4 +79,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-renounceOwnership(process.argv[2]).then(() => process.exit());
+renounceOwnership(process.argv[2]);

@@ -53,6 +53,7 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
       				console.log('finalized');
+				process.exit();
     			}
   		});
 
@@ -79,8 +80,3 @@ function checkSelector(access_selector) {
 }
 
 mintAccessnft(process.argv[2], process.argv[3], process.argv[4]);
-
-setTimeout( function() {
-	console.log('PROCESS EXITED');
-	process.exit();
-}, 15000);

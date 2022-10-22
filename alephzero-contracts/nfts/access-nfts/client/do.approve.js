@@ -53,6 +53,7 @@ async function approve(access_selector, operator, id, approved) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
       				console.log('finalized');
+				process.exit();
     			}
   		});
 
@@ -78,4 +79,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-approve(process.argv[2], process.argv[3], process.argvp[4], process.argv[5]).then(() => process.exit());
+approve(process.argv[2], process.argv[3], process.argvp[4], process.argv[5]);

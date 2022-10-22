@@ -78,4 +78,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-mint(process.argv[2], process.argv[3], process.argvp[4]).then(() => process.exit());
+mint(process.argv[2], process.argv[3], process.argvp[4]);

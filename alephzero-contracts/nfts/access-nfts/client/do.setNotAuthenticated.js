@@ -53,6 +53,7 @@ async function setNotAuthenticated(access_selector, id) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
       				console.log('finalized');
+				process.exit();
     			}
   		});
 
@@ -78,4 +79,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-setNotAuthenticated(process.argv[2], process.argv[3]).then(() => process.exit());
+setNotAuthenticated(process.argv[2], process.argv[3]);

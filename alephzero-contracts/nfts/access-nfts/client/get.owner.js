@@ -56,12 +56,10 @@ async function owner(access_selector) {
 		);
 
 		// check if the call was successful
-		// put stuff here to return
 		if (result.isOk) {
-  			console.log('Success.');
-			console.log('Output:' + output.toHuman());
+			console.log('Result: ' + output.toHuman());
 		} else {
-  			console.error('Error', result.asErr);
+  			console.error('Error: ', result.asErr);
 		}
 
 	} catch(error) {
