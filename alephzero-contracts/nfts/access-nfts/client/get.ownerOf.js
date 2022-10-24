@@ -2,8 +2,6 @@
 // INTERLOCK NETWORK - 
 // PSP34 ACCESS NFT CLIENT LIBRARY
 //
-// !!!!! UNAUDITED, WARNING !!!!!
-//
 
 //
 // access_selectors:
@@ -27,11 +25,6 @@ const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
-// constants
-const MEG = 1000000;
-const gasLimit = 10000 * MEG;
-const storageDepositLimit = null;
-
 async function ownerOf(access_selector, id) {
 
 	try {
@@ -48,24 +41,21 @@ async function ownerOf(access_selector, id) {
 		// submit getter request
 		const { gasRequired, storageDeposit, result, output } =
 			await contract.query['psp34::ownerOf'](
-  			OWNER_pair.address,
-  			{
-    				gasLimit,
-    				storageDepositLimit,
-  			},
-			{u16: id},
-		);
+  			OWNER_pair.address, {}, {u16: id});
 
 		// check if the call was successful
 		if (result.isOk) {
 			console.log('Result: ' + output.toHuman());
+			process.exit();
 		} else {
   			console.error('Error: ', result.asErr);
+			process.exit();
 		}
 
 	} catch(error) {
 
 		console.log(error);
+		process.exit();
 	}
 }
 

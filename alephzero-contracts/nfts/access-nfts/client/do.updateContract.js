@@ -29,7 +29,7 @@ const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
 // constants
 const MEG = 1000000;
-const gasLimit = 10000 * MEG;
+const gasLimit = 100000 * MEG;
 const storageDepositLimit = null;
 
 async function updateContract(access_selector, codehash) {
@@ -45,9 +45,33 @@ async function updateContract(access_selector, codehash) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// submit doer transaction request
-		const txhash = await contract.tx.updateContract
-  			({ storageDepositLimit, gasLimit }, codehash)
+		// perform dry run to check for errors
+		const { gasRequired, storageDeposit, result, output } =
+			await contract.query[method](
+  			OWNER_pair.address, {}, codehash);
+
+		// too much gas required?
+		if (gasRequired > gasLimit) {
+			console.log('tx aborted, gas required is greater than the acceptable gas limit.');
+			process.exit();
+		}
+
+		// too much storage required?
+		if (storageDeposit > storageDepositLimit) {
+			console.log('tx aborted, storage required is greater than the acceptable storage limit.');
+			process.exit();
+		}
+
+		// did the contract revert due to any errors?
+		if (result.toHuman().Ok.flags == 'Revert') {
+			let error = output.toHuman().Err;
+			console.log(`Transaction reverts due to error: ${error}`);
+			process.exit();
+		}
+
+		// submit doer tx
+		let extrinsic = await contract.tx[method]
+  			({ storageDeposit, gasRequired }, codehash)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

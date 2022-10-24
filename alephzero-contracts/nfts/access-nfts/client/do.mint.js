@@ -2,8 +2,6 @@
 // INTERLOCK NETWORK - 
 // PSP34 ACCESS NFT CLIENT LIBRARY
 //
-// !!!!! UNAUDITED, WARNING !!!!!
-//
 
 //
 // access_selectors:
@@ -29,7 +27,7 @@ const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
 // constants
 const MEG = 1000000;
-const gasLimit = 10000 * MEG;
+const gasLimit = 100000 * MEG;
 const storageDepositLimit = null;
 
 async function mint(access_selector, account, id) {
@@ -45,14 +43,39 @@ async function mint(access_selector, account, id) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// submit doer transaction request
-		const txhash = await contract.tx['psp34Mintable::mint']
-  			({ storageDepositLimit, gasLimit }, account, {u16: id})
+		// perform dry run to check for errors
+		const { gasRequired, storageDeposit, result, output } =
+			await contract.query[method](
+  			OWNER_pair.address, {}, account, {u16: id});
+
+		// too much gas required?
+		if (gasRequired > gasLimit) {
+			console.log('tx aborted, gas required is greater than the acceptable gas limit.');
+			process.exit();
+		}
+
+		// too much storage required?
+		if (storageDeposit > storageDepositLimit) {
+			console.log('tx aborted, storage required is greater than the acceptable storage limit.');
+			process.exit();
+		}
+
+		// did the contract revert due to any errors?
+		if (result.toHuman().Ok.flags == 'Revert') {
+			let error = output.toHuman().Err;
+			console.log(`Transaction reverts due to error: ${error}`);
+			process.exit();
+		}
+
+		// submit doer tx
+		let extrinsic = await contract.tx[method]
+  			({ storageDeposit, gasRequired }, account, {u16: id})
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
       				console.log('finalized');
+				process.exit();
     			}
   		});
 
