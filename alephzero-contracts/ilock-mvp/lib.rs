@@ -518,22 +518,20 @@ pub mod ilocktoken {
             // update total amount rewarded to user
             self.rewardedtotal += reward;
 
-            // update token circulation
-            let _ = self.increment_circulation(reward)?;
-
             // update rewards pool balance
             self.rewardspoolbalance -= reward;
 
             // transfer reward tokens from rewards pool to user
-            self.transfer(user, reward, Default::default())?;
+            let _ = self.transfer(user, reward, Default::default())?;
+
+            // update token circulation
+            let _ = self.increment_circulation(reward)?;
 
             let rewardedusertotal: Balance = match self.rewardeduser.get(user) {
                 Some(u) => u,
-                None => {
-                    return Err(PSP22Error::Custom(format!("User {:?} not found", user)))
-                },
+                None => 0,
             };
-            self.rewardeduser.insert(user, &(rewardedusertotal + reward));
+           self.rewardeduser.insert(user, &(rewardedusertotal + reward));
 
             // emit Reward event
             self.env().emit_event(Reward {
