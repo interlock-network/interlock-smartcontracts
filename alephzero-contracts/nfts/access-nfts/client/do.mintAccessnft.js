@@ -45,7 +45,7 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['mintAccessnft'](
   			OWNER_pair.address, {}, jpegurl, recipient);
 
 		// too much gas required?
@@ -68,7 +68,7 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
+		let extrinsic = await contract.tx['mintAccessnft']
   			({ storageDeposit, gasRequired }, jpegurl, recipient)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {

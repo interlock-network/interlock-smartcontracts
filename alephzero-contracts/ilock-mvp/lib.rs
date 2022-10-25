@@ -531,7 +531,7 @@ pub mod ilocktoken {
                 Some(u) => u,
                 None => 0,
             };
-           self.rewardeduser.insert(user, &(rewardedusertotal + reward));
+            self.rewardeduser.insert(user, &(rewardedusertotal + reward));
 
             // emit Reward event
             self.env().emit_event(Reward {

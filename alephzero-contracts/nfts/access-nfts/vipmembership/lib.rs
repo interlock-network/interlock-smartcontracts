@@ -13,11 +13,15 @@
 #[openbrush::contract]
 pub mod vipmembership {
 
-    use ink_storage::traits::SpreadAllocate;
+    use ink_storage::{
+        traits::SpreadAllocate,
+        Mapping,
+    };
     use ink_prelude::{
         string::String,
         vec::Vec,
         vec,
+        format,
     };
     use openbrush::{
         contracts::{
@@ -30,6 +34,8 @@ pub mod vipmembership {
         traits::Storage,
     };
 
+    pub const CAP: u16 = 1000;
+
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
     pub struct VIPmembership {
@@ -40,6 +46,7 @@ pub mod vipmembership {
         #[storage_field]
         ownable: ownable::Data,
         next_vipmembership_id: u16,
+        nfts_held: Mapping<AccountId, Vec<u16>>,
     }
 
     impl PSP34 for VIPmembership {
@@ -48,7 +55,7 @@ pub mod vipmembership {
         #[ink(message)]
         fn transfer(&mut self, to: AccountId, id: Id, data: Vec<u8>) -> Result<(), PSP34Error> {
 
-            self._transfer_token(to, id.clone(), data)?;
+            let _ = self._transfer_token(to, id.clone(), data)?;
             self._set_attribute(
                 id,
                 String::from("AUTHENTICATED").into_bytes(),
@@ -65,15 +72,13 @@ pub mod vipmembership {
     impl Ownable for VIPmembership {}
     impl PSP34Mintable for VIPmembership {
         
-        /// . mint general NFT
-        /// . overrides extention mint() to enforce only_owner modifier
+        /// . overrides extention mint() to disable
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        fn mint(&mut self, recipient: AccountId, id: Id) -> Result<(), PSP34Error> {
+        fn mint(&mut self, _recipient: AccountId, _id: Id) -> Result<(), PSP34Error> {
 
-            self._mint_to(recipient, id)?;
+            return Err(PSP34Error::Custom(format!("The default mint function is disabled.")))
 
-            Ok(())
         }
     }
 
@@ -113,8 +118,23 @@ pub mod vipmembership {
         #[ink(message)]
         pub fn mint_accessnft(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
 
-            // mint next token id
-            self._mint_to(recipient, psp34::Id::U16(self.next_vipmembership_id))?;
+            // make sure cap is not surpassed
+            if self.next_vipmembership_id >= CAP {
+                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", CAP)))
+            }
+
+            // if cap not surpassed, mint next id
+            let _ = self._mint_to(recipient, psp34::Id::U16(self.next_vipmembership_id))?;
+
+            // get nft collection of recipient if already holding
+            let mut collection = match self.nfts_held.get(recipient) {
+                Some(vec) => vec,
+                None => Vec::new(),
+            };
+
+            // add id to recipient's nft collection
+            collection.push(self.next_vipmembership_id);
+            self.nfts_held.insert(recipient, &collection);
 
             // set metadata specific to token
             
@@ -136,6 +156,25 @@ pub mod vipmembership {
             self.next_vipmembership_id += 1;
 
             Ok(())
+        }
+
+        /// . get collection of nfts held by particular user
+        #[ink(message)]
+        pub fn user_collection(&self, user: AccountId) -> Result<Vec<u16>, PSP34Error> {
+
+            // retrieve the collection
+            match self.nfts_held.get(user) {
+                Some(vec) => Ok(vec),
+                None => Err(PSP34Error::Custom(format!("The user {:?} does not have a collection.", user))),
+            }
+        }
+
+        /// . get NFT mint cap
+        #[ink(message)]
+        pub fn get_cap(&self) -> Result<u16, PSP34Error> {
+
+            // retrieve and return the cap
+            Ok(CAP)
         }
 
         /// . grant 'authenticated' status to interlocker

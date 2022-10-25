@@ -45,7 +45,7 @@ async function approve(access_selector, operator, id, approved) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['psp34::approve'](
   			OWNER_pair.address, {}, operator, {u16: id}, approved);
 
 		// too much gas required?
@@ -68,7 +68,7 @@ async function approve(access_selector, operator, id, approved) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
+		let extrinsic = await contract.tx['psp34::approve']
   			({ storageDeposit, gasRequired }, operator, {u16: id}, approved)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
@@ -101,4 +101,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-approve(process.argv[2], process.argv[3], process.argvp[4], process.argv[5]);
+approve(process.argv[2], process.argv[3], process.argv[4], process.argv[5]);
