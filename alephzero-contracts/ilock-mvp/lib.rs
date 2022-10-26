@@ -54,7 +54,7 @@ pub mod ilocktoken {
     /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
-    pub const ONE_MONTH: Timestamp = 2_592_000_;                    // milliseconds in 30 days
+    pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
 
     /// . token data
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
