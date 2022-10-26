@@ -141,14 +141,14 @@ async function sendTransaction(...args) {
 
 		// did the contract revert due to any errors?
 		if (result.toHuman().Ok.flags == 'Revert') {
-			let error = output.toHuman().Err;
+			let error = output;
 			console.log(`Transaction reverts due to error: ${error}`);
 			process.exit();
 		}
 
 		// submit doer tx
 		let extrinsic = await contract.tx[method]
-  			({ storageDeposit, gasRequired }, ...args)
+  			({ storageDepositLimit, gasLimit }, ...args)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

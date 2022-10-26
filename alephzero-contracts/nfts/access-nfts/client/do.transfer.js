@@ -45,7 +45,7 @@ async function transfer(access_selector, to, id, data) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['psp34::transfer'](
   			OWNER_pair.address, {}, to, {u16: id}, data);
 
 		// too much gas required?
@@ -68,8 +68,8 @@ async function transfer(access_selector, to, id, data) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
-  			({ storageDeposit, gasRequired }, to, {u16: id}, data )
+		let extrinsic = await contract.tx['psp34::transfer']
+  			({ storageDepositLimit, gasLimit }, to, {u16: id}, data )
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');
@@ -101,4 +101,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-transfer(process.argv[2], process.argv[3], process.argvp[4], process.argv[5]);
+transfer(process.argv[2], process.argv[3], process.argv[4], process.argv[5]);

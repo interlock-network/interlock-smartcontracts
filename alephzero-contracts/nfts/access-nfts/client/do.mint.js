@@ -4,6 +4,10 @@
 //
 
 //
+// THIS TX WILL ALWAYS REVERT, AS DEFAULT MINT FUNCTION IS DISABLED
+//
+
+//
 // access_selectors:
 // 'VIP_MEMBERSHIP'
 // 'BOUNCER_LICENSE'
@@ -45,7 +49,7 @@ async function mint(access_selector, account, id) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['psp34Mintable::mint'](
   			OWNER_pair.address, {}, account, {u16: id});
 
 		// too much gas required?
@@ -62,13 +66,13 @@ async function mint(access_selector, account, id) {
 
 		// did the contract revert due to any errors?
 		if (result.toHuman().Ok.flags == 'Revert') {
-			let error = output.toHuman().Err;
+			let error = output;
 			console.log(`Transaction reverts due to error: ${error}`);
 			process.exit();
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
+		let extrinsic = await contract.tx['psp34Mintable::mint']
   			({ storageDeposit, gasRequired }, account, {u16: id})
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
@@ -101,4 +105,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-mint(process.argv[2], process.argv[3], process.argvp[4]);
+mint(process.argv[2], process.argv[3], process.argv[4]);

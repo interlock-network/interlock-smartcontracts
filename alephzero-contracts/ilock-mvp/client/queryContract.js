@@ -70,11 +70,6 @@ const contract_ILOCKMVP = process.env.CONTRACT_ILOCKMVP;
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
-// note about gas:
-// Web UI specifies gas in terms of AZERO.
-// Units for polkadot.js RCP calls are specified in microAZERO.
-// Thus, here, specify gas as (AZERO * 10^6).
-
 async function queryContract(...args) {
 
 	try {
@@ -98,10 +93,10 @@ async function queryContract(...args) {
 
 		// check if the call was successful
 		if (result.isOk) {
-			console.log('Result: ' + output.toHuman());
+			console.log('Result: ' + output);
 			process.exit();
 		} else {
-  			console.error('Error: ', result.asErr);
+  			console.error('Error: ', result);
 			process.exit();
 		}
 

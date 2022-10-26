@@ -30,7 +30,7 @@ const MEG = 1000000;
 const gasLimit = 100000 * MEG;
 const storageDepositLimit = null;
 
-async function mintAccessnft(access_selector, jpegurl, recipient) {
+async function mintAccessnft(access_selector, recipient, jpegurl) {
 
 	try {
 		// choose which contract to access based off access_selector
@@ -46,7 +46,7 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
 			await contract.query['mintAccessnft'](
-  			OWNER_pair.address, {}, jpegurl, recipient);
+  			OWNER_pair.address, {}, recipient, jpegurl);
 
 		// too much gas required?
 		if (gasRequired > gasLimit) {
@@ -69,7 +69,7 @@ async function mintAccessnft(access_selector, jpegurl, recipient) {
 
 		// submit doer tx
 		let extrinsic = await contract.tx['mintAccessnft']
-  			({ storageDeposit, gasRequired }, jpegurl, recipient)
+  			({ storageDepositLimit, gasLimit }, recipient, jpegurl)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

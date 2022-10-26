@@ -69,7 +69,7 @@ async function approve(access_selector, operator, id, approved) {
 
 		// submit doer tx
 		let extrinsic = await contract.tx['psp34::approve']
-  			({ storageDeposit, gasRequired }, operator, {u16: id}, approved)
+  			({ storageDepositLimit, gasLimit }, operator, {u16: id}, approved)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

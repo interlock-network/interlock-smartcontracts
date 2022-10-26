@@ -45,7 +45,7 @@ async function renounceOwnership(access_selector) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['ownable::renounceOwnership'](
   			OWNER_pair.address, {});
 
 		// too much gas required?
@@ -68,8 +68,8 @@ async function renounceOwnership(access_selector) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
-  			({ storageDeposit, gasRequired })
+		let extrinsic = await contract.tx['ownable::renounceOwnership']
+  			({ storageDepositLimit, gasLimit })
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

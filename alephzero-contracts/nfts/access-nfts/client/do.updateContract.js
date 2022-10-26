@@ -47,7 +47,7 @@ async function updateContract(access_selector, codehash) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['updateContract'](
   			OWNER_pair.address, {}, codehash);
 
 		// too much gas required?
@@ -70,8 +70,8 @@ async function updateContract(access_selector, codehash) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
-  			({ storageDeposit, gasRequired }, codehash)
+		let extrinsic = await contract.tx['updateContract']
+  			({ storageDepositLimit, gasLimit }, codehash)
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

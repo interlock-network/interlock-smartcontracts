@@ -9,7 +9,7 @@
 // 'BOUNCER_LICENSE'
 //
 // bash calling syntax:
-// node do.transferOwnership.js <access_selector> <newowner>
+// node get.userCollection.js <access_selector> <user>
 //
 
 // imports
@@ -25,12 +25,7 @@ const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
-// constants
-const MEG = 1000000;
-const gasLimit = 100000 * MEG;
-const storageDepositLimit = null;
-
-async function transferOwnership(access_selector, newowner) {
+async function balanceOf(access_selector, user) {
 
 	try {
 		// choose which contract to access based off access_selector
@@ -43,41 +38,20 @@ async function transferOwnership(access_selector, newowner) {
 		const contract = new ContractPromise(api, access_metadata, access_contract);
 		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// perform dry run to check for errors
+		// submit getter request
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query['ownable::transferOwnership'](
-  			OWNER_pair.address, {}, newowner);
+			await contract.query['userCollection'](
+  			OWNER_pair.address, {}, user);
 
-		// too much gas required?
-		if (gasRequired > gasLimit) {
-			console.log('tx aborted, gas required is greater than the acceptable gas limit.');
+		// check if the call was successful
+		if (result.isOk) {
+			console.log('Result: ' + output);
+			process.exit();
+		} else {
+  			console.error('Error: ', result.asErr);
 			process.exit();
 		}
 
-		// too much storage required?
-		if (storageDeposit > storageDepositLimit) {
-			console.log('tx aborted, storage required is greater than the acceptable storage limit.');
-			process.exit();
-		}
-
-		// did the contract revert due to any errors?
-		if (result.toHuman().Ok.flags == 'Revert') {
-			let error = output.toHuman().Err;
-			console.log(`Transaction reverts due to error: ${error}`);
-			process.exit();
-		}
-
-		// submit doer tx
-		let extrinsic = await contract.tx['ownable::transferOwnership']
-  			({ storageDepositLimit, gasLimit }, newowner)
-  			.signAndSend(OWNER_pair, result => {
-    			if (result.status.isInBlock) {
-      				console.log('in a block');
-    			} else if (result.status.isFinalized) {
-      				console.log('finalized');
-				process.exit();
-    			}
-  		});
 	} catch(error) {
 
 		console.log(error);
@@ -100,4 +74,4 @@ function checkSelector(access_selector) {
 	return {access_contract, access_metadata};
 }
 
-transferOwnership(process.argv[2], process.argv[3]);
+balanceOf(process.argv[2], process.argv[3]).then(() => process.exit());

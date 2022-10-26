@@ -45,7 +45,7 @@ async function setAuthenticated(access_selector, id) {
 
 		// perform dry run to check for errors
 		const { gasRequired, storageDeposit, result, output } =
-			await contract.query[method](
+			await contract.query['setAuthenticated'](
   			OWNER_pair.address, {}, {u16: id});
 
 		// too much gas required?
@@ -68,8 +68,8 @@ async function setAuthenticated(access_selector, id) {
 		}
 
 		// submit doer tx
-		let extrinsic = await contract.tx[method]
-  			({ storageDeposit, gasRequired }, {u16: id})
+		let extrinsic = await contract.tx['setAuthenticated']
+  			({ storageDepositLimit, gasLimit }, {u16: id})
   			.signAndSend(OWNER_pair, result => {
     			if (result.status.isInBlock) {
       				console.log('in a block');

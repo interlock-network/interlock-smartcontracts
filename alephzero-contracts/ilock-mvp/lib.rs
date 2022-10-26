@@ -27,6 +27,7 @@ pub mod ilocktoken {
         reflect::ContractEventBase,
     };
     use ink_prelude::{
+        vec::Vec,
         format,
         string::{String, ToString},
     };
@@ -53,7 +54,7 @@ pub mod ilocktoken {
     /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
-    pub const ONE_MONTH: u128 = 2592000;                            // seconds in 30 days
+    pub const ONE_MONTH: Timestamp = 2_592_000_;                    // milliseconds in 30 days
 
     /// . token data
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
@@ -126,17 +127,19 @@ pub mod ilocktoken {
 		ownable: ownable::Data,
         #[storage_field]
         metadata: metadata::Data,
-        owner: AccountId,
         stakeholderdata: Mapping<AccountId, StakeholderData>,
         rewardeduser: Mapping<AccountId, Balance>,
         rewardedtotal: Balance,
         rewardspoolbalance: Balance,
+        whitelistpoolbalance: Balance,
+        publicsalepoolbalance: Balance,
+        partnerspoolbalance: Balance,
         monthspassed: u8,
-        nextpayout: u128,
+        nextpayout: Timestamp,
         circulatingsupply: Balance,
     }
 
-//// PSP22 events /////////////////////////////////////////////////////////////
+//// other events /////////////////////////////////////////////////////////////
 
     /// . specify transfer event
     #[ink(event)]
@@ -181,7 +184,7 @@ pub mod ilocktoken {
         /// Returned if it is too soon to payout for month
         PayoutTooEarly,
         /// Returned if reward is too large
-        RewardTooLarge,
+        PaymentTooLarge,
     }
 
     impl Into<PSP22Error> for OtherError {
@@ -208,11 +211,41 @@ pub mod ilocktoken {
 
             self.circulatingsupply
         }
+
+        /// . override default transfer doer
+        /// . transfer from owner increases total supply
+        #[ink(message)]
+        fn transfer(
+            &mut self,
+            to: AccountId,
+            value: Balance,
+            data: Vec<u8>,
+        ) -> Result<(), PSP22Error> {
+
+            let from = self.env().caller();
+            let _ = self._transfer_from_to(from, to, value, data)?;
+
+            // if sender is owner, then tokens are entering circulation
+            if from == self.ownable.owner {
+                self.circulatingsupply += value;
+            }
+
+            // if recipient is owner, then tokens are being returned or added to rewards pool
+            if to == self.ownable.owner {
+                self.rewardspoolbalance += value;
+            }
+
+            Ok(())
+        }
     }
 
     impl PSP22Metadata for ILOCKtoken {}
 
-    impl Ownable for ILOCKtoken {}
+    impl Ownable for ILOCKtoken {
+        
+        // PRIOR TO OWNER TRANSFER,
+        // REMAINING OWNER NONCIRCULATING BALANCE MUST BE TRANSFERRED TO NEW OWNER.
+    }
 
     impl PSP22Burnable for ILOCKtoken {
 
@@ -228,14 +261,7 @@ pub mod ilocktoken {
 
             // burn the tokens
             let _ = self._burn_from(donor, amount)?;
-            self.decrement_circulation(amount)?;
-
-            // emit transfer event
-            self.env().emit_event(Transfer {
-                from: Some(donor),
-                to: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
-                amount: amount,
-            });
+            self.circulatingsupply -= amount;
 
             Ok(())
         }
@@ -278,6 +304,11 @@ pub mod ilocktoken {
 
     impl ILOCKtoken {
 
+        /// . function for internal _emit_event implementations
+        pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
+            emitter.emit_event(event);
+        }
+
         /// . constructor to initialize contract
         /// . note: pool contracts must be created prior to construction (for args)
         #[ink(constructor)]
@@ -293,8 +324,7 @@ pub mod ilocktoken {
 
                 // set initial data
                 contract.monthspassed = 0;
-                contract.nextpayout = Self::env().block_timestamp() as u128 + ONE_MONTH;
-                contract.owner = caller;
+                contract.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
                 contract.rewardedtotal = 0;
                 contract.circulatingsupply = 0;
 
@@ -307,33 +337,13 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
-                // emit Transfer event
-                Self::env().emit_event(Transfer {
-                    from: Some(ink_env::AccountId::from([0_u8; ID_LENGTH])),
-                    to: Some(caller),
-                    amount: SUPPLY_CAP,
-                });
-
-                // reflect initial circulation
-                // ...these may be inappropriate, as we may increment circulation
-                // every time we pay a whitelister, or every time somebody buys tokens during
-                // public sale...
-
-                // TODO: handle the error cases here
-                // whitelist
-                contract.increment_circulation(POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10)
-                        .expect("Failed to increment circulation");
-                // public sale
-                contract.increment_circulation(POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10)
-                        .expect("Failed to increment circulation");
                 contract.rewardspoolbalance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
-
+                contract.whitelistpoolbalance = POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
+                contract.publicsalepoolbalance = POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
+                contract.partnerspoolbalance = POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
             })
         }
 
-        pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
-            emitter.emit_event(event);
-        }
 
 /////// getters ///////////////////////////////////////////////////////////
 
@@ -341,23 +351,33 @@ pub mod ilocktoken {
 
         /// . function to check if enough time has passed to collect next payout
         /// . this function ensures Interlock cannot rush the vesting schedule
+        /// . this function must be called before the next round of token distributions
         #[ink(message)]
         pub fn check_time(
             &mut self,
         ) -> ResultOther<()> {
 
             // test to see if current time falls beyond time for next payout
-            if self.env().block_timestamp() as u128 > self.nextpayout {
+            if self.env().block_timestamp() > self.nextpayout {
 
                 // update time variables
                 self.nextpayout += ONE_MONTH;
                 self.monthspassed += 1;
 
-                ()
+                return Ok(());
             }
 
             // too early
             return Err(OtherError::PayoutTooEarly)
+        }
+        
+        /// . time in seconds until next payout
+        #[ink(message)]
+        pub fn remaining_time_until_next_payout(
+            &self
+        ) -> Timestamp {
+
+            (self.nextpayout - self.env().block_timestamp()) / 1000
         }
 
 /////// registration  /////////////////////////////////////////////////////////////
@@ -390,7 +410,7 @@ pub mod ilocktoken {
 
 /////// token distribution /////////////////////////////////////////////////////////////
 
-        /// . function to transfer the token share a stakeholder is currently entitled to
+        /// . general function to transfer the token share a stakeholder is currently entitled to
         /// . this is called once per stakeholder by Interlock, Interlock paying fees
         /// . pools are guaranteed to have enough tokens for all stakeholders
         #[ink(message)]
@@ -426,7 +446,6 @@ pub mod ilocktoken {
                 return Err(OtherError::PayoutTooEarly.into())
             }
 
-
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
             if this_stakeholder.share - this_stakeholder.paid - payout <
@@ -439,14 +458,107 @@ pub mod ilocktoken {
             // now transfer tokens
             let _ = self.transfer(stakeholder, payout, Default::default())?;
 
-            // update circulating supply
-            let _ = self.increment_circulation(payout)?;
-
             // finally update stakeholder data struct state
             this_stakeholder.paid += payout;
             self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             Ok(())
+        }
+
+        /// . function used to distribute tokens to whitelisters
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn distribute_whitelist(
+            &mut self,
+            stakeholder: AccountId,
+            amount: Balance,
+        ) -> PSP22Result<()> {
+
+            // make sure reward not too large
+            if self.whitelistpoolbalance < amount {
+                return Err(OtherError::PaymentTooLarge.into())
+            }
+
+            // decrement pool balance
+            self.whitelistpoolbalance -= amount;
+
+            // now transfer tokens
+            let _ = self.transfer(stakeholder, amount, Default::default())?;
+
+            Ok(())
+        }
+
+        /// . function used to distribute tokens to public sale entities (ie exchanges)
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn distribute_publicsale(
+            &mut self,
+            stakeholder: AccountId,
+            amount: Balance,
+        ) -> PSP22Result<()> {
+
+            // make sure reward not too large
+            if self.publicsalepoolbalance < amount {
+                return Err(OtherError::PaymentTooLarge.into())
+            }
+
+            // decrement pool balance
+            self.publicsalepoolbalance -= amount;
+
+            // now transfer tokens
+            let _ = self.transfer(stakeholder, amount, Default::default())?;
+
+            Ok(())
+        }
+
+        /// . function used to distribute tokens to strategic partners
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn distribute_partners(
+            &mut self,
+            stakeholder: AccountId,
+            amount: Balance,
+        ) -> PSP22Result<()> {
+
+            // make sure reward not too large
+            if self.partnerspoolbalance < amount {
+                return Err(OtherError::PaymentTooLarge.into())
+            }
+
+            // decrement pool balance
+            self.partnerspoolbalance -= amount;
+
+            // now transfer tokens
+            let _ = self.transfer(stakeholder, amount, Default::default())?;
+
+            Ok(())
+        }
+
+        /// . get current balance of whitelist pool
+        #[ink(message)]
+        pub fn whitelist_pool_balance(
+            &self
+        ) -> Balance {
+
+            self.whitelistpoolbalance
+        }
+
+        /// . get current balance of publicsale pool
+        #[ink(message)]
+        pub fn publicsale_pool_balance(
+            &self
+        ) -> Balance {
+
+            self.publicsalepoolbalance
+        }
+
+        /// . get current balance of partners pool
+        #[ink(message)]
+        pub fn partners_pool_balance(
+            &self
+        ) -> Balance {
+
+            self.partnerspoolbalance
         }
 
 /////// stakeholder data ////////////////////////////////////////////////////////////
@@ -515,6 +627,11 @@ pub mod ilocktoken {
             user: AccountId
         ) -> PSP22Result<Balance> {
 
+            // make sure reward not too large
+            if self.rewardspoolbalance < reward {
+                return Err(OtherError::PaymentTooLarge.into())
+            }
+
             // update total amount rewarded to user
             self.rewardedtotal += reward;
 
@@ -523,9 +640,6 @@ pub mod ilocktoken {
 
             // transfer reward tokens from rewards pool to user
             let _ = self.transfer(user, reward, Default::default())?;
-
-            // update token circulation
-            let _ = self.increment_circulation(reward)?;
 
             let rewardedusertotal: Balance = match self.rewardeduser.get(user) {
                 Some(u) => u,
@@ -548,11 +662,11 @@ pub mod ilocktoken {
         pub fn rewarded_user_total(
             &self,
             user: AccountId
-        ) -> PSP22Result<Balance> {
+        ) -> Balance {
 
             match self.rewardeduser.get(user) {
-                Some(t) => Ok(t),
-                None => Err(PSP22Error::Custom(format!("User {:?} not found", user))),
+                Some(t) => t,
+                None => 0,
             }
         }
 
@@ -581,35 +695,17 @@ pub mod ilocktoken {
         pub fn months_passed(
             &self,
         ) -> u8 {
+
             self.monthspassed
         }
 
-        /// . function to increment circulatingsupply after reward issue or stakeholder payment
+        /// . function to get the supply cap minted on TGE
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn increment_circulation(
-            &mut self,
-            amount: u128,
-        ) -> PSP22Result<()> {
+        pub fn cap(
+            &self,
+        ) -> u128 {
 
-            match self.circulatingsupply.checked_add(amount) {
-                Some(new_supply) => { self.circulatingsupply = new_supply; Ok(()) },
-                None => Err(PSP22Error::Custom("Overflow when incrementing circulation.".to_string())),
-            }
-        }
-
-        /// . function to decrement circulatingsupply after burn or reward reclaim
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn decrement_circulation(
-            &mut self,
-            amount: u128,
-        ) -> PSP22Result<()> {
-
-            match self.circulatingsupply.checked_sub(amount) {
-                Some(new_supply) => { self.circulatingsupply = new_supply; Ok(()) },
-                None => Err(PSP22Error::Custom("Overflow when decrementing circulation.".to_string())),
-            }
+            SUPPLY_CAP
         }
 
         /// . function to increment monthspassed for testing
@@ -619,6 +715,7 @@ pub mod ilocktoken {
         ) -> bool {
 
             self.monthspassed += 1;
+
             true
         }
 
@@ -665,7 +762,6 @@ pub mod ilocktoken {
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // the rest
-            assert_eq!(ILOCKtokenPSP22.owner, accounts.alice);
             assert_eq!(ILOCKtokenPSP22.monthspassed, 0);
             assert_eq!(ILOCKtokenPSP22.nextpayout, ILOCKtokenPSP22.env().block_timestamp() as u128 + ONE_MONTH);
         }
@@ -1002,26 +1098,6 @@ pub mod ilocktoken {
             let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
             ILOCKtokenPSP22.monthspassed = 99;
             assert_eq!(ILOCKtokenPSP22.months_passed(), 99);
-        }
-
-        /// . test if circulation incrementor does its job
-        #[ink::test]
-        fn increment_circulation_works() {
-
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
-
-            ILOCKtokenPSP22.increment_circulation(100).unwrap();
-            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 + 100);
-        }
-
-        /// . test if circulation decrementor does its job
-        #[ink::test]
-        fn decrement_circulation_works() {
-
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
-
-            ILOCKtokenPSP22.decrement_circulation(100).unwrap();
-            assert_eq!(ILOCKtokenPSP22.total_supply(), 65_000_000 * DECIMALS_POWER10 - 100);
         }
 
         /// . test if burn does its job
