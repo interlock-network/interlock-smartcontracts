@@ -58,6 +58,17 @@
 // 	args:	1
 // 	1:	stakeholder,	string (b58 address)
 //
+// remainingTimeUntilNextPayment
+// 	args:	0
+//
+// whitelistPoolBalance
+// 	args:	0
+//
+// publicsalePoolBalance
+// 	args:	0
+//
+// partnersPoolBalance
+// 	args:	0
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');

@@ -84,6 +84,18 @@
 // 	args:	1
 // 	1:	codehash,	bytestring
 //
+// distributeWhitelist
+// 	args:	1
+// 	1:	stakeholder,	string (b58 address)
+//
+// distributePublicsale
+// 	args:	1
+// 	1:	stakeholder,	string (b58 address)
+//
+// distributePartners
+// 	args:	1
+// 	1:	stakeholder,	string (b58 address)
+//
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
