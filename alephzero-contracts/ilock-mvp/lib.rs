@@ -17,12 +17,11 @@
 
 pub use self::ilocktoken::{
     ILOCKtoken,
+    ILOCKtokenRef,
 };
 
 #[openbrush::contract]
 pub mod ilocktoken {
-
-    use user::UserRef;
 
     use ink_lang::{
         codegen::{EmitEvent, Env},
@@ -41,6 +40,7 @@ pub mod ilocktoken {
             SpreadAllocate,
         },
     };
+    use ink_env::Error;
     use openbrush::{
         contracts::{
             psp22::{
@@ -139,6 +139,9 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
+        usercontracthash: Hash,
+        users: Mapping<AccountId, AccountId>,   // maps user account contract to user wallet
+
     }
 
 //// other events /////////////////////////////////////////////////////////////
@@ -741,29 +744,34 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . entrypoint for USER grey area staking contract generation
+        /// . USER account contract registers with token contract here
+        /// . USER contract must register for token contract to allow reward transfers
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn create_user(
+        pub fn register_user_contract(
             &mut self,
             user: AccountId,
-            codehash: Hash,
-            salt: u32,
-        ) -> ResultOther<AccountId> {
+        ) -> ResultOther<()> {
+            
+            if self.env().code_hash(&self.env().caller()).ok() == Some(self.usercontracthash) {
+                
+                self.users.insert(user, &self.env().caller());
 
-            // instantiate new USER account
-            let total_balance = Self::env().balance();
-            let salt = version.to_le_bytes();
-            let accumulator = UserRef::new(init_value)
-                .code_hash(accumulator_code_hash)
-                .salt_bytes(salt)
-                .instantiate()
-                .unwrap_or_else(|error| {
-                    panic!(
-                        "failed at instantiating the Accumulator contract: {:?}",
-                        error
-                    )
-                });
+                
+            }
+
+
+            Ok(())
+        }
+
+        /// . th
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn update_user_contract_hash(
+            &mut self,
+            codehash: Hash,
+        ) -> PSP22Result<()> {
+            
+            self.usercontracthash = codehash;
 
             Ok(())
         }
