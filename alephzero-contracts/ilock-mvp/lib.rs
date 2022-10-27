@@ -22,6 +22,8 @@ pub use self::ilocktoken::{
 #[openbrush::contract]
 pub mod ilocktoken {
 
+    use user::UserRef;
+
     use ink_lang::{
         codegen::{EmitEvent, Env},
         reflect::ContractEventBase,
@@ -735,6 +737,33 @@ pub mod ilocktoken {
                     code_hash, err
                 )
             });
+
+            Ok(())
+        }
+
+        /// . entrypoint for USER grey area staking contract generation
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn create_user(
+            &mut self,
+            user: AccountId,
+            codehash: Hash,
+            salt: u32,
+        ) -> ResultOther<AccountId> {
+
+            // instantiate new USER account
+            let total_balance = Self::env().balance();
+            let salt = version.to_le_bytes();
+            let accumulator = UserRef::new(init_value)
+                .code_hash(accumulator_code_hash)
+                .salt_bytes(salt)
+                .instantiate()
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "failed at instantiating the Accumulator contract: {:?}",
+                        error
+                    )
+                });
 
             Ok(())
         }
