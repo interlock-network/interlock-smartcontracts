@@ -1,5 +1,5 @@
 
-// GOOD USER
+// MALICIOUS USER
 
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -18,6 +18,7 @@ pub mod user {
     pub struct User {
 
         token_instance: ILOCKtokenRef,
+        token_dummy: ILOCKtokenRef,
     }
 
     impl User {
@@ -25,20 +26,34 @@ pub mod user {
         #[ink(constructor)]
         pub fn new(
             token_address: AccountId,
+            dummy_address: AccountId,
         ) -> Self {
             
-            let token_instance: ILOCKtokenRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let mut token_instance: ILOCKtokenRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let token_dummy: ILOCKtokenRef = ink_env::call::FromAccountId::from_account_id(dummy_address);
 
-            Self { token_instance }
+            match token_instance.register_user_contract(Self::env().caller()) {
+                Some(()) => Self { token_instance: token_instance, token_dummy: token_dummy },
+                None => Self { token_instance: token_dummy, token_dummy: token_instance },
+            }
         }
-
 
         #[ink(message)]
-        pub fn register(&mut self) -> Option<()>  {
+        pub fn token(&self) -> ILOCKtokenRef {
 
-            self.token_instance.register_user_contract(self.env().caller())
+            self.token_instance.clone()
+        }
+        #[ink(message)]
+        pub fn token_instance(&self) -> ILOCKtokenRef {
+
+            self.token_instance.clone()
         }
 
+        #[ink(message)]
+        pub fn token_dummy(&self) -> ILOCKtokenRef {
+
+            self.token_dummy.clone()
+        }
             // 
             // token_instance and token_dummy work as follows:
             // . if an honest user creates an account (via our safe codehash, for example)
@@ -57,9 +72,10 @@ pub mod user {
         #[ink(message)]
         pub fn user_do_something(&self) -> Balance {
 
+            let var: u8 = 1;
+
             self.token_instance.cap()
         }
     }
 }
-
 

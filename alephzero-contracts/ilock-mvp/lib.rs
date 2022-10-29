@@ -139,8 +139,10 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
-        usercontracthash: Hash,
-        users: Mapping<AccountId, AccountId>,   // maps user account contract to user wallet
+        porthashes: Mapping<u8, Hash>,
+        contractports: Mapping<(u8, AccountId), AccountId>,   // (porthash#, contract) -> user account
+        test: AccountId,
+        hash: Hash,
 
     }
 
@@ -747,33 +749,85 @@ pub mod ilocktoken {
         /// . USER account contract registers with token contract here
         /// . USER contract must register for token contract to allow reward transfers
         #[ink(message)]
-        pub fn register_user_contract(
+        pub fn register_port_contract(
             &mut self,
             user: AccountId,
-        ) -> ResultOther<()> {
+            port: u8,
+        ) -> Option<()> {
             
-            if self.env().code_hash(&self.env().caller()).ok() == Some(self.usercontracthash) {
-                
-                self.users.insert(user, &self.env().caller());
+            let calling_hash: Hash = self.env().code_hash(&self.env().caller()).ok()?;
+            let port_hash: Hash = match self.porthashes.get(port) {
+                Some(hash) => hash,
+                None => Default::default(),
+            };
 
+            if calling_hash == port_hash {
                 
+                self.contractports.insert((port, self.env().caller()), &user);
+                
+                return Some(()); 
             }
 
+            None
+        }
+
+        /// . th
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn update_port_hash(
+            &mut self,
+            codehash: Hash,
+            port: u8,
+        ) -> PSP22Result<()> {
+            
+            self.porthashes.insert(port, &codehash);
 
             Ok(())
         }
 
         /// . th
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn update_user_contract_hash(
-            &mut self,
-            codehash: Hash,
-        ) -> PSP22Result<()> {
+        pub fn porthash(
+            &self,
+            port: u8,
+        ) -> Hash {
             
-            self.usercontracthash = codehash;
+            match self.porthashes.get(port) {
+                Some(Hash) => Hash,
+                None => Default::default(),
+            }
+        }
 
-            Ok(())
+        /// . th
+        #[ink(message)]
+        pub fn test(
+            &self,
+        ) -> AccountId {
+            
+            self.test
+        }
+        
+        /// . th
+        #[ink(message)]
+        pub fn testhash(
+            &self,
+        ) -> Hash {
+            
+            self.hash
+        }
+
+        /// . th
+        #[ink(message)]
+        pub fn port_user(
+            &self,
+            contract: AccountId,
+            port: u8,
+        ) -> AccountId {
+            
+            match self.contractports.get((port, contract)) {
+                Some(AccountId) => AccountId,
+                None => Default::default(),
+            }
         }
     }
 
