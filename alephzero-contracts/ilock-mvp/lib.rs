@@ -139,10 +139,9 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
-        porthashes: Mapping<u8, Hash>,
-        contractports: Mapping<(u8, AccountId), AccountId>,   // (porthash#, contract) -> user account
-        test: AccountId,
-        hash: Hash,
+
+        porthashes: Mapping<u16, Hash>,                  // hash of port contract
+        sockets: Mapping<AccountId, (AccountId, u16)>,   // contract address -> (owner address, port)
 
     }
 
@@ -749,10 +748,10 @@ pub mod ilocktoken {
         /// . USER account contract registers with token contract here
         /// . USER contract must register for token contract to allow reward transfers
         #[ink(message)]
-        pub fn register_port_contract(
+        pub fn create_socket(
             &mut self,
-            user: AccountId,
-            port: u8,
+            owner: AccountId,
+            port: u16,
         ) -> Option<()> {
             
             let calling_hash: Hash = self.env().code_hash(&self.env().caller()).ok()?;
@@ -760,10 +759,11 @@ pub mod ilocktoken {
                 Some(hash) => hash,
                 None => Default::default(),
             };
+            let address: AccountId = self.env().caller();
 
             if calling_hash == port_hash {
                 
-                self.contractports.insert((port, self.env().caller()), &user);
+                self.sockets.insert(address, &(owner, port));
                 
                 return Some(()); 
             }
@@ -777,7 +777,7 @@ pub mod ilocktoken {
         pub fn update_port_hash(
             &mut self,
             codehash: Hash,
-            port: u8,
+            port: u16,
         ) -> PSP22Result<()> {
             
             self.porthashes.insert(port, &codehash);
@@ -789,7 +789,7 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn porthash(
             &self,
-            port: u8,
+            port: u16,
         ) -> Hash {
             
             match self.porthashes.get(port) {
@@ -798,34 +798,16 @@ pub mod ilocktoken {
             }
         }
 
-        /// . th
-        #[ink(message)]
-        pub fn test(
-            &self,
-        ) -> AccountId {
-            
-            self.test
-        }
-        
-        /// . th
-        #[ink(message)]
-        pub fn testhash(
-            &self,
-        ) -> Hash {
-            
-            self.hash
-        }
 
         /// . th
         #[ink(message)]
-        pub fn port_user(
+        pub fn socket_owner(
             &self,
             contract: AccountId,
-            port: u8,
         ) -> AccountId {
             
-            match self.contractports.get((port, contract)) {
-                Some(AccountId) => AccountId,
+            match self.sockets.get(contract) {
+                Some(socket) => socket.0,
                 None => Default::default(),
             }
         }
