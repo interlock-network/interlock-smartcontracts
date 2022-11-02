@@ -29,6 +29,7 @@ pub mod ilocktoken {
     };
     use ink_prelude::{
         vec::Vec,
+        vec,
         format,
         string::{String, ToString},
     };
@@ -119,6 +120,26 @@ pub mod ilocktoken {
         pool: u8,
     }
 
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default, )]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    pub struct Port {
+        hash: Hash,
+        tax: Balance,
+    }
+
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    pub struct Socket {
+        address: AccountId,
+        port: u16,
+    }
+
     /// . ILOCKtoken struct contains overall storage data for contract
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
@@ -140,8 +161,9 @@ pub mod ilocktoken {
         nextpayout: Timestamp,
         circulatingsupply: Balance,
 
-        porthashes: Mapping<u16, Hash>,                  // hash of port contract
-        sockets: Mapping<AccountId, (AccountId, u16)>,   // contract address -> (owner address, port)
+        ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
+        sockets: Mapping<AccountId, Socket>,  // contract address -> socket
+                                                        // socket == owneraddress:port
 
     }
 
@@ -191,6 +213,9 @@ pub mod ilocktoken {
         PayoutTooEarly,
         /// Returned if reward is too large
         PaymentTooLarge,
+        /// Returned if socket does not exist
+        NoSocket,
+        Custom(String),
     }
 
     impl Into<PSP22Error> for OtherError {
@@ -199,10 +224,16 @@ pub mod ilocktoken {
         }
     }
 
+    impl Into<OtherError> for PSP22Error {
+        fn into(self) -> OtherError {
+            OtherError::Custom(format!("{:?}", self))
+        }
+    }
+
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
     /// . OtherError result type.
-    pub type ResultOther<T> = core::result::Result<T, OtherError>;
+    pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
     pub type Event = <ILOCKtoken as ContractEventBase>::Type;
 
@@ -219,6 +250,7 @@ pub mod ilocktoken {
         }
 
         /// . override default transfer doer
+        /// . check is caller is socket, then tax and reward if so
         /// . transfer from owner increases total supply
         #[ink(message)]
         fn transfer(
@@ -229,6 +261,7 @@ pub mod ilocktoken {
         ) -> Result<(), PSP22Error> {
 
             let from = self.env().caller();
+
             let _ = self._transfer_from_to(from, to, value, data)?;
 
             // if sender is owner, then tokens are entering circulation
@@ -361,7 +394,7 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn check_time(
             &mut self,
-        ) -> ResultOther<()> {
+        ) -> OtherResult<()> {
 
             // test to see if current time falls beyond time for next payout
             if self.env().block_timestamp() > self.nextpayout {
@@ -755,45 +788,91 @@ pub mod ilocktoken {
         ) -> Option<()> {
             
             let calling_hash: Hash = self.env().code_hash(&self.env().caller()).ok()?;
-            let port_hash: Hash = match self.porthashes.get(port) {
-                Some(hash) => hash,
+            let port_hash: Hash = match self.ports.get(port) {
+                Some(port) => port.hash,
                 None => Default::default(),
             };
-            let address: AccountId = self.env().caller();
 
             if calling_hash == port_hash {
                 
-                self.sockets.insert(address, &(owner, port));
-                
+                let contract: AccountId = self.env().caller();
+                let socket = Socket { address: owner, port: port };
+
+                self.sockets.insert(contract, &socket);
+
+
                 return Some(()); 
             }
 
             None
         }
 
-        /// . th
+        /// . check for socket and charge owner per port spec
+        pub fn is_socket(
+            &mut self,
+            address: AccountId,
+        ) -> OtherResult<bool> {
+
+            // check if socket exists
+            let socket: Socket = match self.sockets.get(address) {
+                Some(socket) => socket,
+                None => return Ok(false),
+            };
+            let port: Port = match self.ports.get(socket.port) {
+                Some(port) => port,
+                None => return Ok(false),
+            };
+            let tax: Balance = port.tax;
+            let owner: AccountId = socket.address;
+
+            // tax socket owner
+            match socket.port {
+                
+                0 => Ok(true),      // interlock, no tax
+                1 => {
+
+                    // inject logic for this port, here
+
+                    // this is the basic transaction tax scheme
+                    match self.transfer_from(owner, self.ownable.owner, tax, Default::default()) {
+                        Err(error) => Err(error.into()),
+                        Ok(()) => Ok(true), // return true to proceed with rewards transfer
+                    }
+                },
+                // 2 => Ok(true),
+                // 3 => Ok(true),
+                // 4 => Ok(true),
+                // ... more contracts
+                
+                _ => Err(OtherError::Custom(format!("Socket registered with invalid port."))),
+                }
+        }
+
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
-        pub fn update_port_hash(
+        pub fn create_port(
             &mut self,
             codehash: Hash,
-            port: u16,
+            tax: Balance,
+            number: u16,
         ) -> PSP22Result<()> {
+
+            let port = Port { hash: codehash, tax: tax };
             
-            self.porthashes.insert(port, &codehash);
+            self.ports.insert(number, &port);
 
             Ok(())
         }
 
         /// . th
         #[ink(message)]
-        pub fn porthash(
+        pub fn port(
             &self,
             port: u16,
-        ) -> Hash {
+        ) -> Port {
             
-            match self.porthashes.get(port) {
-                Some(Hash) => Hash,
+            match self.ports.get(port) {
+                Some(port) => port,
                 None => Default::default(),
             }
         }
@@ -801,13 +880,13 @@ pub mod ilocktoken {
 
         /// . th
         #[ink(message)]
-        pub fn socket_owner(
+        pub fn socket(
             &self,
             contract: AccountId,
-        ) -> AccountId {
+        ) -> Socket {
             
             match self.sockets.get(contract) {
-                Some(socket) => socket.0,
+                Some(socket) => socket,
                 None => Default::default(),
             }
         }
