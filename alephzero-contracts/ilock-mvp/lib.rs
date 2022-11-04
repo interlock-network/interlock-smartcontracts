@@ -128,6 +128,9 @@ pub mod ilocktoken {
     pub struct Port {
         hash: Hash,
         tax: Balance,
+        cap: Balance,
+        paid: Balance,
+        collected: Balance,
     }
 
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
@@ -160,6 +163,7 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
+        taxpool: Balance,
 
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
@@ -250,7 +254,6 @@ pub mod ilocktoken {
         }
 
         /// . override default transfer doer
-        /// . check is caller is socket, then tax and reward if so
         /// . transfer from owner increases total supply
         #[ink(message)]
         fn transfer(
@@ -272,10 +275,39 @@ pub mod ilocktoken {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
                 self.rewardspoolbalance += value;
+                self.circulatingsupply -= value;
             }
 
             Ok(())
         }
+
+        /// . override default transfer_from_to doer
+        /// . transfer from owner increases total supply
+        #[ink(message)]
+        fn transfer_from(
+            &mut self,
+            from: AccountId,
+            to: AccountId,
+            value: Balance,
+            data: Vec<u8>,
+        ) -> Result<(), PSP22Error> {
+
+            let _ = self._transfer_from_to(from, to, value, data)?;
+
+            // if sender is owner, then tokens are entering circulation
+            if from == self.ownable.owner {
+                self.circulatingsupply += value;
+            }
+
+            // if recipient is owner, then tokens are being returned or added to rewards pool
+            if to == self.ownable.owner {
+                self.rewardspoolbalance += value;
+                self.circulatingsupply -= value;
+            }
+
+            Ok(())
+        }
+
     }
 
     impl PSP22Metadata for ILOCKtoken {}
@@ -784,22 +816,24 @@ pub mod ilocktoken {
         pub fn create_socket(
             &mut self,
             owner: AccountId,
-            port: u16,
+            number: u16,
         ) -> Option<()> {
             
             let calling_hash: Hash = self.env().code_hash(&self.env().caller()).ok()?;
-            let port_hash: Hash = match self.ports.get(port) {
-                Some(port) => port.hash,
+            let port: Port = match self.ports.get(number) {
+                Some(port) => port,
                 None => Default::default(),
             };
 
-            if calling_hash == port_hash {
+            if calling_hash == port.hash {
                 
                 let contract: AccountId = self.env().caller();
-                let socket = Socket { address: owner, port: port };
+                let socket = Socket { address: owner, port: number };
 
                 self.sockets.insert(contract, &socket);
-
+            
+                let _ = self.psp22.allowances.insert(&(&self.ownable.owner, &self.env().caller()), &port.cap);
+                self._emit_approval_event(self.ownable.owner, owner, port.cap);
 
                 return Some(()); 
             }
@@ -808,45 +842,111 @@ pub mod ilocktoken {
         }
 
         /// . check for socket and charge owner per port spec
-        pub fn is_socket(
+        pub fn call_socket(
             &mut self,
             address: AccountId,
-        ) -> OtherResult<bool> {
+            amount: Balance,
+        ) -> OtherResult<()> {
 
-            // check if socket exists
+            // get socket, to get port
             let socket: Socket = match self.sockets.get(address) {
                 Some(socket) => socket,
-                None => return Ok(false),
+                None => return Ok(()),
             };
             let port: Port = match self.ports.get(socket.port) {
                 Some(port) => port,
-                None => return Ok(false),
+                None => return Ok(()),
             };
-            let tax: Balance = port.tax;
             let owner: AccountId = socket.address;
 
-            // tax socket owner
+            // tax socket owner, inject port logic, transfer reward
             match socket.port {
-                
-                0 => Ok(true),      // interlock, no tax
-                1 => {
 
-                    // inject logic for this port, here
-
-                    // this is the basic transaction tax scheme
-                    match self.transfer_from(owner, self.ownable.owner, tax, Default::default()) {
-                        Err(error) => Err(error.into()),
-                        Ok(()) => Ok(true), // return true to proceed with rewards transfer
-                    }
-                },
-                // 2 => Ok(true),
-                // 3 => Ok(true),
-                // 4 => Ok(true),
-                // ... more contracts
+                // NOTE: injecting custom logic into port requires Interlock Token
+                //       contract codehash update
                 
-                _ => Err(OtherError::Custom(format!("Socket registered with invalid port."))),
-                }
+                // reserved Interlock ports
+                0 => { self.tax_and_reward(owner, address, amount, port)? },
+                1 => { self.tax_and_reward(owner, address, amount, port)? },
+                2 => { self.tax_and_reward(owner, address, amount, port)? },
+                3 => { self.tax_and_reward(owner, address, amount, port)? },
+                4 => { self.tax_and_reward(owner, address, amount, port)? },
+                5 => { self.tax_and_reward(owner, address, amount, port)? },
+                6 => { self.tax_and_reward(owner, address, amount, port)? },
+                7 => { self.tax_and_reward(owner, address, amount, port)? },
+                8 => { self.tax_and_reward(owner, address, amount, port)? },
+                9 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                // reserved community node ports
+                10 => { self.tax_and_reward(owner, address, amount, port)? },
+                11 => { self.tax_and_reward(owner, address, amount, port)? },
+                12 => { self.tax_and_reward(owner, address, amount, port)? },
+                13 => { self.tax_and_reward(owner, address, amount, port)? },
+                14 => { self.tax_and_reward(owner, address, amount, port)? },
+                15 => { self.tax_and_reward(owner, address, amount, port)? },
+                16 => { self.tax_and_reward(owner, address, amount, port)? },
+                17 => { self.tax_and_reward(owner, address, amount, port)? },
+                18 => { self.tax_and_reward(owner, address, amount, port)? },
+                19 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                20 => { self.tax_and_reward(owner, address, amount, port)? },
+                21 => { self.tax_and_reward(owner, address, amount, port)? },
+                22 => { self.tax_and_reward(owner, address, amount, port)? },
+                23 => { self.tax_and_reward(owner, address, amount, port)? },
+                24 => { self.tax_and_reward(owner, address, amount, port)? },
+                25 => { self.tax_and_reward(owner, address, amount, port)? },
+                26 => { self.tax_and_reward(owner, address, amount, port)? },
+                27 => { self.tax_and_reward(owner, address, amount, port)? },
+                28 => { self.tax_and_reward(owner, address, amount, port)? },
+                29 => { self.tax_and_reward(owner, address, amount, port)? },
+                
+                30 => { self.tax_and_reward(owner, address, amount, port)? },
+                31 => { self.tax_and_reward(owner, address, amount, port)? },
+                32 => { self.tax_and_reward(owner, address, amount, port)? },
+                33 => { self.tax_and_reward(owner, address, amount, port)? },
+                34 => { self.tax_and_reward(owner, address, amount, port)? },
+                35 => { self.tax_and_reward(owner, address, amount, port)? },
+                36 => { self.tax_and_reward(owner, address, amount, port)? },
+                37 => { self.tax_and_reward(owner, address, amount, port)? },
+                38 => { self.tax_and_reward(owner, address, amount, port)? },
+                39 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                // ...
+
+                _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
+            };
+
+            Ok(())
         }
+
+        /// . tax and reward socket
+        pub fn tax_and_reward(
+            &mut self,
+            owner: AccountId,
+            address: AccountId,
+            amount: Balance,
+            mut port: Port,
+        ) -> OtherResult<()> {
+
+            let _ = match self.transfer_from(owner, self.ownable.owner, port.tax, Default::default()) {
+                Err(error) => return Err(error.into()),
+                Ok(()) => (),  
+            };
+
+            self.taxpool += port.tax;
+            port.collected += port.tax;
+
+            let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
+                Err(error) => return Err(error.into()),
+                Ok(()) => (),
+            };
+
+            port.paid += amount;
+
+            Ok(())
+        }
+
+
 
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -854,11 +954,18 @@ pub mod ilocktoken {
             &mut self,
             codehash: Hash,
             tax: Balance,
+            cap: Balance,
             number: u16,
         ) -> PSP22Result<()> {
 
-            let port = Port { hash: codehash, tax: tax };
-            
+            let port = Port {
+                hash: codehash,
+                tax: tax,
+                cap: cap,
+                paid: 0,
+                collected: 0,
+            };
+
             self.ports.insert(number, &port);
 
             Ok(())
