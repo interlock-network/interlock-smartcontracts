@@ -154,11 +154,8 @@ pub mod ilocktoken {
         metadata: metadata::Data,
         stakeholderdata: Mapping<AccountId, StakeholderData>,
         rewardeduser: Mapping<AccountId, Balance>,
+        poolbalances: [Balance; POOL_COUNT],
         rewardedtotal: Balance,
-        rewardspoolbalance: Balance,
-        whitelistpoolbalance: Balance,
-        publicsalepoolbalance: Balance,
-        partnerspoolbalance: Balance,
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
@@ -281,7 +278,7 @@ pub mod ilocktoken {
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.rewardspoolbalance += value;
+                self.poolbalances[REWARDS as usize] += value;
                 self.circulatingsupply -= value;
             }
 
@@ -308,7 +305,7 @@ pub mod ilocktoken {
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.rewardspoolbalance += value;
+                self.poolbalances[REWARDS as usize] += value;
                 self.circulatingsupply -= value;
             }
 
@@ -415,10 +412,10 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
-                contract.rewardspoolbalance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
-                contract.whitelistpoolbalance = POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
-                contract.publicsalepoolbalance = POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
-                contract.partnerspoolbalance = POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[REWARDS as usize] = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[WHITELIST as usize] = POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[PUBLIC_SALE as usize] = POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[PARTNERS as usize] = POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
             })
         }
 
@@ -536,6 +533,9 @@ pub mod ilocktoken {
             // now transfer tokens
             let _ = self.transfer(stakeholder, payout, Default::default())?;
 
+            // update pool balance
+            self.poolbalances[this_stakeholder.pool as usize] -= payout;
+
             // finally update stakeholder data struct state
             this_stakeholder.paid += payout;
             self.stakeholderdata.insert(stakeholder, &this_stakeholder);
@@ -553,12 +553,12 @@ pub mod ilocktoken {
         ) -> PSP22Result<()> {
 
             // make sure reward not too large
-            if self.whitelistpoolbalance < amount {
+            if self.poolbalances[WHITELIST as usize] < amount {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // decrement pool balance
-            self.whitelistpoolbalance -= amount;
+            self.poolbalances[WHITELIST as usize] -= amount;
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
@@ -576,12 +576,12 @@ pub mod ilocktoken {
         ) -> PSP22Result<()> {
 
             // make sure reward not too large
-            if self.publicsalepoolbalance < amount {
+            if self.poolbalances[PUBLIC_SALE as usize] < amount {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // decrement pool balance
-            self.publicsalepoolbalance -= amount;
+            self.poolbalances[PUBLIC_SALE as usize] -= amount;
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
@@ -599,44 +599,17 @@ pub mod ilocktoken {
         ) -> PSP22Result<()> {
 
             // make sure reward not too large
-            if self.partnerspoolbalance < amount {
+            if self.poolbalances[PARTNERS as usize] < amount {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // decrement pool balance
-            self.partnerspoolbalance -= amount;
+            self.poolbalances[PARTNERS as usize] -= amount;
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
 
             Ok(())
-        }
-
-        /// . get current balance of whitelist pool
-        #[ink(message)]
-        pub fn whitelist_pool_balance(
-            &self
-        ) -> Balance {
-
-            self.whitelistpoolbalance
-        }
-
-        /// . get current balance of publicsale pool
-        #[ink(message)]
-        pub fn publicsale_pool_balance(
-            &self
-        ) -> Balance {
-
-            self.publicsalepoolbalance
-        }
-
-        /// . get current balance of partners pool
-        #[ink(message)]
-        pub fn partners_pool_balance(
-            &self
-        ) -> Balance {
-
-            self.partnerspoolbalance
         }
 
 /////// stakeholder data ////////////////////////////////////////////////////////////
@@ -693,6 +666,16 @@ pub mod ilocktoken {
                 pool.cliffs,
             )
         }
+        
+        /// . get current balance of whitelist pool
+        #[ink(message)]
+        pub fn pool_balance(
+            &self,
+            pool: u8,
+        ) -> (String, Balance) {
+
+            (POOLS[pool as usize].name.to_string(), self.poolbalances[pool as usize])
+        }
 
 //// rewarding  //////////////////////////////////////////////////////////////////////
 
@@ -706,7 +689,7 @@ pub mod ilocktoken {
         ) -> PSP22Result<Balance> {
 
             // make sure reward not too large
-            if self.rewardspoolbalance < reward {
+            if self.poolbalances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
@@ -714,7 +697,7 @@ pub mod ilocktoken {
             self.rewardedtotal += reward;
 
             // update rewards pool balance
-            self.rewardspoolbalance -= reward;
+            self.poolbalances[REWARDS as usize] -= reward;
 
             // transfer reward tokens from rewards pool to user
             let _ = self.transfer(user, reward, Default::default())?;
@@ -757,17 +740,29 @@ pub mod ilocktoken {
             self.rewardedtotal
         }
 
-        /// . get current balance of rewards pool
-        #[ink(message)]
-        pub fn rewards_pool_balance(
-            &self
-        ) -> Balance {
-
-            self.rewardspoolbalance
-        }
-
 //// misc  //////////////////////////////////////////////////////////////////////
         
+        /// . get current balance of whitelist pool
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn withdraw_tax(
+            &mut self,
+            wallet: AccountId,
+            amount: Balance
+        ) -> PSP22Result<()> {
+
+            if amount > self.taxpool {
+
+                return Err(OtherError::PaymentTooLarge.into());
+            }
+
+            let _ = self.transfer(wallet, amount, Default::default())?;
+
+            self.taxpool -= amount;
+
+            Ok(())
+        }
+
         /// . function to get the number of months passed for contract
         #[ink(message)]
         pub fn months_passed(
@@ -797,6 +792,8 @@ pub mod ilocktoken {
             true
         }
 
+//// contract portability  //////////////////////////////////////////////////////////////////////
+
         /// . modifies the code which is used to execute calls to this contract address
         /// . this upgrades the token contract logic while using old state
         #[ink(message)]
@@ -816,16 +813,6 @@ pub mod ilocktoken {
 
             Ok(())
         }
-
-        // SECURITY VULNERABILITY:
-        // connecting contracts will need to ensure that their contract
-        // only pays rewards when they have earned them
-        // Otherwise, anybody could copy the port contract and use it
-        // outside of the app to 'force' reward distribution
-        //
-        // This may be a problem for our gray area staking contracts.
-
-
 
         /// . account contract registers with token contract here
         /// . contract must first register with token contract to allow reward transfers
@@ -977,22 +964,39 @@ pub mod ilocktoken {
             mut port: Port,
         ) -> OtherResult<()> {
 
+            // transfer transaction tax from socket owner to token contract owner
             let _ = match self.transfer_from(owner, self.ownable.owner, port.tax, Default::default()) {
                 Err(error) => return Err(error.into()),
                 Ok(()) => (),  
             };
 
+            // update pools
             self.taxpool += port.tax;
             port.collected += port.tax;
 
+            // transfer reward to reward recipient
             let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
                 Err(error) => return Err(error.into()),
                 Ok(()) => (),
             };
 
+            // update port
             port.paid += amount;
 
             Ok(())
+        }
+
+        /// . get socket info
+        #[ink(message)]
+        pub fn socket(
+            &self,
+            contract: AccountId,
+        ) -> Socket {
+            
+            match self.sockets.get(contract) {
+                Some(socket) => socket,
+                None => Default::default(),
+            }
         }
 
         /// . create a new port that rewards contract can register with
@@ -1030,20 +1034,6 @@ pub mod ilocktoken {
             
             match self.ports.get(port) {
                 Some(port) => port,
-                None => Default::default(),
-            }
-        }
-
-
-        /// . get socket info
-        #[ink(message)]
-        pub fn socket(
-            &self,
-            contract: AccountId,
-        ) -> Socket {
-            
-            match self.sockets.get(contract) {
-                Some(socket) => socket,
                 None => Default::default(),
             }
         }
