@@ -817,9 +817,6 @@ pub mod ilocktoken {
             Ok(())
         }
 
-
-
-
         // SECURITY VULNERABILITY:
         // connecting contracts will need to ensure that their contract
         // only pays rewards when they have earned them
