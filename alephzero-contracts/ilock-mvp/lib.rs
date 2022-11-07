@@ -29,7 +29,6 @@ pub mod ilocktoken {
     };
     use ink_prelude::{
         vec::Vec,
-        vec,
         format,
         string::{String, ToString},
     };
@@ -41,7 +40,6 @@ pub mod ilocktoken {
             SpreadAllocate,
         },
     };
-    use ink_env::Error;
     use openbrush::{
         contracts::{
             psp22::{
@@ -131,6 +129,7 @@ pub mod ilocktoken {
         cap: Balance,
         paid: Balance,
         collected: Balance,
+        locked: bool,
     }
 
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
@@ -219,6 +218,14 @@ pub mod ilocktoken {
         PaymentTooLarge,
         /// Returned if socket does not exist
         NoSocket,
+        /// Returned if port does not exist
+        NoPort,
+        /// Returned if not contract
+        NotContract,
+        /// Returned if only owner can add socket
+        PortLocked,
+        /// Returned if port cap is surpassed
+        PortCapSurpassed,
         Custom(String),
     }
 
@@ -810,38 +817,77 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . USER account contract registers with token contract here
-        /// . USER contract must register for token contract to allow reward transfers
+
+
+
+        // SECURITY VULNERABILITY:
+        // connecting contracts will need to ensure that their contract
+        // only pays rewards when they have earned them
+        // Otherwise, anybody could copy the port contract and use it
+        // outside of the app to 'force' reward distribution
+        //
+        // This may be a problem for our gray area staking contracts.
+
+
+
+        /// . account contract registers with token contract here
+        /// . contract must first register with token contract to allow reward transfers
         #[ink(message)]
         pub fn create_socket(
             &mut self,
             owner: AccountId,
             number: u16,
-        ) -> Option<()> {
-            
-            let calling_hash: Hash = self.env().code_hash(&self.env().caller()).ok()?;
-            let port: Port = match self.ports.get(number) {
-                Some(port) => port,
-                None => Default::default(),
+        ) -> OtherResult<()> {
+
+            // make sure caller is a contact, return if not
+            if !self.env().is_contract(&self.env().caller()) {
+
+                return Err(OtherError::NotContract.into());
             };
 
+            // get hash of calling contract
+            let calling_hash: Hash = match self.env().code_hash(&self.env().caller()) {
+                Ok(hash) => hash,
+                Err(_) => return Err(OtherError::NotContract.into()),
+            };
+
+            // get port specified by calling contract
+            let port: Port = match self.ports.get(number) {
+                Some(port) => port,
+                None => return Err(OtherError::NoPort.into()),
+            };
+
+            // make sure port is unlocked, or caller is token contract owner
+            if port.locked && (self.ownable.owner != owner) {
+
+                return Err(OtherError::PortLocked.into());
+            }
+            
+            // compare calling contract hash to registered port hash
             if calling_hash == port.hash {
                 
+                // if the same, contract is allowed to create socket
                 let contract: AccountId = self.env().caller();
                 let socket = Socket { address: owner, port: number };
 
                 self.sockets.insert(contract, &socket);
             
-                let _ = self.psp22.allowances.insert(&(&self.ownable.owner, &self.env().caller()), &port.cap);
+                // give socket allowance up to port cap
+                self.psp22.allowances.insert(
+                    &(&self.ownable.owner, &self.env().caller()),
+                    &port.cap
+                );
+
                 self._emit_approval_event(self.ownable.owner, owner, port.cap);
 
-                return Some(()); 
+                return Ok(()); 
             }
 
-            None
+            Err(OtherError::NotContract.into())
         }
 
         /// . check for socket and charge owner per port spec
+        #[ink(message)]
         pub fn call_socket(
             &mut self,
             address: AccountId,
@@ -859,11 +905,17 @@ pub mod ilocktoken {
             };
             let owner: AccountId = socket.address;
 
+            // make sure this will not exceed port cap
+            if port.cap < (port.paid + amount) {
+
+                return Err(OtherError::PortCapSurpassed.into());
+            }
+
             // tax socket owner, inject port logic, transfer reward
             match socket.port {
 
                 // NOTE: injecting custom logic into port requires Interlock Token
-                //       contract codehash update
+                //       contract codehash update after internal port contract audit
                 
                 // reserved Interlock ports
                 0 => { self.tax_and_reward(owner, address, amount, port)? },
@@ -946,8 +998,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-
-
+        /// . create a new port that rewards contract can register with
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn create_port(
@@ -955,6 +1006,7 @@ pub mod ilocktoken {
             codehash: Hash,
             tax: Balance,
             cap: Balance,
+            locked: bool,
             number: u16,
         ) -> PSP22Result<()> {
 
@@ -964,6 +1016,7 @@ pub mod ilocktoken {
                 cap: cap,
                 paid: 0,
                 collected: 0,
+                locked: locked,
             };
 
             self.ports.insert(number, &port);
@@ -971,7 +1024,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . th
+        /// . get port info
         #[ink(message)]
         pub fn port(
             &self,
@@ -985,7 +1038,7 @@ pub mod ilocktoken {
         }
 
 
-        /// . th
+        /// . get socket info
         #[ink(message)]
         pub fn socket(
             &self,

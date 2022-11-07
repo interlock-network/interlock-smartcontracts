@@ -3,19 +3,20 @@
 use ink_lang as ink;
 
 #[ink::contract]
-pub mod user {
+pub mod port {
 
     use ilocktoken::ILOCKtokenRef;
+    use ilocktoken::ilocktoken::OtherError;
 
     pub const PORT: u16 = 0;
 
     #[ink(storage)]
-    pub struct User {
+    pub struct Port {
 
         token_instance: ILOCKtokenRef,
     }
 
-    impl User {
+    impl Port {
 
         #[ink(constructor)]
         pub fn new(
@@ -28,15 +29,21 @@ pub mod user {
         }
 
         #[ink(message)]
-        pub fn register(&mut self) -> Option<()>  {
+        pub fn register(&mut self) -> Result<(), OtherError> {
 
             self.token_instance.create_socket(self.env().caller(), PORT)
         }
 
         #[ink(message)]
-        pub fn user_do_something(&self) -> Balance {
+        pub fn call_socket(
+            &mut self,
+            address: AccountId,
+            amount: Balance
+        ) -> Result<(), OtherError> {
 
-            self.token_instance.cap()
+            // do stuff here, then reward user
+
+            self.token_instance.call_socket(address, amount)
         }
     }
 }
