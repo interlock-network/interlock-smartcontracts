@@ -17,6 +17,7 @@
 
 pub use self::ilocktoken::{
     ILOCKtoken,
+    ILOCKtokenRef,
 };
 
 #[openbrush::contract]
@@ -117,6 +118,30 @@ pub mod ilocktoken {
         pool: u8,
     }
 
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default, )]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    pub struct Port {
+        hash: Hash,
+        tax: Balance,
+        cap: Balance,
+        paid: Balance,
+        collected: Balance,
+        locked: bool,
+    }
+
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    )]
+    pub struct Socket {
+        address: AccountId,
+        port: u16,
+    }
+
     /// . ILOCKtoken struct contains overall storage data for contract
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
@@ -137,6 +162,12 @@ pub mod ilocktoken {
         monthspassed: u8,
         nextpayout: Timestamp,
         circulatingsupply: Balance,
+        taxpool: Balance,
+
+        ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
+        sockets: Mapping<AccountId, Socket>,  // contract address -> socket
+                                                        // socket == owneraddress:port
+
     }
 
 //// other events /////////////////////////////////////////////////////////////
@@ -185,6 +216,17 @@ pub mod ilocktoken {
         PayoutTooEarly,
         /// Returned if reward is too large
         PaymentTooLarge,
+        /// Returned if socket does not exist
+        NoSocket,
+        /// Returned if port does not exist
+        NoPort,
+        /// Returned if not contract
+        NotContract,
+        /// Returned if only owner can add socket
+        PortLocked,
+        /// Returned if port cap is surpassed
+        PortCapSurpassed,
+        Custom(String),
     }
 
     impl Into<PSP22Error> for OtherError {
@@ -193,10 +235,16 @@ pub mod ilocktoken {
         }
     }
 
+    impl Into<OtherError> for PSP22Error {
+        fn into(self) -> OtherError {
+            OtherError::Custom(format!("{:?}", self))
+        }
+    }
+
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
     /// . OtherError result type.
-    pub type ResultOther<T> = core::result::Result<T, OtherError>;
+    pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
     pub type Event = <ILOCKtoken as ContractEventBase>::Type;
 
@@ -223,6 +271,7 @@ pub mod ilocktoken {
         ) -> Result<(), PSP22Error> {
 
             let from = self.env().caller();
+
             let _ = self._transfer_from_to(from, to, value, data)?;
 
             // if sender is owner, then tokens are entering circulation
@@ -233,10 +282,39 @@ pub mod ilocktoken {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
                 self.rewardspoolbalance += value;
+                self.circulatingsupply -= value;
             }
 
             Ok(())
         }
+
+        /// . override default transfer_from_to doer
+        /// . transfer from owner increases total supply
+        #[ink(message)]
+        fn transfer_from(
+            &mut self,
+            from: AccountId,
+            to: AccountId,
+            value: Balance,
+            data: Vec<u8>,
+        ) -> Result<(), PSP22Error> {
+
+            let _ = self._transfer_from_to(from, to, value, data)?;
+
+            // if sender is owner, then tokens are entering circulation
+            if from == self.ownable.owner {
+                self.circulatingsupply += value;
+            }
+
+            // if recipient is owner, then tokens are being returned or added to rewards pool
+            if to == self.ownable.owner {
+                self.rewardspoolbalance += value;
+                self.circulatingsupply -= value;
+            }
+
+            Ok(())
+        }
+
     }
 
     impl PSP22Metadata for ILOCKtoken {}
@@ -355,7 +433,7 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn check_time(
             &mut self,
-        ) -> ResultOther<()> {
+        ) -> OtherResult<()> {
 
             // test to see if current time falls beyond time for next payout
             if self.env().block_timestamp() > self.nextpayout {
@@ -739,6 +817,236 @@ pub mod ilocktoken {
             Ok(())
         }
 
+        // SECURITY VULNERABILITY:
+        // connecting contracts will need to ensure that their contract
+        // only pays rewards when they have earned them
+        // Otherwise, anybody could copy the port contract and use it
+        // outside of the app to 'force' reward distribution
+        //
+        // This may be a problem for our gray area staking contracts.
+
+
+
+        /// . account contract registers with token contract here
+        /// . contract must first register with token contract to allow reward transfers
+        #[ink(message)]
+        pub fn create_socket(
+            &mut self,
+            owner: AccountId,
+            number: u16,
+        ) -> OtherResult<()> {
+
+            // make sure caller is a contact, return if not
+            if !self.env().is_contract(&self.env().caller()) {
+
+                return Err(OtherError::NotContract.into());
+            };
+
+            // get hash of calling contract
+            let calling_hash: Hash = match self.env().code_hash(&self.env().caller()) {
+                Ok(hash) => hash,
+                Err(_) => return Err(OtherError::NotContract.into()),
+            };
+
+            // get port specified by calling contract
+            let port: Port = match self.ports.get(number) {
+                Some(port) => port,
+                None => return Err(OtherError::NoPort.into()),
+            };
+
+            // make sure port is unlocked, or caller is token contract owner
+            if port.locked && (self.ownable.owner != owner) {
+
+                return Err(OtherError::PortLocked.into());
+            }
+            
+            // compare calling contract hash to registered port hash
+            if calling_hash == port.hash {
+                
+                // if the same, contract is allowed to create socket
+                let contract: AccountId = self.env().caller();
+                let socket = Socket { address: owner, port: number };
+
+                self.sockets.insert(contract, &socket);
+            
+                // give socket allowance up to port cap
+                self.psp22.allowances.insert(
+                    &(&self.ownable.owner, &self.env().caller()),
+                    &port.cap
+                );
+
+                self._emit_approval_event(self.ownable.owner, owner, port.cap);
+
+                return Ok(()); 
+            }
+
+            Err(OtherError::NotContract.into())
+        }
+
+        /// . check for socket and charge owner per port spec
+        #[ink(message)]
+        pub fn call_socket(
+            &mut self,
+            address: AccountId,
+            amount: Balance,
+        ) -> OtherResult<()> {
+
+            // get socket, to get port
+            let socket: Socket = match self.sockets.get(address) {
+                Some(socket) => socket,
+                None => return Ok(()),
+            };
+            let port: Port = match self.ports.get(socket.port) {
+                Some(port) => port,
+                None => return Ok(()),
+            };
+            let owner: AccountId = socket.address;
+
+            // make sure this will not exceed port cap
+            if port.cap < (port.paid + amount) {
+
+                return Err(OtherError::PortCapSurpassed.into());
+            }
+
+            // tax socket owner, inject port logic, transfer reward
+            match socket.port {
+
+                // NOTE: injecting custom logic into port requires Interlock Token
+                //       contract codehash update after internal port contract audit
+                
+                // reserved Interlock ports
+                0 => { self.tax_and_reward(owner, address, amount, port)? },
+                1 => { self.tax_and_reward(owner, address, amount, port)? },
+                2 => { self.tax_and_reward(owner, address, amount, port)? },
+                3 => { self.tax_and_reward(owner, address, amount, port)? },
+                4 => { self.tax_and_reward(owner, address, amount, port)? },
+                5 => { self.tax_and_reward(owner, address, amount, port)? },
+                6 => { self.tax_and_reward(owner, address, amount, port)? },
+                7 => { self.tax_and_reward(owner, address, amount, port)? },
+                8 => { self.tax_and_reward(owner, address, amount, port)? },
+                9 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                // reserved community node ports
+                10 => { self.tax_and_reward(owner, address, amount, port)? },
+                11 => { self.tax_and_reward(owner, address, amount, port)? },
+                12 => { self.tax_and_reward(owner, address, amount, port)? },
+                13 => { self.tax_and_reward(owner, address, amount, port)? },
+                14 => { self.tax_and_reward(owner, address, amount, port)? },
+                15 => { self.tax_and_reward(owner, address, amount, port)? },
+                16 => { self.tax_and_reward(owner, address, amount, port)? },
+                17 => { self.tax_and_reward(owner, address, amount, port)? },
+                18 => { self.tax_and_reward(owner, address, amount, port)? },
+                19 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                20 => { self.tax_and_reward(owner, address, amount, port)? },
+                21 => { self.tax_and_reward(owner, address, amount, port)? },
+                22 => { self.tax_and_reward(owner, address, amount, port)? },
+                23 => { self.tax_and_reward(owner, address, amount, port)? },
+                24 => { self.tax_and_reward(owner, address, amount, port)? },
+                25 => { self.tax_and_reward(owner, address, amount, port)? },
+                26 => { self.tax_and_reward(owner, address, amount, port)? },
+                27 => { self.tax_and_reward(owner, address, amount, port)? },
+                28 => { self.tax_and_reward(owner, address, amount, port)? },
+                29 => { self.tax_and_reward(owner, address, amount, port)? },
+                
+                30 => { self.tax_and_reward(owner, address, amount, port)? },
+                31 => { self.tax_and_reward(owner, address, amount, port)? },
+                32 => { self.tax_and_reward(owner, address, amount, port)? },
+                33 => { self.tax_and_reward(owner, address, amount, port)? },
+                34 => { self.tax_and_reward(owner, address, amount, port)? },
+                35 => { self.tax_and_reward(owner, address, amount, port)? },
+                36 => { self.tax_and_reward(owner, address, amount, port)? },
+                37 => { self.tax_and_reward(owner, address, amount, port)? },
+                38 => { self.tax_and_reward(owner, address, amount, port)? },
+                39 => { self.tax_and_reward(owner, address, amount, port)? },
+
+                // ...
+
+                _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
+            };
+
+            Ok(())
+        }
+
+        /// . tax and reward socket
+        pub fn tax_and_reward(
+            &mut self,
+            owner: AccountId,
+            address: AccountId,
+            amount: Balance,
+            mut port: Port,
+        ) -> OtherResult<()> {
+
+            let _ = match self.transfer_from(owner, self.ownable.owner, port.tax, Default::default()) {
+                Err(error) => return Err(error.into()),
+                Ok(()) => (),  
+            };
+
+            self.taxpool += port.tax;
+            port.collected += port.tax;
+
+            let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
+                Err(error) => return Err(error.into()),
+                Ok(()) => (),
+            };
+
+            port.paid += amount;
+
+            Ok(())
+        }
+
+        /// . create a new port that rewards contract can register with
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn create_port(
+            &mut self,
+            codehash: Hash,
+            tax: Balance,
+            cap: Balance,
+            locked: bool,
+            number: u16,
+        ) -> PSP22Result<()> {
+
+            let port = Port {
+                hash: codehash,
+                tax: tax,
+                cap: cap,
+                paid: 0,
+                collected: 0,
+                locked: locked,
+            };
+
+            self.ports.insert(number, &port);
+
+            Ok(())
+        }
+
+        /// . get port info
+        #[ink(message)]
+        pub fn port(
+            &self,
+            port: u16,
+        ) -> Port {
+            
+            match self.ports.get(port) {
+                Some(port) => port,
+                None => Default::default(),
+            }
+        }
+
+
+        /// . get socket info
+        #[ink(message)]
+        pub fn socket(
+            &self,
+            contract: AccountId,
+        ) -> Socket {
+            
+            match self.sockets.get(contract) {
+                Some(socket) => socket,
+                None => Default::default(),
+            }
+        }
     }
 
 //// tests //////////////////////////////////////////////////////////////////////
