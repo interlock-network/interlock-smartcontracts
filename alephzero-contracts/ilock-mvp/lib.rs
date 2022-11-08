@@ -50,7 +50,9 @@ pub mod ilocktoken {
         traits::Storage,
     };
 
+////////////////////////////////////////////////////////////////////////////
 //// constants /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
     /// . magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
@@ -102,7 +104,9 @@ pub mod ilocktoken {
     pub const WHITELIST: u8         = 10;
     pub const PUBLIC_SALE: u8       = 11;
 
-//// structured data /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// structured data ///////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
     /// . StakeholderData struct contains all pertinent information for each stakeholder
     ///   (Besides balance and allowance mappings)
@@ -146,28 +150,42 @@ pub mod ilocktoken {
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
     pub struct ILOCKtoken {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES, OR TYPE!!!
+        // . TO ADD NEW VARIABLE, IT MUST BE APPENDED TO END OF LIST
+
         #[storage_field]
         psp22: psp22::Data,
         #[storage_field]
 		ownable: ownable::Data,
         #[storage_field]
         metadata: metadata::Data,
+
         stakeholderdata: Mapping<AccountId, StakeholderData>,
-        rewardeduser: Mapping<AccountId, Balance>,
+        rewardedinterlocker: Mapping<AccountId, Balance>,
         poolbalances: [Balance; POOL_COUNT],
         rewardedtotal: Balance,
-        monthspassed: u8,
-        nextpayout: Timestamp,
         circulatingsupply: Balance,
         taxpool: Balance,
-
+        monthspassed: u8,
+        nextpayout: Timestamp,
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
                                                         // socket == owneraddress:port
+        // ADD NEW VARIABLES BELOW FOR
+        // ANY SOCKET LOGIC CODE HASH UPDATE
+        // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
+        // newvariable1: Var1,
+        // ...
+        
+        // ONLY APPEND NEW VARIABLES TO END OF
+        // PREEXISTING VARIABLES
     }
 
-//// other events /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// events and errors /////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
     /// . specify transfer event
     #[ink(event)]
@@ -245,7 +263,9 @@ pub mod ilocktoken {
 
     pub type Event = <ILOCKtoken as ContractEventBase>::Type;
 
-/////// init /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/////// reimplement some functions /////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
     impl PSP22 for ILOCKtoken {
         
@@ -319,7 +339,8 @@ pub mod ilocktoken {
     impl Ownable for ILOCKtoken {
         
         // PRIOR TO OWNER TRANSFER,
-        // REMAINING OWNER NONCIRCULATING BALANCE MUST BE TRANSFERRED TO NEW OWNER.
+        // REMAINING OWNER NONCIRCULATING
+        // BALANCE MUST BE TRANSFERRED TO NEW OWNER.
     }
 
     impl PSP22Burnable for ILOCKtoken {
@@ -377,6 +398,10 @@ pub mod ilocktoken {
         }
     }
 
+////////////////////////////////////////////////////////////////////////////
+/////// implement token contract ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
     impl ILOCKtoken {
 
         /// . function for internal _emit_event implementations
@@ -412,17 +437,20 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
-                contract.poolbalances[REWARDS as usize] = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[WHITELIST as usize] = POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[PUBLIC_SALE as usize] = POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[PARTNERS as usize] = POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[REWARDS as usize] =
+                                POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[WHITELIST as usize] =
+                                POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[PUBLIC_SALE as usize] =
+                                POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
+                contract.poolbalances[PARTNERS as usize] =
+                                POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
             })
         }
 
-
-/////// getters ///////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////
 /////// timing /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// . function to check if enough time has passed to collect next payout
         /// . this function ensures Interlock cannot rush the vesting schedule
@@ -442,7 +470,7 @@ pub mod ilocktoken {
                 return Ok(());
             }
 
-            // too early
+            // too early, do nothing
             return Err(OtherError::PayoutTooEarly)
         }
         
@@ -455,7 +483,9 @@ pub mod ilocktoken {
             (self.nextpayout - self.env().block_timestamp()) / 1000
         }
 
-/////// registration  /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/////// stakeholders  //////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// . function that registers a stakeholder's wallet and vesting info
         /// . used to calculate monthly payouts and track net paid
@@ -482,8 +512,39 @@ pub mod ilocktoken {
             Ok(())
         }
 
+        /// . function that returns a stakeholder's payout and other data
+        /// . this will allow stakeholders to verify their stake from explorer if so motivated
+        /// . returns tuple (paidout, payremaining, payamount, poolnumber)
+        #[ink(message)]
+        pub fn stakeholder_data(
+            &self,
+            stakeholder: AccountId,
+        ) -> (Balance, Balance, Balance, u8) {
 
-/////// token distribution /////////////////////////////////////////////////////////////
+            // get pool and stakeholder data structs first
+            let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+            let pool = &POOLS[this_stakeholder.pool as usize];
+
+            // how much has stakeholder already claimed?
+            let paidout: Balance = this_stakeholder.paid;
+
+            // how much does stakeholder have yet to collect?
+            let payremaining: Balance = this_stakeholder.share - this_stakeholder.paid;
+
+            // how much does stakeholder get each month?
+            let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
+
+            return (
+                paidout,
+                payremaining,
+                payamount,
+                this_stakeholder.pool,
+            )
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// token distribution /////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// . general function to transfer the token share a stakeholder is currently entitled to
         /// . this is called once per stakeholder by Interlock, Interlock paying fees
@@ -612,39 +673,9 @@ pub mod ilocktoken {
             Ok(())
         }
 
-/////// stakeholder data ////////////////////////////////////////////////////////////
-
-        /// . function that returns a stakeholder's payout data
-        /// . this will allow stakeholders to verify their stake from explorer if so motivated
-        /// . returns tuple (paidout, payremaining, payamount, poolnumber)
-        #[ink(message)]
-        pub fn stakeholder_data(
-            &self,
-            stakeholder: AccountId,
-        ) -> (Balance, Balance, Balance, u8) {
-
-            // get pool and stakeholder data structs first
-            let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
-            let pool = &POOLS[this_stakeholder.pool as usize];
-
-            // how much has stakeholder already claimed?
-            let paidout: Balance = this_stakeholder.paid;
-
-            // how much does stakeholder have yet to collect?
-            let payremaining: Balance = this_stakeholder.share - this_stakeholder.paid;
-
-            // how much does stakeholder get each month?
-            let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
-
-            return (
-                paidout,
-                payremaining,
-                payamount,
-                this_stakeholder.pool,
-            )
-        }
-
-/////// pool data ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/////// pool data //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// . function that returns pool data
         /// . this will allow observers to verify vesting parameters for each pool (esp. theirs)
@@ -677,15 +708,17 @@ pub mod ilocktoken {
             (POOLS[pool as usize].name.to_string(), self.poolbalances[pool as usize])
         }
 
-//// rewarding  //////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// rewarding  ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
-        /// . reward the user for browsing
+        /// . reward the interlocker for browsing
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
-        pub fn reward_user(
+        pub fn reward_interlocker(
             &mut self,
             reward: Balance,
-            user: AccountId
+            interlocker: AccountId
         ) -> PSP22Result<Balance> {
 
             // make sure reward not too large
@@ -693,40 +726,41 @@ pub mod ilocktoken {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
-            // update total amount rewarded to user
+            // update total amount rewarded to interlocker
             self.rewardedtotal += reward;
 
             // update rewards pool balance
             self.poolbalances[REWARDS as usize] -= reward;
 
-            // transfer reward tokens from rewards pool to user
-            let _ = self.transfer(user, reward, Default::default())?;
+            // transfer reward tokens from rewards pool to interlocker
+            let _ = self.transfer(interlocker, reward, Default::default())?;
 
-            let rewardedusertotal: Balance = match self.rewardeduser.get(user) {
-                Some(u) => u,
+            // get previous total rewarded to interlocker
+            let rewardedinterlockertotal: Balance = match self.rewardedinterlocker.get(interlocker) {
+                Some(total) => total,
                 None => 0,
             };
-            self.rewardeduser.insert(user, &(rewardedusertotal + reward));
+            self.rewardedinterlocker.insert(interlocker, &(rewardedinterlockertotal + reward));
 
             // emit Reward event
             self.env().emit_event(Reward {
-                to: Some(user),
+                to: Some(interlocker),
                 amount: reward,
             });
 
-            // this returns user total reward amount for extension display purposes
-            Ok(rewardedusertotal + reward)
+            // this returns interlocker total reward amount for extension display purposes
+            Ok(rewardedinterlockertotal + reward)
         }
 
-        /// . get amount rewarded to user to date
+        /// . get amount rewarded to interlocker to date
         #[ink(message)]
-        pub fn rewarded_user_total(
+        pub fn rewarded_interlocker_total(
             &self,
-            user: AccountId
+            interlocker: AccountId
         ) -> Balance {
 
-            match self.rewardeduser.get(user) {
-                Some(t) => t,
+            match self.rewardedinterlocker.get(interlocker) {
+                Some(total) => total,
                 None => 0,
             }
         }
@@ -740,7 +774,9 @@ pub mod ilocktoken {
             self.rewardedtotal
         }
 
-//// misc  //////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// misc  /////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
         
         /// . get current balance of whitelist pool
         #[openbrush::modifiers(only_owner)]
@@ -751,6 +787,7 @@ pub mod ilocktoken {
             amount: Balance
         ) -> PSP22Result<()> {
 
+            // only withdraw what is available in pool
             if amount > self.taxpool {
 
                 return Err(OtherError::PaymentTooLarge.into());
@@ -792,7 +829,9 @@ pub mod ilocktoken {
             true
         }
 
-//// contract portability  //////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// portability and extensibility  ////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// . modifies the code which is used to execute calls to this contract address
         /// . this upgrades the token contract logic while using old state
@@ -814,7 +853,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . account contract registers with token contract here
+        /// . rewards contracts register with token contract here
         /// . contract must first register with token contract to allow reward transfers
         #[ink(message)]
         pub fn create_socket(
@@ -842,21 +881,29 @@ pub mod ilocktoken {
             };
 
             // make sure port is unlocked, or caller is token contract owner
+            // ... this makes it so that people can't build their own application
+            //     and to 'hijack' an approved and registered rewards contract.
+            //   . if port is locked then only interlock can register new reward contract
             if port.locked && (self.ownable.owner != owner) {
 
                 return Err(OtherError::PortLocked.into());
             }
             
             // compare calling contract hash to registered port hash
+            // to make sure it is safe (ie, approved and audited by interlock
             if calling_hash == port.hash {
                 
                 // if the same, contract is allowed to create socket
                 let contract: AccountId = self.env().caller();
                 let socket = Socket { address: owner, port: number };
 
+                // socket is registered with token contract
+                // and calling contract may start calling socket to receive rewards
                 self.sockets.insert(contract, &socket);
             
                 // give socket allowance up to port cap
+                // ... connecting contracts will not be able to reward
+                //     more than cap specified by interlock (for safety)
                 self.psp22.allowances.insert(
                     &(&self.ownable.owner, &self.env().caller()),
                     &port.cap
@@ -867,6 +914,9 @@ pub mod ilocktoken {
                 return Ok(()); 
             }
 
+            // returns error if calling contract is not a known
+            // safe contract registered by interlock as a 'port' that 
+            // the calling contract can connect to
             Err(OtherError::NotContract.into())
         }
 
@@ -878,7 +928,7 @@ pub mod ilocktoken {
             amount: Balance,
         ) -> OtherResult<()> {
 
-            // get socket, to get port
+            // get socket, to get port assiciated with socket
             let socket: Socket = match self.sockets.get(address) {
                 Some(socket) => socket,
                 None => return Ok(()),
@@ -1000,6 +1050,8 @@ pub mod ilocktoken {
         }
 
         /// . create a new port that rewards contract can register with
+        /// . eaech port tracks amount rewarded, tax collected, and if it is locked or not
+        /// . a locked port may only be registered by the interlock network foundation
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn create_port(
@@ -1039,7 +1091,9 @@ pub mod ilocktoken {
         }
     }
 
-//// tests //////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//// tests /////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 // . To view debug prints and assertion failures run test via:
 // cargo nightly+ test -- --nocapture
