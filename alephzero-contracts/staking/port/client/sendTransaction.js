@@ -1,6 +1,6 @@
 //
 // INTERLOCK NETWORK - 
-// PSP22 TOKEN CONTRACT
+// PORT CONTRACT TEMPLATE
 //
 
 //
@@ -14,88 +14,16 @@
 //
 // Enter each method below as a string in <method> field. Quotes are unneccessary.
 //
-// checkTime
+// register
 // 	args:	0
 //
-// decrementCirculation
-// 	args:	1
-// 	1:	amount, 	big number
-//
-// distributeTokens
-// 	args:	1
-// 	1:	stakeholder, 	string (b58 address)
-//
-// incrementCirculation
-// 	args:	1
-// 	1:	amount, 	big number
-//
-// ownable::renounceOwnership
-// 	args:	0
-//
-// ownable::transferOwnership
-// 	args: 	1
-// 	1:	newowner	string (b58 address)
-//
-// psp22::approve
+// callSocket
 // 	args:	2
-// 	1:	spender, 	string (b58 address)
-// 	2:	value,		big number
-//
-// psp22::decreaseAllowance
-// 	args:	2
-// 	1:	spender,	string (b58 address)
-// 	2:	deltavalue,	big number
-//
-// psp22::increaseAllowance
-// 	args:	2
-// 	1:	spender,	string (b58 address)
-// 	2:	deltavalue,	big number
-//
-// psp22::transfer
-// 	args:	0
-// 	1:	to,		string (b58 address)
-// 	2:	value,		big number
-// 	3:	data,		byte string
-//
-// psp22::transferFrom
-// 	args:	4
-// 	1:	from,		string (b58 address)
-// 	2:	to,		string (b58 address)
-// 	3:	value,		big number
-// 	4:	data,		byte string
-//
-// psp22Burnable::burn
-// 	args:	2
-// 	1:	account,	string (b58 address)
+// 	1:	address,	b58 string
 // 	2:	amount,		big number
 //
-// registerStakeholder
-// 	args:	3
-// 	1:	stakeholder,	string (b58 address)
-// 	2:	share,		big number
-// 	3:	pool,		u8
-//
-// rewardUser
-// 	args:	2
-// 	1:	reward,		big number
-// 	2:	user,		string (b58 address)
-//
-// updateContract
-// 	args:	1
-// 	1:	codehash,	bytestring
-//
-// distributeWhitelist
-// 	args:	1
-// 	1:	stakeholder,	string (b58 address)
-//
-// distributePublicsale
-// 	args:	1
-// 	1:	stakeholder,	string (b58 address)
-//
-// distributePartners
-// 	args:	1
-// 	1:	stakeholder,	string (b58 address)
-//
+// Further implemented methods below
+
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
@@ -104,7 +32,7 @@ require('dotenv').config();
 
 // constants
 const metadata_ILOCKMVP = require('../target/ink/metadata.json');
-const contract_ILOCKMVP = process.env.CONTRACT_ILOCKMVP;
+const contract_ILOCKMVP = process.env.CONTRACT_PORT;
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
@@ -159,6 +87,7 @@ async function sendTransaction(...args) {
 			process.exit();
 		}
 
+		console.log('chirp');
 		// submit doer tx
 		let extrinsic = await contract.tx[method]
   			({ storageDepositLimit, gasLimit }, ...args)

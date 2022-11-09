@@ -412,7 +412,6 @@ pub mod ilocktoken {
         /// . constructor to initialize contract
         /// . note: pool contracts must be created prior to construction (for args)
         #[ink(constructor)]
-        // takes in array of pool addresses generated earlier, pre token contract constructor
         pub fn new_token(
         ) -> Self {
 
@@ -437,14 +436,11 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
-                contract.poolbalances[REWARDS as usize] =
-                                POOLS[REWARDS as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[WHITELIST as usize] =
-                                POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[PUBLIC_SALE as usize] =
-                                POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10;
-                contract.poolbalances[PARTNERS as usize] =
-                                POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10;
+                for pool in 0..POOL_COUNT {
+
+                    contract.poolbalances[pool] =
+                                    POOLS[pool].tokens * DECIMALS_POWER10;
+                }
             })
         }
 

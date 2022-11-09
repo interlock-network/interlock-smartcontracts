@@ -1,6 +1,6 @@
 //
 // INTERLOCK NETWORK - 
-// PSP22 TOKEN CONTRACT
+// PORT CONTRACT TEMPLATE
 //
 
 //
@@ -13,66 +13,8 @@
 //
 // Enter each method below as a string in <method> field. Quotes are unneccessary.
 //
-// monthsPassed
-// 	args:	0
-//
-// ownable::owner
-// 	args:	0
-//
-// poolData
-// 	args:	1
-// 	1:	pool number, 	u8
-//
-// psp22::allowance
-// 	args:	2
-// 	1:	owner, 		string (b58 address)
-// 	2:	spender, 	string (b58 address)
-//
-// psp22::balanceOf
-// 	args:	1
-// 	1:	owner,		string (b58 address)
-//
-// psp22::totalSupply
-// 	args: 	0
-//
-// psp22Metadata::tokenDecimals
-// 	args:	0
-//
-// psp22Metadata::tokenName
-// 	args:	0
-//
-// psp22Metadata::tokenSymbol
-// 	args:	0
-//
-// rewardedTotal
-// 	args:	0
-//
-// rewardedUserTotal
-// 	args:	1
-// 	1:	user,		string (b58 address)
-//
-// rewardsPoolBalance
-// 	args:	0
-//
-// stakeholderData
-// 	args:	1
-// 	1:	stakeholder,	string (b58 address)
-//
-// remainingTimeUntilNextPayment
-// 	args:	0
-//
-// whitelistPoolBalance
-// 	args:	0
-//
-// publicsalePoolBalance
-// 	args:	0
-//
-// partnersPoolBalance
-// 	args:	0
-//
-// cap
-// 	args:	0
-//
+// No methods yet.
+
 
 // imports
 const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
@@ -81,7 +23,7 @@ require('dotenv').config();
 
 // constants
 const metadata_ILOCKMVP = require('../target/ink/metadata.json');
-const contract_ILOCKMVP = process.env.CONTRACT_ILOCKMVP;
+const contract_ILOCKMVP = process.env.CONTRACT_PORT;
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 
