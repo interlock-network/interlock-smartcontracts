@@ -19,9 +19,17 @@
 // ownable::owner
 // 	args:	0
 //
+// poolBalance
+// 	args:	1
+// 	1:	pool number,	u8
+//
 // poolData
 // 	args:	1
 // 	1:	pool number, 	u8
+//
+// port
+// 	args:	1
+// 	1:	port number,	u16
 //
 // psp22::allowance
 // 	args:	2
@@ -47,27 +55,19 @@
 // rewardedTotal
 // 	args:	0
 //
-// rewardedUserTotal
+// rewardedInterlockerTotal
 // 	args:	1
 // 	1:	user,		string (b58 address)
 //
-// rewardsPoolBalance
-// 	args:	0
+// socket
+// 	args:	1
+// 	1:	contract,	string (b58 address)
 //
 // stakeholderData
 // 	args:	1
 // 	1:	stakeholder,	string (b58 address)
 //
 // remainingTimeUntilNextPayment
-// 	args:	0
-//
-// whitelistPoolBalance
-// 	args:	0
-//
-// publicsalePoolBalance
-// 	args:	0
-//
-// partnersPoolBalance
 // 	args:	0
 //
 // cap

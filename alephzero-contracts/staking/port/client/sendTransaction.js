@@ -87,7 +87,6 @@ async function sendTransaction(...args) {
 			process.exit();
 		}
 
-		console.log('chirp');
 		// submit doer tx
 		let extrinsic = await contract.tx[method]
   			({ storageDepositLimit, gasLimit }, ...args)

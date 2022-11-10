@@ -241,6 +241,11 @@ pub mod ilocktoken {
         PortLocked,
         /// Returned if port cap is surpassed
         PortCapSurpassed,
+        /// Returned if reward recipient is a contract
+        CannotRewardContract,
+        /// Returned if socket contract does not match registered hash
+        UnsafeContract,
+        /// Returned if socket contract does not match registered hash
         Custom(String),
     }
 
@@ -796,6 +801,15 @@ pub mod ilocktoken {
             Ok(())
         }
 
+        /// . display taxpool balance
+        #[ink(message)]
+        pub fn tax_available(
+            &self,
+        ) -> Balance {
+
+            self.taxpool
+        }
+
         /// . function to get the number of months passed for contract
         #[ink(message)]
         pub fn months_passed(
@@ -861,19 +875,19 @@ pub mod ilocktoken {
             // make sure caller is a contact, return if not
             if !self.env().is_contract(&self.env().caller()) {
 
-                return Err(OtherError::NotContract.into());
+                return Err(OtherError::NotContract);
             };
 
             // get hash of calling contract
             let calling_hash: Hash = match self.env().code_hash(&self.env().caller()) {
                 Ok(hash) => hash,
-                Err(_) => return Err(OtherError::NotContract.into()),
+                Err(_) => return Err(OtherError::NotContract),
             };
 
             // get port specified by calling contract
             let port: Port = match self.ports.get(number) {
                 Some(port) => port,
-                None => return Err(OtherError::NoPort.into()),
+                None => return Err(OtherError::NoPort),
             };
 
             // make sure port is unlocked, or caller is token contract owner
@@ -882,7 +896,7 @@ pub mod ilocktoken {
             //   . if port is locked then only interlock can register new reward contract
             if port.locked && (self.ownable.owner != owner) {
 
-                return Err(OtherError::PortLocked.into());
+                return Err(OtherError::PortLocked);
             }
             
             // compare calling contract hash to registered port hash
@@ -913,7 +927,7 @@ pub mod ilocktoken {
             // returns error if calling contract is not a known
             // safe contract registered by interlock as a 'port' that 
             // the calling contract can connect to
-            Err(OtherError::NotContract.into())
+            Err(OtherError::UnsafeContract)
         }
 
         /// . check for socket and charge owner per port spec
@@ -924,22 +938,21 @@ pub mod ilocktoken {
             amount: Balance,
         ) -> OtherResult<()> {
 
+            // make sure address is not contract
+            if self.env().is_contract(&address) {
+
+                return Err(OtherError::CannotRewardContract);
+            }
+
             // get socket, to get port assiciated with socket
-            let socket: Socket = match self.sockets.get(address) {
+            let socket: Socket = match self.sockets.get(self.env().caller()) {
                 Some(socket) => socket,
-                None => return Ok(()),
+                None => return Err(OtherError::NoSocket),
             };
-            let port: Port = match self.ports.get(socket.port) {
-                Some(port) => port,
-                None => return Ok(()),
-            };
+
+            // port owner address
             let owner: AccountId = socket.address;
 
-            // make sure this will not exceed port cap
-            if port.cap < (port.paid + amount) {
-
-                return Err(OtherError::PortCapSurpassed.into());
-            }
 
             // tax socket owner, inject port logic, transfer reward
             match socket.port {
@@ -948,8 +961,8 @@ pub mod ilocktoken {
                 //       contract codehash update after internal port contract audit
                 
                 // reserved Interlock ports
-                0 => { self.tax_and_reward(owner, address, amount, port)? },
-                1 => { self.tax_and_reward(owner, address, amount, port)? },
+                0 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+            /*    1 => { self.tax_and_reward(owner, address, amount, port)? },
                 2 => { self.tax_and_reward(owner, address, amount, port)? },
                 3 => { self.tax_and_reward(owner, address, amount, port)? },
                 4 => { self.tax_and_reward(owner, address, amount, port)? },
@@ -992,7 +1005,7 @@ pub mod ilocktoken {
                 37 => { self.tax_and_reward(owner, address, amount, port)? },
                 38 => { self.tax_and_reward(owner, address, amount, port)? },
                 39 => { self.tax_and_reward(owner, address, amount, port)? },
-
+*/
                 // ...
 
                 _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
@@ -1007,8 +1020,20 @@ pub mod ilocktoken {
             owner: AccountId,
             address: AccountId,
             amount: Balance,
-            mut port: Port,
+            portnumber: u16,
         ) -> OtherResult<()> {
+
+            // get port info
+            let mut port: Port = match self.ports.get(portnumber) {
+                Some(port) => port,
+                None => return Err(OtherError::NoPort),
+            };
+
+            // make sure this will not exceed port cap
+            if port.cap < (port.paid + amount) {
+
+                return Err(OtherError::PortCapSurpassed.into());
+            }
 
             // transfer transaction tax from socket owner to token contract owner
             let _ = match self.transfer_from(owner, self.ownable.owner, port.tax, Default::default()) {
@@ -1028,6 +1053,7 @@ pub mod ilocktoken {
 
             // update port
             port.paid += amount;
+            self.ports.insert(portnumber, &port);
 
             Ok(())
         }

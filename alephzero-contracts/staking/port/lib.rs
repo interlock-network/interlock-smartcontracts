@@ -7,6 +7,7 @@ pub mod port {
 
     use ilocktoken::ILOCKtokenRef;
     use ilocktoken::ilocktoken::OtherError;
+    use ink_prelude::string::String;
 
     pub const PORT: u16 = 0;
 
@@ -44,6 +45,15 @@ pub mod port {
             // do stuff here, then reward user
 
             self.token_instance.call_socket(address, amount)
+        }
+
+        #[ink(message)]
+        pub fn pool_balance(
+            &self,
+            pool: u8,
+        ) -> (String, Balance) {
+
+            self.token_instance.pool_balance(pool)
         }
     }
 }

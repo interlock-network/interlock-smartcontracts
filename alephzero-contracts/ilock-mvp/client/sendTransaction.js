@@ -14,8 +14,21 @@
 //
 // Enter each method below as a string in <method> field. Quotes are unneccessary.
 //
+// callSocket
+// 	args:	2
+// 	1:	address,	string (b58 address) (reward recipient)
+// 	2:	amount,		big number
+//
 // checkTime
 // 	args:	0
+//
+// createPort
+// 	args:	5
+// 	1:	codehash,	hex bytestring, 0x prefix
+// 	2:	tax,		big number
+// 	3:	cap,		big number
+// 	4:	locked,		bool
+// 	5:	number,		u16 (port number)
 //
 // decrementCirculation
 // 	args:	1
