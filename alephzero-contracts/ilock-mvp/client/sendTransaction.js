@@ -30,6 +30,8 @@
 // 	4:	locked,		bool
 // 	5:	number,		u16 (port number)
 //
+// 	NOTE! 'locked' ARGUMENT WILL ONLY SET FALSE BY PASSING THE EMPTY STRING, ""
+//
 // decrementCirculation
 // 	args:	1
 // 	1:	amount, 	big number

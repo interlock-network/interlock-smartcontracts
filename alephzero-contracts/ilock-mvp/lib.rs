@@ -1051,6 +1051,11 @@ pub mod ilocktoken {
                 Ok(()) => (),
             };
 
+            // update balance pool and totals
+            // (the port.tax subtraction is to offset rewardpool increase on transfer from token owner)
+            self.poolbalances[REWARDS as usize] -= amount + port.tax;
+            self.rewardedtotal += amount;
+
             // update port
             port.paid += amount;
             self.ports.insert(portnumber, &port);
