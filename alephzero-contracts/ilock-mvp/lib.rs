@@ -131,9 +131,9 @@ pub mod ilocktoken {
         hash: Hash,
         tax: Balance,
         cap: Balance,
+        locked: bool,
         paid: Balance,
         collected: Balance,
-        locked: bool,
     }
 
     #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
@@ -368,6 +368,7 @@ pub mod ilocktoken {
         }
 	}
 
+    // these implementations are because open brush does not implement
     impl Internal for ILOCKtoken {
 
         fn _emit_transfer_event(
@@ -409,6 +410,7 @@ pub mod ilocktoken {
 
     impl ILOCKtoken {
 
+        // Pete said this was probably necessary
         /// . function for internal _emit_event implementations
         pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
             emitter.emit_event(event);
@@ -441,6 +443,7 @@ pub mod ilocktoken {
                         .expect("Failed to mint the initial supply");
                 contract._init_with_owner(caller);
 
+                // create initial pool balances
                 for pool in 0..POOL_COUNT {
 
                     contract.poolbalances[pool] =
@@ -475,13 +478,15 @@ pub mod ilocktoken {
             return Err(OtherError::PayoutTooEarly)
         }
         
-        /// . time in seconds until next payout
+        /// . time in seconds until next payout in minutes
         #[ink(message)]
         pub fn remaining_time_until_next_payout(
             &self
         ) -> Timestamp {
 
-            (self.nextpayout - self.env().block_timestamp()) / 1000
+            // add logic here to return 0 if overflow
+
+            (self.nextpayout - self.env().block_timestamp()) / 60_000
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -520,7 +525,7 @@ pub mod ilocktoken {
         pub fn stakeholder_data(
             &self,
             stakeholder: AccountId,
-        ) -> (Balance, Balance, Balance, u8) {
+        ) -> (String, String, String, String) {
 
             // get pool and stakeholder data structs first
             let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
@@ -536,10 +541,10 @@ pub mod ilocktoken {
             let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
 
             return (
-                paidout,
-                payremaining,
-                payamount,
-                this_stakeholder.pool,
+                format!("paidout: {:?} ", paidout),
+                format!("payremaining: {:?} ", payremaining),
+                format!("payamount: {:?} ", payamount),
+                format!("pool: {:?}", POOLS[this_stakeholder.pool as usize].name),
             )
         }
 
@@ -687,15 +692,15 @@ pub mod ilocktoken {
         pub fn pool_data(
             &self,
             pool: u8,
-        ) -> (String, u128, u8, u8) {
+        ) -> (String, String, String, String) {
         
             let pool = &POOLS[pool as usize];
             // just grab up and send it out
             return (
-                pool.name.to_string(),
-                pool.tokens,
-                pool.vests,
-                pool.cliffs,
+                format!("pool: {:?} ", pool.name.to_string()),
+                format!("tokens alotted: {:?} ", pool.tokens),
+                format!("number of vests: {:?} ", pool.vests),
+                format!("vesting cliff: {:?} ", pool.cliffs),
             )
         }
         
@@ -706,7 +711,10 @@ pub mod ilocktoken {
             pool: u8,
         ) -> (String, Balance) {
 
-            (POOLS[pool as usize].name.to_string(), self.poolbalances[pool as usize])
+            (format!("pool: {:?} balance: {:?}", 
+                    POOLS[pool as usize].name.to_string(),
+                    self.poolbalances[pool as usize]),
+             self.poolbalances[pool as usize])
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -714,6 +722,7 @@ pub mod ilocktoken {
 ////////////////////////////////////////////////////////////////////////////
 
         /// . reward the interlocker for browsing
+        /// . this is a manual rewarding function, to override the socket formalism
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn reward_interlocker(
@@ -863,7 +872,7 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . rewards contracts register with token contract here
+        /// . rewards/staking contracts register with token contract here
         /// . contract must first register with token contract to allow reward transfers
         #[ink(message)]
         pub fn create_socket(
@@ -891,8 +900,8 @@ pub mod ilocktoken {
             };
 
             // make sure port is unlocked, or caller is token contract owner
-            // ... this makes it so that people can't build their own application
-            //     and to 'hijack' an approved and registered rewards contract.
+            //   . this makes it so that people can't build their own client application
+            //     to 'hijack' an approved and registered rewards contract.
             //   . if port is locked then only interlock can register new reward contract
             if port.locked && (self.ownable.owner != owner) {
 
@@ -900,7 +909,7 @@ pub mod ilocktoken {
             }
             
             // compare calling contract hash to registered port hash
-            // to make sure it is safe (ie, approved and audited by interlock
+            // to make sure it is safe (ie, approved and audited by interlock)
             if calling_hash == port.hash {
                 
                 // if the same, contract is allowed to create socket
@@ -912,7 +921,7 @@ pub mod ilocktoken {
                 self.sockets.insert(contract, &socket);
             
                 // give socket allowance up to port cap
-                // ... connecting contracts will not be able to reward
+                //   . connecting contracts will not be able to reward
                 //     more than cap specified by interlock (for safety)
                 self.psp22.allowances.insert(
                     &(&self.ownable.owner, &self.env().caller()),
@@ -962,51 +971,59 @@ pub mod ilocktoken {
                 
                 // reserved Interlock ports
                 0 => { self.tax_and_reward(owner, address, amount, socket.port)? },
-            /*    1 => { self.tax_and_reward(owner, address, amount, port)? },
-                2 => { self.tax_and_reward(owner, address, amount, port)? },
-                3 => { self.tax_and_reward(owner, address, amount, port)? },
-                4 => { self.tax_and_reward(owner, address, amount, port)? },
-                5 => { self.tax_and_reward(owner, address, amount, port)? },
-                6 => { self.tax_and_reward(owner, address, amount, port)? },
-                7 => { self.tax_and_reward(owner, address, amount, port)? },
-                8 => { self.tax_and_reward(owner, address, amount, port)? },
-                9 => { self.tax_and_reward(owner, address, amount, port)? },
+                1 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                2 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                3 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                4 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                5 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                6 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                7 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                8 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                9 => { self.tax_and_reward(owner, address, amount, socket.port)? },
 
                 // reserved community node ports
-                10 => { self.tax_and_reward(owner, address, amount, port)? },
-                11 => { self.tax_and_reward(owner, address, amount, port)? },
-                12 => { self.tax_and_reward(owner, address, amount, port)? },
-                13 => { self.tax_and_reward(owner, address, amount, port)? },
-                14 => { self.tax_and_reward(owner, address, amount, port)? },
-                15 => { self.tax_and_reward(owner, address, amount, port)? },
-                16 => { self.tax_and_reward(owner, address, amount, port)? },
-                17 => { self.tax_and_reward(owner, address, amount, port)? },
-                18 => { self.tax_and_reward(owner, address, amount, port)? },
-                19 => { self.tax_and_reward(owner, address, amount, port)? },
+                10 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                11 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                12 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                13 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                14 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                15 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                16 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                17 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                18 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                19 => { self.tax_and_reward(owner, address, amount, socket.port)? },
 
-                20 => { self.tax_and_reward(owner, address, amount, port)? },
-                21 => { self.tax_and_reward(owner, address, amount, port)? },
-                22 => { self.tax_and_reward(owner, address, amount, port)? },
-                23 => { self.tax_and_reward(owner, address, amount, port)? },
-                24 => { self.tax_and_reward(owner, address, amount, port)? },
-                25 => { self.tax_and_reward(owner, address, amount, port)? },
-                26 => { self.tax_and_reward(owner, address, amount, port)? },
-                27 => { self.tax_and_reward(owner, address, amount, port)? },
-                28 => { self.tax_and_reward(owner, address, amount, port)? },
-                29 => { self.tax_and_reward(owner, address, amount, port)? },
+                20 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                21 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                22 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                23 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                24 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                25 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                26 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                27 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                28 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                29 => { self.tax_and_reward(owner, address, amount, socket.port)? },
                 
-                30 => { self.tax_and_reward(owner, address, amount, port)? },
-                31 => { self.tax_and_reward(owner, address, amount, port)? },
-                32 => { self.tax_and_reward(owner, address, amount, port)? },
-                33 => { self.tax_and_reward(owner, address, amount, port)? },
-                34 => { self.tax_and_reward(owner, address, amount, port)? },
-                35 => { self.tax_and_reward(owner, address, amount, port)? },
-                36 => { self.tax_and_reward(owner, address, amount, port)? },
-                37 => { self.tax_and_reward(owner, address, amount, port)? },
-                38 => { self.tax_and_reward(owner, address, amount, port)? },
-                39 => { self.tax_and_reward(owner, address, amount, port)? },
-*/
-                // ...
+                30 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                31 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                32 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                33 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                34 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                35 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                36 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                37 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                38 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+                39 => { self.tax_and_reward(owner, address, amount, socket.port)? },
+
+                // ... custom logic example:
+
+                65535 => {
+
+                    // < inject custom logic here >
+
+                    // then reward and tax
+                    self.tax_and_reward(owner, address, amount, socket.port)?
+                },
 
                 _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
             };
@@ -1035,6 +1052,12 @@ pub mod ilocktoken {
                 return Err(OtherError::PortCapSurpassed.into());
             }
 
+            // TODO/QUESTION:
+            // tax should probably be a fraction of reward,
+            // instead of a flat rate per reward
+            //   . this would change the logic a little bit
+            // ?
+
             // transfer transaction tax from socket owner to token contract owner
             let _ = match self.transfer_from(owner, self.ownable.owner, port.tax, Default::default()) {
                 Err(error) => return Err(error.into()),
@@ -1059,6 +1082,12 @@ pub mod ilocktoken {
             // update port
             port.paid += amount;
             self.ports.insert(portnumber, &port);
+
+            // emit Reward event
+            self.env().emit_event(Reward {
+                to: Some(address),
+                amount: amount,
+            });
 
             Ok(())
         }
@@ -1090,13 +1119,16 @@ pub mod ilocktoken {
             number: u16,
         ) -> PSP22Result<()> {
 
+            // do we need an overflow check?
+            // (ie, is it even possible to pass a u32, etc, port number?)
+
             let port = Port {
                 hash: codehash,
                 tax: tax,
                 cap: cap,
+                locked: locked,
                 paid: 0,
                 collected: 0,
-                locked: locked,
             };
 
             self.ports.insert(number, &port);
@@ -1121,11 +1153,13 @@ pub mod ilocktoken {
 ////////////////////////////////////////////////////////////////////////////
 //// tests /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
+//
+// INCOMPLETE
+//
 // . To view debug prints and assertion failures run test via:
-// cargo nightly+ test -- --nocapture
+//   cargo nightly+ test -- --nocapture
 // . To view debug for specific method run test via:
-// cargo nightly+ test <test_function_here> -- --nocapture
+//   cargo nightly+ test <test_function_here> -- --nocapture
 
     #[cfg(test)]
     mod tests {
