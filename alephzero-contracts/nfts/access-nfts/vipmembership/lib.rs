@@ -1,342 +1,403 @@
 //
-// INTERLOCK NETWORK - 
-// PSP34 ACCESS CONTRACT - VIP MEMBERSHIP
+// INTERLOCK NETWORK - GENERAL ACCESS NFT
 //
-// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
-//
-// This is a standard ERC721-style token contract
-// with provisions for enforcing proof of VIP membership,
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
+pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 
 #[openbrush::contract]
-pub mod vipmembership {
+pub mod psp34_nft {
+    use ink_prelude::string::String;
+    use ink_prelude::string::ToString;
+    use ink_prelude::vec::Vec;
+    use ink_prelude::format;
+    use ink_storage::traits::SpreadAllocate;
+    use ink_storage::Mapping;
+    use ink_lang::codegen::Env;
+    use openbrush::contracts::ownable::*;
+    use openbrush::contracts::psp34::extensions::enumerable::*;
+    use openbrush::contracts::psp34::extensions::metadata::*;
+    use openbrush::contracts::psp34::*;
+    use openbrush::modifiers;
 
-    use ink_storage::{
-        traits::SpreadAllocate,
-        Mapping,
-    };
-    use ink_prelude::{
-        string::String,
-        vec::Vec,
-        vec,
-        format,
-    };
-    use openbrush::{
-        contracts::{
-            psp34::extensions::{
-                metadata::*,
-                mintable::*,
-            },
-            ownable::*,
-        },
-        traits::Storage,
-    };
-
-    pub const CAP: u16 = 1000;
-
+    #[derive(Default, SpreadAllocate, PSP34Storage, PSP34MetadataStorage, OwnableStorage)]
     #[ink(storage)]
-    #[derive(Default, SpreadAllocate, Storage)]
-    pub struct VIPmembership {
-        #[storage_field]
-        psp34: psp34::Data,
-        #[storage_field]
-        metadata: metadata::Data,
-        #[storage_field]
-        ownable: ownable::Data,
-        next_vipmembership_id: u16,
-        nfts_held: Mapping<AccountId, Vec<u16>>,
+    pub struct Psp34Nft {
+        #[PSP34StorageField]
+        psp34: PSP34Data<EnumerableBalances>,
+        #[PSP34MetadataStorageField]
+        metadata: PSP34MetadataData,
+        #[OwnableStorageField]
+        ownable: OwnableData,
+        last_token_id: u64,
+        attribute_count: u32,
+        attribute_names: Mapping<u32, Vec<u8>>,
+        locked_tokens: Mapping<Id, u8>,
+        locked_token_count: u64,
+        nfts_held: Mapping<AccountId, Vec<Id>>,
+        cap: u64,
+
     }
 
-    impl PSP34 for VIPmembership {
+
+    #[openbrush::wrapper]
+    pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
+    impl PSP34 for Psp34Nft {
 
         /// . override transfer function to reset each NFT to 'not authenticated' on transfer
         #[ink(message)]
         fn transfer(&mut self, to: AccountId, id: Id, data: Vec<u8>) -> Result<(), PSP34Error> {
 
+            let from = self.env().caller();
             let _ = self._transfer_token(to, id.clone(), data)?;
             self._set_attribute(
-                id,
-                String::from("AUTHENTICATED").into_bytes(),
-                vec![0],
+                id.clone(),
+                String::from("isauthenticated").into_bytes(),
+                String::from("false").into_bytes(),
             );
+
+            // update sender's collection
+            let mut from_collection = match self.nfts_held.get(from) {
+                Some(collection) => collection,
+                None => return Err(PSP34Error::Custom(format!("No collection, fatal error"))),
+            };
+            let index = match from_collection.iter().position(|element| *element == id) {
+                Some(index) => index,
+                None => return Err(PSP34Error::Custom(format!("No NFT in collection, fatal error"))),
+            };
+            from_collection.remove(index);
+            self.nfts_held.insert(from, &from_collection);
+
+            // update recipient's collection
+            let mut to_collection = match self.nfts_held.get(to) {
+                Some(collection) => collection,
+                None => Vec::new(),
+            };
+            to_collection.push(id);
+            self.nfts_held.insert(to, &to_collection);
 
             Ok(())
         }
-
-        // no transfer_from function for PSP34
     }
 
-    impl PSP34Metadata for VIPmembership {}
-    impl Ownable for VIPmembership {}
-    impl PSP34Mintable for VIPmembership {
-        
-        /// . overrides extention mint() to disable
-        #[openbrush::modifiers(only_owner)]
+    impl Ownable for Psp34Nft {}
+    impl PSP34Metadata for Psp34Nft {}
+    impl PSP34Internal for Psp34Nft {}
+    impl PSP34Enumerable for Psp34Nft {}
+
+    #[openbrush::trait_definition]
+    pub trait Psp34Traits {
         #[ink(message)]
-        fn mint(&mut self, _recipient: AccountId, _id: Id) -> Result<(), PSP34Error> {
-
-            return Err(PSP34Error::Custom(format!("The default mint function is disabled.")))
-
-        }
+        fn set_base_uri(&mut self, uri: String) -> Result<(), PSP34Error>;
+        #[ink(message)]
+        fn set_multiple_attributes(
+            &mut self,
+            token_id: Id,
+            attributes: Vec<String>,
+            values: Vec<String>,
+        ) -> Result<(), PSP34Error>;
+        #[ink(message)]
+        fn get_attributes(&self, token_id: Id, attributes: Vec<String>) -> Vec<String>;
+        #[ink(message)]
+        fn get_attribute_count(&self) -> u32;
+        #[ink(message)]
+        fn get_attribute_name(&self, index: u32) -> String;
+        #[ink(message)]
+        fn token_uri(&self, token_id: u64) -> String;
     }
 
-    impl VIPmembership {
-
-        /// . initialize contract
+    impl Psp34Nft {
         #[ink(constructor)]
-        pub fn new(
-        ) -> Self {
+        pub fn new(name: String, symbol: String, class: String, cap: u64) -> Self {
+            
+            // create the contract
+            ink_lang::codegen::initialize_contract(|instance: &mut Self| {
 
-            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
-                
-                contract._init_with_owner(contract.env().caller());
-                contract.next_vipmembership_id = 0;
-
-				let collection_id = contract.collection_id();
-				contract._set_attribute(
-                    collection_id.clone(),
+                // set attributes
+                instance._set_attribute(
+                    Id::U8(0),
                     String::from("name").into_bytes(),
-                    String::from("Interlock Access NFT").into_bytes(),
+                    name.into_bytes(),
                 );
-				contract._set_attribute(
-                    collection_id.clone(),
+                instance._set_attribute(
+                    Id::U8(0),
                     String::from("symbol").into_bytes(),
-                    String::from("ILOCKACCESS").into_bytes(),
+                    symbol.into_bytes(),
                 );
-				contract._set_attribute(
-                    collection_id,
-                    String::from("ACCESS_CLASS").into_bytes(),
-                    String::from("VIP_MEMBERSHIP").into_bytes(),
+                instance._set_attribute(
+                    Id::U8(0),
+                    String::from("class").into_bytes(),
+                    class.into_bytes(),
                 );
+
+                // assign caller as owner
+                instance._init_with_owner(instance.env().caller());
+
+                // set cap
+                instance.cap = cap;
             })
         }
 
         /// . mint an NFT VIP membership certificate
-        #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn mint_accessnft(&mut self, recipient: AccountId, jpeg_url: String) -> Result<(), PSP34Error> {
+        #[modifiers(only_owner)]
+        pub fn mint(
+            &mut self,
+            recipient: AccountId,
+        ) -> Result<(), PSP34Error> {
+
+            // next token id
+            self.last_token_id += 1;
 
             // make sure cap is not surpassed
-            if self.next_vipmembership_id >= CAP {
-                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", CAP)))
+            if self.last_token_id >= self.cap {
+                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap)))
             }
 
             // if cap not surpassed, mint next id
-            let _ = self._mint_to(recipient, psp34::Id::U16(self.next_vipmembership_id))?;
+            let _ = self._mint_to(recipient, psp34::Id::U64(self.last_token_id))?;
 
             // get nft collection of recipient if already holding
             let mut collection = match self.nfts_held.get(recipient) {
-                Some(vec) => vec,
+                Some(collection) => collection,
                 None => Vec::new(),
             };
 
             // add id to recipient's nft collection
-            collection.push(self.next_vipmembership_id);
+            collection.push(psp34::Id::U64(self.last_token_id));
             self.nfts_held.insert(recipient, &collection);
 
             // set metadata specific to token
             
-            // where this jpeg lives
-            self._set_attribute(
-                psp34::Id::U16(self.next_vipmembership_id),
-                String::from("JPEG").into_bytes(),
-                jpeg_url.into_bytes(),
-            );
-
             // initial authentication status is false
             self._set_attribute(
-                psp34::Id::U16(self.next_vipmembership_id),
-                String::from("AUTHENTICATED").into_bytes(),
-                vec![0],
+                psp34::Id::U64(self.last_token_id),
+                String::from("isauthenticated").into_bytes(),
+                String::from("false").into_bytes(),
             );
 
-            // setup for next mint
-            self.next_vipmembership_id += 1;
+            // identifying info if relevant
+            self._set_attribute(
+                psp34::Id::U64(self.last_token_id),
+                String::from("identification").into_bytes(),
+                String::from("").into_bytes(),
+            );
 
             Ok(())
         }
 
-        /// . get collection of nfts held by particular user
+        ///Only Owner can mint new token and add attributes for it
         #[ink(message)]
-        pub fn user_collection(&self, user: AccountId) -> Result<Vec<u16>, PSP34Error> {
+        #[modifiers(only_owner)]
+        pub fn mint_with_attributes(
+            &mut self,
+            recipient: AccountId,
+            attributes: Vec<String>,
+            values: Vec<String>,
+        ) -> Result<(), PSP34Error> {
 
-            // retrieve the collection
-            match self.nfts_held.get(user) {
-                Some(vec) => Ok(vec),
-                None => Err(PSP34Error::Custom(format!("The user {:?} does not have a collection.", user))),
+            // next token id
+            self.last_token_id += 1;
+
+            // make sure cap is not surpassed
+            if self.last_token_id >= self.cap {
+                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap)))
+            }
+
+            // mint and set
+            let _ = self._mint_to(recipient, Id::U64(self.last_token_id))?;
+            let _ = self.set_multiple_attributes(Id::U64(self.last_token_id), attributes, values)?;
+
+            // update recipient's collection
+            let mut collection = match self.nfts_held.get(recipient) {
+                Some(collection) => collection,
+                None => Vec::new(),
+            };
+            collection.push(Id::U64(self.last_token_id));
+            self.nfts_held.insert(recipient, &collection);
+
+            Ok(())
+        }
+
+        ///Get Token Count
+        #[ink(message)]
+        pub fn get_last_token_id(&self) -> u64 {
+            return self.last_token_id;
+        }
+
+        fn add_attribute_name(&mut self, attribute_input: Vec<u8>) {
+            let mut exist: bool = false;
+            for index in 0..self.attribute_count {
+                let attribute_name = self.attribute_names.get(&(index + 1));
+                if attribute_name.is_some() {
+                    if attribute_name.unwrap() == attribute_input {
+                        exist = true;
+                        break;
+                    }
+                }
+            }
+            if !exist {
+                self.attribute_count += 1;
+                self.attribute_names
+                    .insert(&self.attribute_count, &attribute_input);
             }
         }
 
-        /// . get NFT mint cap
+        /// . Lock nft - Only owner token
         #[ink(message)]
-        pub fn get_cap(&self) -> Result<u16, PSP34Error> {
+        pub fn lock(&mut self, token_id: Id) -> Result<(), PSP34Error> {
+            
+            let caller = self.env().caller();
 
-            // retrieve and return the cap
-            Ok(CAP)
-        }
+            let token_owner = match self.owner_of(token_id.clone()) {
+                Some(owner) => owner,
+                None => return Err(PSP34Error::Custom(format!("Token does not exist."))),
+            };
 
-        /// . grant 'authenticated' status to interlocker
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn set_authenticated(&mut self, id: Id) -> Result<(), PSP34Error> {
+            if caller != token_owner {
+                return Err(PSP34Error::Custom(format!("Caller not token owner.")));
+            }
 
-            self._set_attribute(
-                id,
-                String::from("AUTHENTICATED").into_bytes(),
-                vec![1],
-            );
+            self.locked_token_count += 1;
+            self.locked_tokens.insert(&token_id, &1);
 
             Ok(())
         }
 
-        /// . revoke 'authenticated' status from interlocker
-        #[openbrush::modifiers(only_owner)]
+        /// . Check token is locked or not
         #[ink(message)]
-        pub fn set_not_authenticated(&mut self, id: Id) -> Result<(), PSP34Error> {
+        pub fn is_locked_nft(&self, token_id: Id) -> bool {
 
-            self._set_attribute(
-                id,
-                String::from("AUTHENTICATED").into_bytes(),
-                vec![0],
-            );
-
-            Ok(())
+            match self.locked_tokens.get(&token_id) {
+                Some(_) => return true,
+                None => return false,
+            }
         }
 
-        /// . modifies the code which is used to execute calls to this contract address
-        /// . this upgrades the token contract logic while using old state
-        #[openbrush::modifiers(only_owner)]
+        /// . Get Locked Token Count
         #[ink(message)]
-        pub fn upgrade_contract(
-            &mut self,
-            code_hash: [u8; 32]
-        ) -> Result<(), PSP34Error> {
+        pub fn get_locked_token_count(&self) -> u64 {
+            return self.locked_token_count;
+        }
 
-            // takes code hash of updates contract and modifies preexisting logic to match
-            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
-                panic!(
-                    "Failed to `set_code_hash` to {:?} due to {:?}",
-                    code_hash, err
-                )
-            });
+        /// . remove token from circulation
+        #[ink(message)]
+        pub fn burn(&mut self, id: Id) -> Result<(), PSP34Error> {
+            
+            let caller = self.env().caller();
 
-            Ok(())
+            let token_owner = match self.owner_of(id.clone()) {
+                Some(owner) => owner,
+                None => return Err(PSP34Error::Custom(format!("Token does not exist."))),
+            };
+
+            if caller != token_owner {
+                return Err(PSP34Error::Custom(format!("Caller not token owner.")));
+            }
+
+            self._burn_from(caller, id)
         }
     }
 
-//// tests //////////////////////////////////////////////////////////////////////
+    impl Psp34Traits for Psp34Nft {
 
-// . To view debug prints and assertion failures run test via:
-// cargo nightly+ test -- --nocapture
-// . To view debug for specific method run test via:
-// cargo nightly+ test <test_function_here> -- --nocapture
+        /// . Change baseURI
+        #[ink(message)]
+        #[modifiers(only_owner)]
+        fn set_base_uri(&mut self, uri: String) -> Result<(), PSP34Error> {
 
-    #[cfg(test)]
-    mod tests {
-
-        use super::*;
-        use ink_lang as ink;
-
-        /// . test if the default constructor does its job
-        #[ink::test]
-        fn constructor_works() {
-
-            let vipmembership = VIPmembership::new();
-
-            // check collection metadata -- unwrap() OK in this testing context
-            assert_eq!(
-                vipmembership.get_attribute(vipmembership.collection_id(), String::from("name").into_bytes()).unwrap(),
-                String::from("Interlock Access NFT").into_bytes()
+            self._set_attribute(
+                Id::U8(0),
+                String::from("baseURI").into_bytes(),
+                uri.into_bytes(),
             );
-            assert_eq!(
-                vipmembership.get_attribute(vipmembership.collection_id(), String::from("symbol").into_bytes()).unwrap(),
-                String::from("ILOCKACCESS").into_bytes()
-            );
-            assert_eq!(
-                vipmembership.get_attribute(vipmembership.collection_id(), String::from("ACCESS_CLASS").into_bytes()).unwrap(),
-                String::from("VIP_MEMBERSHIP").into_bytes()
-            );
-            assert_eq!(vipmembership.next_vipmembership_id, 0);
+            Ok(())
         }
 
-        /// . test if the vip mint function does its job
-        #[ink::test]
-        fn mint_vipmembership_works() {
-
-            let mut vipmembership = VIPmembership::new();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            // mint vip nft -- unwrap() OK in this testing context
-            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
-
-            // check nft metadata -- unwrap() OK in this testing context
-            assert_eq!(vipmembership.balance_of(accounts.bob), 1);
-            assert_eq!(vipmembership.next_vipmembership_id, 1);
-            assert_eq!(
-                vipmembership.get_attribute(psp34::Id::U16(0), String::from("JPEG").into_bytes()).unwrap(),
-                String::from("https://www.test.com").into_bytes()
-            );
-            assert_eq!(
-                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
-                [0]
-            );
-            assert_eq!(vipmembership.owner_of(psp34::Id::U16(0)).unwrap(), accounts.bob);
+        ///Only Owner can set multiple attributes to a token
+        #[ink(message)]
+        #[modifiers(only_owner)]
+        fn set_multiple_attributes(
+            &mut self,
+            token_id: Id,
+            attributes: Vec<String>,
+            values: Vec<String>,
+        ) -> Result<(), PSP34Error> {
+            assert!(token_id != Id::U64(0));
+            if self.is_locked_nft(token_id.clone()) {
+                return Err(PSP34Error::Custom(String::from("Token is locked")));
+            }
+            if attributes.len() != values.len() {
+                return Err(PSP34Error::Custom(String::from("Inputs not same length")));
+            }
+            //Check Duplication
+            let mut sorted_attributes = attributes.clone();
+            sorted_attributes.sort();
+            let length = sorted_attributes.len();
+            for i in 0..length {
+                let attribute = sorted_attributes[i].clone();
+                let byte_attribute = attribute.into_bytes();
+                if i + 1 < length {
+                    let next_attribute = sorted_attributes[i + 1].clone();
+                    let byte_next_attribute = next_attribute.into_bytes();
+                    if byte_attribute == byte_next_attribute {
+                        return Err(PSP34Error::Custom(String::from("Duplicated Attributes")));
+                    }
+                }
+                let unsorted_attribute = attributes[i].clone();
+                let byte_unsorted_attribute = unsorted_attribute.into_bytes();
+                let value = values[i].clone();
+                self.add_attribute_name(byte_unsorted_attribute.clone());
+                self._set_attribute(
+                    token_id.clone(),
+                    byte_unsorted_attribute.clone(),
+                    value.into_bytes(),
+                );
+            }
+            Ok(())
         }
 
-        /// . test if the set authenticated funtion does its job
-        #[ink::test]
-        fn set_authenticated_works() {
-
-            let mut vipmembership = VIPmembership::new();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            // mint vip nft -- unwrap() OK in this testing context
-            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
-
-            // set authenticated -- unwrap() OK in this testing context
-            vipmembership.set_authenticated(psp34::Id::U16(0)).unwrap();
-
-            // verify authentication
-            assert_eq!(
-                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
-                [1]
-            );
+        /// Get multiple  attributes
+        #[ink(message)]
+        fn get_attributes(&self, token_id: Id, attributes: Vec<String>) -> Vec<String> {
+            let length = attributes.len();
+            let mut ret = Vec::<String>::new();
+            for i in 0..length {
+                let attribute = attributes[i].clone();
+                let value = self.get_attribute(token_id.clone(), attribute.into_bytes());
+                if value.is_some() {
+                    ret.push(String::from_utf8(value.unwrap()).unwrap());
+                } else {
+                    ret.push(String::from(""));
+                }
+            }
+            ret
         }
 
-        /// . test if the set not authenticated funtion does its job
-        #[ink::test]
-        fn set_not_authenticated_works() {
-
-            let mut vipmembership = VIPmembership::new();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-
-            // mint vip nft -- unwrap() OK in this testing context
-            vipmembership.mint_vipmembership(accounts.bob, "https://www.test.com".to_string()).unwrap();
-
-            // set authenticated -- unwrap() OK in this testing context
-            vipmembership.set_authenticated(psp34::Id::U16(0)).unwrap();
-
-            // set not authenticated -- unwrap() OK in this testing context
-            vipmembership.set_not_authenticated(psp34::Id::U16(0)).unwrap();
-
-            // verify authentication
-            assert_eq!(
-                vipmembership.get_attribute(psp34::Id::U16(0), String::from("AUTHENTICATED").into_bytes()).unwrap(),
-                [0]
-            );
+        ///Get Attribute Count
+        #[ink(message)]
+        fn get_attribute_count(&self) -> u32 {
+            self.attribute_count
         }
 
+        ///Get Attribute Name
+        #[ink(message)]
+        fn get_attribute_name(&self, index: u32) -> String {
+            
+            match self.attribute_names.get(&index) {
+                Some(attribute) => String::from_utf8(attribute).unwrap(),
+                None => String::from(""),
+            }
+        }
 
-        // no transfer_from function for PSP34
-    
-        // . test if the overridden transfer funtion does its job
-        // .    . AUTHENTICATED flips to zero on transfer, verified on testnet
-        //
-        // . test if contract upgrade function does its job
-        // .    . logic upgrades on contract set_code_hash, verified on testnet
-
+        /// Get URI from token ID
+        #[ink(message)]
+        fn token_uri(&self, token_id: u64) -> String {
+            let value = self.get_attribute(Id::U8(0), String::from("baseURI").into_bytes());
+            let mut token_uri = String::from_utf8(value.unwrap()).unwrap();
+            token_uri = token_uri + &token_id.to_string() + &String::from(".json");
+            return token_uri;
+        }
     }
 }
-
