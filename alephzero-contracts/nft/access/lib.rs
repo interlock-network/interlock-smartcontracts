@@ -9,24 +9,23 @@ pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 #[openbrush::contract]
 pub mod psp34_nft {
 
-    use ink_prelude::{
-        string::{String, toString},
+    use ink::codegen::Env;
+    use ink::prelude::{
+        string::{String, ToString},
         vec::Vec,
         format,
     };
-    use ink_storage::{
-        traits::SpreadAllocate,
-        Mapping,
-    };
-    use ink_lang::codegen::Env;
-    use openbrush::contracts::{
-        ownable::*,
-        contracts::psp34::extensions::{enumerable::*, metadata::*},
+    use ink::storage::Mapping;
+    use openbrush::{
+        contracts::{
+            ownable::*,
+            psp34::extensions::{enumerable::*, metadata::*},
+        },
         traits::Storage,
         modifiers,
-    }
+    };
 
-    #[derive(Default, SpreadAllocate, Storage)]
+    #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
 
@@ -73,11 +72,13 @@ pub mod psp34_nft {
             // update sender's collection
             let mut from_collection = match self.nfts_held.get(from) {
                 Some(collection) => collection,
-                None => return Err(PSP34Error::Custom(format!("No collection, fatal error"))),
+                None => return Err(PSP34Error::Custom(
+                        format!("No collection, fatal error").into_bytes())),
             };
             let index = match from_collection.iter().position(|element| *element == id) {
                 Some(index) => index,
-                None => return Err(PSP34Error::Custom(format!("No NFT in collection, fatal error"))),
+                None => return Err(PSP34Error::Custom(
+                        format!("No NFT in collection, fatal error").into_bytes())),
             };
             from_collection.remove(index);
             self.nfts_held.insert(from, &from_collection);
@@ -145,8 +146,8 @@ pub mod psp34_nft {
         ) -> Self {
             
             // create the contract
-            ink_lang::codegen::initialize_contract(|instance: &mut Self| {
-
+            //ink::lang::codegen::initialize_contract(|instance: &mut Self| {
+            let mut instance = Self::default();
                 // set attributes
                 instance._set_attribute(
                     Id::U8(0),
@@ -169,7 +170,9 @@ pub mod psp34_nft {
 
                 // set cap
                 instance.cap = cap;
-            })
+
+                instance
+            
         }
 
         /// . mint an access NFT
@@ -185,7 +188,8 @@ pub mod psp34_nft {
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.cap {
-                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap)))
+                return Err(PSP34Error::Custom(
+                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
             // if cap not surpassed, mint next id
@@ -235,7 +239,8 @@ pub mod psp34_nft {
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.cap {
-                return Err(PSP34Error::Custom(format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap)))
+                return Err(PSP34Error::Custom(
+                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
             // mint and set
@@ -297,7 +302,8 @@ pub mod psp34_nft {
             // retrieve the collection
             match self.nfts_held.get(ilocker) {
                 Some(vec) => Ok(vec),
-                None => Err(PSP34Error::Custom(format!("The user {:?} does not have a collection.", ilocker))),
+                None => Err(PSP34Error::Custom(
+                        format!("The user {:?} does not have a collection.", ilocker).into_bytes())),
             }
         }
 
@@ -343,11 +349,13 @@ pub mod psp34_nft {
 
             let token_owner = match self.owner_of(token_id.clone()) {
                 Some(owner) => owner,
-                None => return Err(PSP34Error::Custom(format!("Token does not exist."))),
+                None => return Err(PSP34Error::Custom(
+                        format!("Token does not exist.").into_bytes())),
             };
 
             if caller != token_owner {
-                return Err(PSP34Error::Custom(format!("Caller not token owner.")));
+                return Err(PSP34Error::Custom(
+                        format!("Caller not token owner.").into_bytes()));
             }
 
             self.locked_token_count += 1;
@@ -388,11 +396,13 @@ pub mod psp34_nft {
 
             let token_owner = match self.owner_of(id.clone()) {
                 Some(owner) => owner,
-                None => return Err(PSP34Error::Custom(format!("Token does not exist."))),
+                None => return Err(PSP34Error::Custom(
+                        format!("Token does not exist.").into_bytes())),
             };
 
             if caller != token_owner {
-                return Err(PSP34Error::Custom(format!("Caller not token owner.")));
+                return Err(PSP34Error::Custom(
+                        format!("Caller not token owner.").into_bytes()));
             }
 
             self._burn_from(caller, id)
@@ -429,10 +439,12 @@ pub mod psp34_nft {
 
             assert!(token_id != Id::U64(0));
             if self.is_locked_nft(token_id.clone()) {
-                return Err(PSP34Error::Custom(String::from("Token is locked")));
+                return Err(PSP34Error::Custom(
+                        String::from("Token is locked").into_bytes()));
             }
             if attributes.len() != values.len() {
-                return Err(PSP34Error::Custom(String::from("Inputs not same length")));
+                return Err(PSP34Error::Custom(
+                        String::from("Inputs not same length").into_bytes()));
             }
             //Check Duplication
             let mut sorted_attributes = attributes.clone();
@@ -445,7 +457,8 @@ pub mod psp34_nft {
                     let next_attribute = sorted_attributes[i + 1].clone();
                     let byte_next_attribute = next_attribute.into_bytes();
                     if byte_attribute == byte_next_attribute {
-                        return Err(PSP34Error::Custom(String::from("Duplicated attributes")));
+                        return Err(PSP34Error::Custom(
+                                String::from("Duplicated attributes").into_bytes()));
                     }
                 }
                 let unsorted_attribute = attributes[i].clone();
