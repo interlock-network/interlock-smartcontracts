@@ -13,7 +13,7 @@ const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
 const metadata = require('./metadata.json');
 
-async function main (message) {
+async function main(message) {
 
   // establish connection with blockchain
   console.log('');

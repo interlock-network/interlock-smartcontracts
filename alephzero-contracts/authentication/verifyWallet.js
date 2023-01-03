@@ -53,7 +53,7 @@ const TRUE = '0x74727565';
 const FALSE = '0x66616c7365';
 const ISAUTHENTICATED = '0x697361757468656e74696361746564';
 
-async function authenticate(owner) {
+async function main(message) {
 
 	try {
 		// setup session
@@ -69,7 +69,7 @@ async function authenticate(owner) {
 		// get NFT collection for wallet
 		let { gasRequired, storageDeposit, result, output } =
 			await contract.query['ilockerCollection'](
-  			OWNER_pair.address, {}, owner);
+  			OWNER_pair.address, {}, message.wallet);
 
 		// check if the call was successful
 		if (result.isOk) {
@@ -99,13 +99,25 @@ async function authenticate(owner) {
 				const listen = path.resolve('listenForTransfer.js');
 				const listenChild = fork(listen);
 
-				listenChild.send({amount: 1, wallet: owner});
+				listenChild.send({amount: message.amount, wallet: message.wallet});
 				listenChild.on('message', message => {
 					console.log('status:', message);
 					if (message == 'wallet authenticated') {
 						const set = path.resolve('setAuthenticated.js');
 						const setChild = fork(set);
 						setChild.send({id: notAuthenticatedId});
+						
+						setChild.on('message', message => {
+							if (message == 'nft authenticated') {
+								process.send({
+									type: "authentication complete",
+									wallet: message.wallet,
+									id: notAuthenticatedId
+								});
+								process.exit();
+							};
+						});
+
 					};
 				});
 			}
@@ -118,9 +130,6 @@ async function authenticate(owner) {
 		process.exit();
 	}
 }
-
-authenticate(process.argv[2]).then(() => {});
-
 
 process.on('message', message => {
   main(message).catch((error) => {

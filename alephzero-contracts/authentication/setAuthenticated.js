@@ -1,15 +1,6 @@
 //
 // INTERLOCK NETWORK - 
-// PSP34 ACCESS NFT CLIENT LIBRARY
-//
-
-//
-// access_selectors:
-// 'VIP_MEMBERSHIP'
-// 'BOUNCER_LICENSE'
-//
-// bash calling syntax:
-// node do.transfer.js <access_selector> <to> <id> <data>
+// NFT AUTHENTICATION: SETAUTHENTICATED
 //
 
 // imports
@@ -69,7 +60,7 @@ async function main(message) {
     			if (result.status.isInBlock) {
       				console.log('in a block');
     			} else if (result.status.isFinalized) {
-      				console.log('nft authenticated');
+      				process.send('nft authenticated');
 				process.exit();
     			}
   		});
