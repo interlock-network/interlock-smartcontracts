@@ -8,28 +8,35 @@ pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 
 #[openbrush::contract]
 pub mod psp34_nft {
-    use ink_prelude::string::String;
-    use ink_prelude::string::ToString;
-    use ink_prelude::vec::Vec;
-    use ink_prelude::format;
-    use ink_storage::traits::SpreadAllocate;
-    use ink_storage::Mapping;
+
+    use ink_prelude::{
+        string::{String, toString},
+        vec::Vec,
+        format,
+    };
+    use ink_storage::{
+        traits::SpreadAllocate,
+        Mapping,
+    };
     use ink_lang::codegen::Env;
-    use openbrush::contracts::ownable::*;
-    use openbrush::contracts::psp34::extensions::enumerable::*;
-    use openbrush::contracts::psp34::extensions::metadata::*;
-    use openbrush::traits::Storage;
-    use openbrush::modifiers;
+    use openbrush::contracts::{
+        ownable::*,
+        contracts::psp34::extensions::{enumerable::*, metadata::*},
+        traits::Storage,
+        modifiers,
+    }
 
     #[derive(Default, SpreadAllocate, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
+
         #[storage_field]
         psp34: psp34::Data<enumerable::Balances>,
         #[storage_field]
         metadata: metadata::Data,
         #[storage_field]
         ownable: ownable::Data,
+
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
@@ -37,15 +44,15 @@ pub mod psp34_nft {
         locked_token_count: u64,
         nfts_held: Mapping<AccountId, Vec<Id>>,
         cap: u64,
-
     }
-
 
     #[openbrush::wrapper]
     pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
+
     impl PSP34 for Psp34Nft {
 
         /// . override transfer function to reset each NFT to 'not authenticated' on transfer
+        /// . also updates 'collection' status (nfts_held)
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -54,6 +61,7 @@ pub mod psp34_nft {
             data: Vec<u8>
         ) -> Result<(), PSP34Error> {
 
+            // revoke authenticated status
             let from = self.env().caller();
             let _ = self._transfer_token(to, id.clone(), data)?;
             self._set_attribute(
@@ -93,7 +101,10 @@ pub mod psp34_nft {
     #[openbrush::trait_definition]
     pub trait Psp34Traits {
         #[ink(message)]
-        fn set_base_uri(&mut self, uri: String) -> Result<(), PSP34Error>;
+        fn set_base_uri(
+            &mut self,
+            uri: String
+        ) -> Result<(), PSP34Error>;
         #[ink(message)]
         fn set_multiple_attributes(
             &mut self,
@@ -102,13 +113,25 @@ pub mod psp34_nft {
             values: Vec<String>,
         ) -> Result<(), PSP34Error>;
         #[ink(message)]
-        fn get_attributes(&self, token_id: Id, attributes: Vec<String>) -> Vec<String>;
+        fn get_attributes(
+            &self,
+            token_id: Id,
+            attributes: Vec<String>
+        ) -> Vec<String>;
         #[ink(message)]
-        fn get_attribute_count(&self) -> u32;
+        fn get_attribute_count(
+            &self
+        ) -> u32;
         #[ink(message)]
-        fn get_attribute_name(&self, index: u32) -> String;
+        fn get_attribute_name(
+            &self,
+            index: u32
+        ) -> String;
         #[ink(message)]
-        fn token_uri(&self, token_id: u64) -> String;
+        fn token_uri(
+            &self,
+            token_id: u64
+        ) -> String;
     }
 
     impl Psp34Nft {
@@ -149,7 +172,7 @@ pub mod psp34_nft {
             })
         }
 
-        /// . mint an NFT VIP membership certificate
+        /// . mint an access NFT
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint(
@@ -197,7 +220,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        ///Only Owner can mint new token and add attributes for it
+        /// . only contract owner can mint new token and add attributes for it
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint_with_attributes(
@@ -278,7 +301,7 @@ pub mod psp34_nft {
             }
         }
 
-        ///Get Token Count
+        /// . get total token count
         #[ink(message)]
         pub fn get_last_token_id(
             &self
@@ -309,7 +332,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . Lock nft - Only owner token
+        /// . lock nft - only token owner can call
         #[ink(message)]
         pub fn lock(
             &mut self,
@@ -333,7 +356,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . Check token is locked or not
+        /// . check if token is locked or not
         #[ink(message)]
         pub fn is_locked_nft(
             &self,
@@ -346,15 +369,20 @@ pub mod psp34_nft {
             }
         }
 
-        /// . Get Locked Token Count
+        /// . get locked token count
         #[ink(message)]
-        pub fn get_locked_token_count(&self) -> u64 {
+        pub fn get_locked_token_count(
+            &self
+        ) -> u64 {
             return self.locked_token_count;
         }
 
         /// . remove token from circulation
         #[ink(message)]
-        pub fn burn(&mut self, id: Id) -> Result<(), PSP34Error> {
+        pub fn burn(
+            &mut self,
+            id: Id
+        ) -> Result<(), PSP34Error> {
             
             let caller = self.env().caller();
 
@@ -373,7 +401,7 @@ pub mod psp34_nft {
 
     impl Psp34Traits for Psp34Nft {
 
-        /// . Change baseURI
+        /// . change base URI
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_base_uri(
@@ -389,7 +417,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        ///Only Owner can set multiple attributes to a token
+        /// . only contract owner can set multiple attributes to a token
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_multiple_attributes(
@@ -417,7 +445,7 @@ pub mod psp34_nft {
                     let next_attribute = sorted_attributes[i + 1].clone();
                     let byte_next_attribute = next_attribute.into_bytes();
                     if byte_attribute == byte_next_attribute {
-                        return Err(PSP34Error::Custom(String::from("Duplicated Attributes")));
+                        return Err(PSP34Error::Custom(String::from("Duplicated attributes")));
                     }
                 }
                 let unsorted_attribute = attributes[i].clone();
@@ -433,7 +461,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// Get multiple  attributes
+        /// . get multiple attributes
         #[ink(message)]
         fn get_attributes(
             &self,
@@ -455,7 +483,7 @@ pub mod psp34_nft {
             ret
         }
 
-        ///Get Attribute Count
+        /// . get attribute count
         #[ink(message)]
         fn get_attribute_count(
             &self
@@ -463,7 +491,7 @@ pub mod psp34_nft {
             self.attribute_count
         }
 
-        ///Get Attribute Name
+        /// . get attribute name
         #[ink(message)]
         fn get_attribute_name(
             &self,
@@ -476,7 +504,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// Get URI from token ID
+        /// . get URI from token ID
         #[ink(message)]
         fn token_uri(
             &self,
