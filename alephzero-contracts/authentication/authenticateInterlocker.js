@@ -5,7 +5,10 @@ const program = path.resolve('verifyWallet.js');
 
 
 const amount = prompt(`Please enter amount: `);
-const wallet = prompt(`Please enter wallet: `);
+const wallet = '5EtTSfiarDaXaDiKfVkQii3eCDnbHtEdwggyGX3Zbe45mXH7';
+
+
+// what does 
 
 const child = fork(program);
 

@@ -167,7 +167,7 @@ pub mod ilocktoken {
         rewardedtotal: Balance,
         circulatingsupply: Balance,
         taxpool: Balance,
-        monthspassed: u8,
+        monthspassed: u16,
         nextpayout: Timestamp,
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
@@ -570,7 +570,7 @@ pub mod ilocktoken {
             let pool = &POOLS[this_stakeholder.pool as usize];
 
             // require cliff to have been surpassed
-            if self.monthspassed < pool.cliffs {
+            if self.monthspassed < pool.cliffs as u16 {
                 return Err(OtherError::CliffNotPassed.into())
             }
 
@@ -823,7 +823,7 @@ pub mod ilocktoken {
         #[ink(message)]
         pub fn months_passed(
             &self,
-        ) -> u8 {
+        ) -> u16 {
 
             self.monthspassed
         }
@@ -1076,8 +1076,8 @@ pub mod ilocktoken {
 
             // update balance pool and totals
             // (the port.tax subtraction is to offset rewardpool increase on transfer from token owner)
-            self.poolbalances[REWARDS as usize] -= amount + port.tax;
-            self.rewardedtotal += amount;
+            self.poolbalances[REWARDS as usize] -= amount + port.tax; // << extra port.tax term to
+            self.rewardedtotal += amount;                             // offset transfer function
 
             // update port
             port.paid += amount;
