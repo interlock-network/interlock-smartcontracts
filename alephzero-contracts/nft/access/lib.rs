@@ -146,32 +146,32 @@ pub mod psp34_nft {
         ) -> Self {
             
             // create the contract
-            //ink::lang::codegen::initialize_contract(|instance: &mut Self| {
-            let mut instance = Self::default();
-                // set attributes
-                instance._set_attribute(
-                    Id::U8(0),
-                    String::from("name").into_bytes(),
-                    name.into_bytes(),
-                );
-                instance._set_attribute(
-                    Id::U8(0),
-                    String::from("symbol").into_bytes(),
-                    symbol.into_bytes(),
-                );
-                instance._set_attribute(
-                    Id::U8(0),
-                    String::from("class").into_bytes(),
-                    class.into_bytes(),
-                );
+            let mut contract = Self::default();
+                
+            // set attributes
+            contract._set_attribute(
+                Id::U8(0),
+                String::from("name").into_bytes(),
+                name.into_bytes(),
+            );
+            contract._set_attribute(
+                Id::U8(0),
+                String::from("symbol").into_bytes(),
+                symbol.into_bytes(),
+            );
+            contract._set_attribute(
+                Id::U8(0),
+                String::from("class").into_bytes(),
+                class.into_bytes(),
+            );
 
-                // assign caller as owner
-                instance._init_with_owner(instance.env().caller());
+            // assign caller as owner
+            contract._init_with_owner(contract.env().caller());
 
-                // set cap
-                instance.cap = cap;
+            // set cap
+            contract.cap = cap;
 
-                instance
+            contract
             
         }
 
