@@ -172,7 +172,6 @@ pub mod psp34_nft {
             contract.cap = cap;
 
             contract
-            
         }
 
         /// . mint an access NFT

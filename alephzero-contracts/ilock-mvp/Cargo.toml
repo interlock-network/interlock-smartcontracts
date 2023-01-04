@@ -5,18 +5,19 @@ authors = ["Blair Munro <blairmunroakusa@gmail.com>"]
 edition = "2021"
 
 # This is to enable unsigned integer division (floor division)
-# ...safe-math functions are built into lib.rs where overflow checks would otherwise be
-#    (that is, in all cases except the floor division operation)
+# ...safe-math functions are used for lib.rs arithmetic where overflow checks would otherwise be
+#    (that is, in all cases except the few floor division operations)
 [profile.release]
 overflow-checks = false
 
 [dependencies]
-ink = { git = "https://github.com/paritytech/ink", commit = "4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false }
+ink = { git = "https://github.com/paritytech/ink", default-features = false }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
 openbrush = { tag = "3.0.0-beta", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp22", "ownable"] }
+
 [lib]
 name = "ilocktoken"
 path = "lib.rs"

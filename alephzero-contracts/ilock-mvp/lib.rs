@@ -113,12 +113,17 @@ pub mod ilocktoken {
 
     /// . StakeholderData struct contains all pertinent information for each stakeholder
     ///   (Besides balance and allowance mappings)
-    #[derive(scale::Encode, scale::Decode, Clone)]
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
     feature = "std",
-    derive(scale_info::TypeInfo)
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
-    #[derive(Debug)]
     pub struct StakeholderData {
         paid: Balance,
         share: Balance,
@@ -128,7 +133,13 @@ pub mod ilocktoken {
     #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
     feature = "std",
-    derive(scale_info::TypeInfo)
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
     pub struct Port {
         hash: Hash,
@@ -142,7 +153,13 @@ pub mod ilocktoken {
     #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
     feature = "std",
-    derive(scale_info::TypeInfo)
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
     pub struct Socket {
         address: AccountId,
