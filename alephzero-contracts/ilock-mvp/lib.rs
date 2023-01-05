@@ -544,7 +544,7 @@ pub mod ilocktoken {
             let paidout: Balance = this_stakeholder.paid;
 
             // how much does stakeholder have yet to collect?
-            let payremaining: Balance = this_stakeholder.share - this_stakeholder.paid;
+            let payremaining: Balance = this_stakeholder.share - paidout;
 
             // how much does stakeholder get each month?
             let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
