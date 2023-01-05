@@ -77,7 +77,7 @@ pub mod ilocktoken {
 
     /// . pool data
     pub const POOLS: [PoolData; POOL_COUNT] = [
-        PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,   vests: 24, cliffs: 1, },
+        PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
         PoolData { name: "presale_2",                     tokens: 66_666_667,  vests: 15, cliffs: 1, },
         PoolData { name: "presale_3",                     tokens: 40_000_000,  vests: 12, cliffs: 1, },
@@ -813,6 +813,11 @@ pub mod ilocktoken {
         }
 
         /// . function to increment monthspassed for testing
+        /// 
+        ///
+        ///     MUST BE DELETED PRIOR TO AUDIT
+        ///
+        ///
         #[ink(message)]
         pub fn TESTING_increment_month(
             &mut self,
@@ -847,6 +852,34 @@ pub mod ilocktoken {
             Ok(())
         }
 
+        /// . create a new port that rewards contract can register with
+        /// . eaech port tracks amount rewarded, tax collected, and if it is locked or not
+        /// . a locked port may only be registered by the interlock network foundation
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn create_port(
+            &mut self,
+            codehash: Hash,
+            tax: Balance,
+            cap: Balance,
+            locked: bool,
+            number: u16,
+        ) -> PSP22Result<()> {
+
+            let port = Port {
+                hash: codehash,     // <--! a port defines an external staking/reward contract plus any
+                tax: tax,           //      custom logic preceding the tax_and_reward() function
+                cap: cap,
+                locked: locked,
+                paid: 0,
+                collected: 0,
+            };
+
+            self.ports.insert(number, &port);
+
+            Ok(())
+        }
+
         /// . rewards/staking contracts register with token contract here
         /// . contract must first register with token contract to allow reward transfers
         #[ink(message)]
@@ -874,10 +907,11 @@ pub mod ilocktoken {
                 None => return Err(OtherError::NoPort),
             };
 
-            // make sure port is unlocked, or caller is token contract owner
+            // make sure port is unlocked, or caller is token contract owner (interlock)
             //   . this makes it so that people can't build their own client application
             //     to 'hijack' an approved and registered rewards contract.
-            //   . if port is locked then only interlock can register new reward contract
+            //   . if port is locked then only interlock can create new socket with port
+            //   . socket creation is only called by an external contract that the port represents
             if port.locked && (self.ownable.owner != owner) {
 
                 return Err(OtherError::PortLocked);
@@ -891,13 +925,13 @@ pub mod ilocktoken {
                 let contract: AccountId = self.env().caller();
                 let socket = Socket { address: owner, port: number };
 
-                // socket is registered with token contract
-                // and calling contract may start calling socket to receive rewards
+                // socket is registered with token contract thus the calling
+                // contract that created the socket may start calling socket to receive rewards
                 self.sockets.insert(contract, &socket);
             
                 // give socket allowance up to port cap
                 //   . connecting contracts will not be able to reward
-                //     more than cap specified by interlock (for safety)
+                //     more than cap specified by interlock (this may be a stipend, for example)
                 self.psp22.allowances.insert(
                     &(&self.ownable.owner, &self.env().caller()),
                     &port.cap
@@ -934,7 +968,7 @@ pub mod ilocktoken {
                 None => return Err(OtherError::NoSocket),
             };
 
-            // port owner address
+            // port owner's address
             let owner: AccountId = socket.address;
 
 
@@ -1078,37 +1112,6 @@ pub mod ilocktoken {
                 Some(socket) => socket,
                 None => Default::default(),
             }
-        }
-
-        /// . create a new port that rewards contract can register with
-        /// . eaech port tracks amount rewarded, tax collected, and if it is locked or not
-        /// . a locked port may only be registered by the interlock network foundation
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn create_port(
-            &mut self,
-            codehash: Hash,
-            tax: Balance,
-            cap: Balance,
-            locked: bool,
-            number: u16,
-        ) -> PSP22Result<()> {
-
-            // do we need an overflow check?
-            // (ie, is it even possible to pass a u32, etc, port number?)
-
-            let port = Port {
-                hash: codehash,
-                tax: tax,
-                cap: cap,
-                locked: locked,
-                paid: 0,
-                collected: 0,
-            };
-
-            self.ports.insert(number, &port);
-
-            Ok(())
         }
 
         /// . get port info
