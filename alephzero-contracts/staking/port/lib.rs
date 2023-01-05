@@ -1,13 +1,26 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+//
+// INTERLOCK NETWORK STAKING PORT CONTRACT
+//
+// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
+//
+//
+// This contract build may need to be done after running
+//
+//      cargo install cargo-contract --version 2.0.0-beta
+//
+// The contract may be built running
+//
+//      cargo contract build
+//
 
-use ink_lang as ink;
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[ink::contract]
 pub mod port {
 
     use ilocktoken::ILOCKtokenRef;
     use ilocktoken::ilocktoken::OtherError;
-    use ink_prelude::string::String;
+    use ink::prelude::string::String;
 
     pub const PORT: u16 = 0;
 
@@ -24,7 +37,7 @@ pub mod port {
             token_address: AccountId,
         ) -> Self {
             
-            let token_instance: ILOCKtokenRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let token_instance: ILOCKtokenRef = ink::env::call::FromAccountId::from_account_id(token_address);
 
             Self { token_instance }
         }
