@@ -77,7 +77,7 @@ pub mod ilocktoken {
 
     /// . pool data
     pub const POOLS: [PoolData; POOL_COUNT] = [
-        PoolData { name: "early_backers+venture_capital", tokens: 20_000_00,   vests: 24, cliffs: 1, },
+        PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,   vests: 24, cliffs: 1, },
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
         PoolData { name: "presale_2",                     tokens: 66_666_667,  vests: 15, cliffs: 1, },
         PoolData { name: "presale_3",                     tokens: 40_000_000,  vests: 12, cliffs: 1, },
