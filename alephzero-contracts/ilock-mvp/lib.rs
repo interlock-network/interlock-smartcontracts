@@ -172,15 +172,6 @@ pub mod ilocktoken {
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
                                                         // socket == owneraddress:port
-        // ADD NEW VARIABLES BELOW FOR
-        // ANY SOCKET LOGIC CODE HASH UPDATE
-        // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-
-        // newvariable1: Var1,
-        // ...
-        
-        // ONLY APPEND NEW VARIABLES TO END OF
-        // PREEXISTING VARIABLES
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -954,6 +945,7 @@ pub mod ilocktoken {
             &mut self,
             address: AccountId,
             amount: Balance,
+            _data: Vec<u8>,
         ) -> OtherResult<()> {
 
             // make sure address is not contract

@@ -7,7 +7,10 @@ pub mod port {
 
     use ilocktoken::ILOCKtokenRef;
     use ilocktoken::ilocktoken::OtherError;
-    use ink_prelude::string::String;
+    use ink_prelude::{
+        string::String,
+        vec::Vec,
+    };
 
     pub const PORT: u16 = 0;
 
@@ -39,12 +42,13 @@ pub mod port {
         pub fn call_socket(
             &mut self,
             address: AccountId,
-            amount: Balance
+            amount: Balance,
+            data: Vec<u8>,
         ) -> Result<(), OtherError> {
 
             // do stuff here, then reward user
 
-            self.token_instance.call_socket(address, amount)
+            self.token_instance.call_socket(address, amount, data)
         }
 
         #[ink(message)]
