@@ -463,7 +463,7 @@ pub mod ilocktoken {
         #[openbrush::modifiers(only_owner)]
         pub fn check_time(
             &mut self,
-        ) -> OtherResult<()> {
+        ) -> PSP22Result<()> {
 
             // test to see if current time falls beyond time for next payout
             if self.env().block_timestamp() > self.nextpayout {
@@ -476,7 +476,7 @@ pub mod ilocktoken {
             }
 
             // too early, do nothing
-            return Err(OtherError::PayoutTooEarly)
+            return Err(OtherError::PayoutTooEarly.into())
         }
         
         /// . time in seconds until next payout in minutes
@@ -487,7 +487,15 @@ pub mod ilocktoken {
 
             // add logic here to return 0 if overflow
 
-            (self.nextpayout - self.env().block_timestamp()) / 60_000
+            let timeleft: Timestamp = (self.nextpayout - self.env().block_timestamp()) / 60_000;
+
+            // if time has run out, remaining time is zero and timeleft overflows
+            if timeleft > self.nextpayout {
+
+                return 0;
+            }
+
+            timeleft
         }
 
 ////////////////////////////////////////////////////////////////////////////
