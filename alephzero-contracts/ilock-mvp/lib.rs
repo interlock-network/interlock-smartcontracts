@@ -460,6 +460,7 @@ pub mod ilocktoken {
         /// . this function ensures Interlock cannot rush the vesting schedule
         /// . this function must be called before the next round of token distributions
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn check_time(
             &mut self,
         ) -> OtherResult<()> {
