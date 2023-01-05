@@ -619,68 +619,34 @@ pub mod ilocktoken {
             Ok(())
         }
 
-        /// . function used to distribute tokens to whitelisters
+        /// . function used to payout tokens to pools with no vesting schedule
+        /// POOL ARGUMENTS:
+        ///     PARTNERS
+        ///     WHITELIST
+        ///     PUBLIC_SALE
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
-        pub fn distribute_whitelist(
+        pub fn payout_tokens(
             &mut self,
             stakeholder: AccountId,
             amount: Balance,
+            pool: String,
         ) -> PSP22Result<()> {
 
+            let poolnumber: u8 = match pool.as_str() {
+                "PARTNERS"      => 9,
+                "WHITELIST"     => 10,
+                "PUBLIC_SALE"   => 11,
+                _ => return Err(OtherError::Custom(format!("Invalid pool.")).into()),
+            };
+        
             // make sure reward not too large
-            if self.poolbalances[WHITELIST as usize] < amount {
+            if self.poolbalances[poolnumber as usize] < amount {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // decrement pool balance
-            self.poolbalances[WHITELIST as usize] -= amount;
-
-            // now transfer tokens
-            let _ = self.transfer(stakeholder, amount, Default::default())?;
-
-            Ok(())
-        }
-
-        /// . function used to distribute tokens to public sale entities (ie exchanges)
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn distribute_publicsale(
-            &mut self,
-            stakeholder: AccountId,
-            amount: Balance,
-        ) -> PSP22Result<()> {
-
-            // make sure reward not too large
-            if self.poolbalances[PUBLIC_SALE as usize] < amount {
-                return Err(OtherError::PaymentTooLarge.into())
-            }
-
-            // decrement pool balance
-            self.poolbalances[PUBLIC_SALE as usize] -= amount;
-
-            // now transfer tokens
-            let _ = self.transfer(stakeholder, amount, Default::default())?;
-
-            Ok(())
-        }
-
-        /// . function used to distribute tokens to strategic partners
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn distribute_partners(
-            &mut self,
-            stakeholder: AccountId,
-            amount: Balance,
-        ) -> PSP22Result<()> {
-
-            // make sure reward not too large
-            if self.poolbalances[PARTNERS as usize] < amount {
-                return Err(OtherError::PaymentTooLarge.into())
-            }
-
-            // decrement pool balance
-            self.poolbalances[PARTNERS as usize] -= amount;
+            self.poolbalances[poolnumber as usize] -= amount;
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
