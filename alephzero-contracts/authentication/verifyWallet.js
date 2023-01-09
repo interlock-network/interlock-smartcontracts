@@ -45,7 +45,7 @@ const path = require('path');
 const fork = require('child_process').fork;
 
 // constants
-const access_metadata = require('./metadata.json');
+const access_metadata = require('./access_metadata.json');
 const access_contract = '5EVdCVKBs3X3NHd33f6KZkmpkw2qeKqMHUVjzdD7me5m2JCS';
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;

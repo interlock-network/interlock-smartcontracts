@@ -11,7 +11,7 @@ const { ContractPromise, CodePromise } = require('@polkadot/api-contract');
 // constants
 const OWNER_MNEMONIC = require('./.mnemonic.json');
 const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
-const metadata = require('./metadata.json');
+const metadata = require('./access_metadata.json');
 
 async function main(message) {
 
