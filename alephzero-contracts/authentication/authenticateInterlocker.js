@@ -1,3 +1,8 @@
+//
+// INTERLOCK NETWORK - AUTHENTICATE INTERLOCKER
+// PSP34 ACCESS NFT AUTHENTICATION
+//
+
 const path = require('path');
 const prompt = require('prompt-sync')({sigint: true});
 
@@ -15,29 +20,29 @@ const child = fork(program);
 child.send({amount: amount, wallet: wallet});
 
 child.on('message', message => {
-	console.log('status:', message);
-	if (message.type == "authentication complete") {
+  console.log('status:', message);
+  if (message.type == "authentication complete") {
 
-		//////////////////////////////////
-		//
-		// insert database entry here
-		//
-		//////////////////////////////////
+    //////////////////////////////////
+    //
+    // insert database entry here
+    //
+    //////////////////////////////////
 
-		//////////////////////////////////
-		//
-		// prompt webpage to prompt user to enter credentials
-		//
-		//////////////////////////////////
+    //////////////////////////////////
+    //
+    // prompt webpage to prompt user to enter credentials
+    //
+    //////////////////////////////////
 
-		//////////////////////////////////
-		//
-		// listen for credentials and enter in DB?
-		//
-		//////////////////////////////////
+    //////////////////////////////////
+    //
+    // listen for credentials and enter in DB?
+    //
+    //////////////////////////////////
 
-		child.close();
-	};
+    child.close();
+  };
 });
 // ^^^^ loop here to listen for request from webpage ^^^^
 

@@ -1,6 +1,6 @@
 //
-// INTERLOCK NETWORK - 
-// NFT AUTHENTICATION: SETAUTHENTICATED
+// INTERLOCK NETWORK - SET AUTHENTICATED
+// PSP34 ACCESS NFT AUTHENTICATION
 //
 
 // imports
@@ -20,56 +20,56 @@ const storageDepositLimit = null;
 
 async function main(message) {
 
-	try {
+  try {
 
-		// setup session
-		const wsProvider = new WsProvider('wss://ws.test.azero.dev');
-		const keyring = new Keyring({type: 'sr25519'});
-		const api = await ApiPromise.create({ provider: wsProvider });
-		const contract = new ContractPromise(api, access_metadata, access_contract);
-		const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
+    // setup session
+    const wsProvider = new WsProvider('wss://ws.test.azero.dev');
+    const keyring = new Keyring({type: 'sr25519'});
+    const api = await ApiPromise.create({ provider: wsProvider });
+    const contract = new ContractPromise(api, access_metadata, access_contract);
+    const OWNER_pair = keyring.addFromUri(OWNER_mnemonic);
 
-		// perform dry run to check for errors
-		const { gasRequired, storageDeposit, result, output } =
-			await contract.query['setAuthenticated'](
-  			OWNER_pair.address, {}, {u64: message.id});
+    // perform dry run to check for errors
+    const { gasRequired, storageDeposit, result, output } =
+      await contract.query['setAuthenticated']
+	(OWNER_pair.address, {}, {u64: message.id});
 
-		// too much gas required?
-		if (gasRequired > gasLimit) {
-			console.log('tx aborted, gas required is greater than the acceptable gas limit.');
-			process.exit();
-		}
+    // too much gas required?
+    if (gasRequired > gasLimit) {
+      console.log('tx aborted, gas required is greater than the acceptable gas limit.');
+      process.exit();
+    }
 
-		// too much storage required?
-		if (storageDeposit > storageDepositLimit) {
-			console.log('tx aborted, storage required is greater than the acceptable storage limit.');
-			process.exit();
-		}
+    // too much storage required?
+    if (storageDeposit > storageDepositLimit) {
+      console.log('tx aborted, storage required is greater than the acceptable storage limit.');
+      process.exit();
+    }
 
-		// did the contract revert due to any errors?
-		if (result.toHuman().Ok.flags == 'Revert') {
-			let error = output.toHuman().Err;
-			console.log(`Transaction reverts due to error: ${error}`);
-			process.exit();
-		}
+    // did the contract revert due to any errors?
+    if (result.toHuman().Ok.flags == 'Revert') {
+      let error = output.toHuman().Err;
+      console.log(`Transaction reverts due to error: ${error}`);
+      process.exit();
+    }
 
-		// submit doer tx
-		let extrinsic = await contract.tx['setAuthenticated']
-  			({ storageDepositLimit, gasLimit }, {u64: message.id})
-  			.signAndSend(OWNER_pair, result => {
-    			if (result.status.isInBlock) {
-      				console.log('in a block');
-    			} else if (result.status.isFinalized) {
-      				process.send('nft authenticated');
-				process.exit();
-    			}
-  		});
+    // submit doer tx
+    let extrinsic = await contract.tx['setAuthenticated']
+      ({ storageDepositLimit, gasLimit }, {u64: message.id})
+      .signAndSend(OWNER_pair, result => {
+        if (result.status.isInBlock) {
+          console.log('in a block');
+        } else if (result.status.isFinalized) {
+          process.send('nft authenticated');
+          process.exit();
+        }
+      });
 
-	} catch(error) {
+  } catch(error) {
 
-		console.log(error);
-		process.exit();
-	}
+    console.log(error);
+    process.exit();
+  }
 }
 
 process.on('message', message => {
