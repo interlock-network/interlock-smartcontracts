@@ -146,7 +146,9 @@ pub mod ilocktoken {
         port: u16,
     }
 
+
     /// . ILOCKtoken struct contains overall storage data for contract
+    #[openbrush::upgradeable_storage(STORAGE_KEY)]
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
     pub struct ILOCKtoken {
@@ -172,6 +174,10 @@ pub mod ilocktoken {
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
                                                         // socket == owneraddress:port
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4d9b6ca (ilock-mvp/lib.rs: tested upgradeable storage)
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -270,7 +276,8 @@ pub mod ilocktoken {
         #[ink(message)]
         fn total_supply(&self) -> Balance {
 
-            self.circulatingsupply
+            // revert, testing set code hash
+            self.circulatingsupply + 999
         }
 
         /// . override default transfer doer
@@ -1117,7 +1124,7 @@ pub mod ilocktoken {
                 Some(port) => port,
                 None => Default::default(),
             }
-        }
+        }        
     }
 
 ////////////////////////////////////////////////////////////////////////////
