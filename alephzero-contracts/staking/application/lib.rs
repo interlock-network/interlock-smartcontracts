@@ -1,3 +1,7 @@
+//
+// INTERLOCK NETWORK - GENERIC STAKING AND REWARDS APPLICATION CONTRACT
+//
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use ink_lang as ink;
@@ -9,7 +13,8 @@ pub mod application {
     use ilockmvp::ilockmvp::OtherError;
     use ink_prelude::vec::Vec;
 
-    // this is the application port (the contract hash and owner, cap, tax, etc)
+    // this is the number designating application type's
+    // port (the contract hash, owner, cap, tax, paid, collected, etc)
     pub const PORT: u16 = 0;
 
     #[ink(storage)]
@@ -27,6 +32,7 @@ pub mod application {
             token_address: AccountId,
         ) -> Self {
             
+            // create a reference to the deployed token contract
             let token_instance: ILOCKmvpRef = ink_env::call::FromAccountId::from_account_id(token_address);
             let operator: AccountId = Self::env().caller();
 
@@ -36,7 +42,9 @@ pub mod application {
         /// . register this application contract with the token contract
         /// . only operator may call
         #[ink(message)]
-        pub fn create_socket(&mut self) -> Result<(), OtherError> {
+        pub fn create_socket(
+            &mut self
+        ) -> Result<(), OtherError> {
 
             // make sure caller is operator
             if self.env().caller() != self.operator {
@@ -54,8 +62,8 @@ pub mod application {
             &mut self,
             address: AccountId,
             amount: Balance,
-            data: Vec<u8>,
-        ) -> Result<(), OtherError> {
+            data: Vec<u8>,                  // <--! data vector to pass custom information to token
+            ) -> Result<(), OtherError> {   //      contract logic
 
             // make sure caller is operator
             if self.env().caller() != self.operator {
@@ -63,7 +71,7 @@ pub mod application {
                 return Err(OtherError::CallerNotOperator);
             }
 
-            // do stuff here, then reward user
+            // < do stuff here, then reward user >
 
             self.token_instance.call_socket(address, amount, data)
         }
