@@ -5,8 +5,8 @@ use ink_lang as ink;
 #[ink::contract]
 pub mod port {
 
-    use ilocktoken::ILOCKtokenRef;
-    use ilocktoken::ilocktoken::OtherError;
+    use ilockmvp::ILOCKmvpRef;
+    use ilockmvp::ilockmvp::OtherError;
     use ink_prelude::{
         string::String,
         vec::Vec,
@@ -17,7 +17,7 @@ pub mod port {
     #[ink(storage)]
     pub struct Port {
 
-        token_instance: ILOCKtokenRef,
+        token_instance: ILOCKmvpRef,
     }
 
     impl Port {
@@ -27,7 +27,7 @@ pub mod port {
             token_address: AccountId,
         ) -> Self {
             
-            let token_instance: ILOCKtokenRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let token_instance: ILOCKmvpRef = ink_env::call::FromAccountId::from_account_id(token_address);
 
             Self { token_instance }
         }
