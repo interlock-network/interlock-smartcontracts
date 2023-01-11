@@ -1,7 +1,7 @@
 [package]
-name = "port"
+name = "application"
 version = "0.1.0"
-authors = ["Interlock Network, blairmunroakusa@wp.computer"]
+authors = ["Interlock Network, Blair Munro <blairmunroakusa@gmail.com>"]
 edition = "2021"
 
 [dependencies]
@@ -17,13 +17,13 @@ ink_lang_ir = { version = "=3.3.1", default-features = false }
 ink_lang_macro = { version = "=3.3.1", default-features = false }
 ink_storage_derive = { version = "=3.3.1", default-features = false }
 
-ilockmvp = { path = "../../ilock-mvp", default-features = false, features = ["ink-as-dependency"] }
+ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
 [lib]
-name = "port"
+name = "application"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.

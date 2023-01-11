@@ -3,7 +3,7 @@
 use ink_lang as ink;
 
 #[ink::contract]
-pub mod port {
+pub mod application {
 
     use ilockmvp::ILOCKmvpRef;
     use ilockmvp::ilockmvp::OtherError;
@@ -12,24 +12,27 @@ pub mod port {
         vec::Vec,
     };
 
+    // this is the application port (the contract hash and owner, cap, tax, etc)
     pub const PORT: u16 = 0;
 
     #[ink(storage)]
-    pub struct Port {
+    pub struct Application {
 
         token_instance: ILOCKmvpRef,
+        operator: AccountId,
     }
 
-    impl Port {
+    impl Application {
 
         #[ink(constructor)]
-        pub fn new(
+        pub fn new_application(
             token_address: AccountId,
         ) -> Self {
             
             let token_instance: ILOCKmvpRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let operator: AccountId = Self::env().caller();
 
-            Self { token_instance }
+            Self { token_instance, operator }
         }
 
         #[ink(message)]
