@@ -237,7 +237,9 @@ pub mod ilockmvp {
         CannotRewardContract,
         /// Returned if socket contract does not match registered hash
         UnsafeContract,
-        /// Returned if socket contract does not match registered hash
+        /// Returned if application contract caller is not its operator
+        CallerNotOperator,
+        /// custome contract error
         Custom(String),
     }
 

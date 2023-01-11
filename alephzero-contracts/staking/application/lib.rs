@@ -35,8 +35,12 @@ pub mod application {
             Self { token_instance, operator }
         }
 
+        /// . register this application contract with the token contract
+        /// . only operator may call
         #[ink(message)]
         pub fn register(&mut self) -> Result<(), OtherError> {
+
+            
 
             self.token_instance.create_socket(self.env().caller(), PORT)
         }
