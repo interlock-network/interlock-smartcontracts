@@ -67,5 +67,23 @@ pub mod application {
 
             self.token_instance.call_socket(address, amount, data)
         }
+
+        /// . change application operator
+        /// . only operator may call
+        #[ink(message)]
+        pub fn change_operator(
+            &mut self,
+        ) -> Result<(), OtherError> {
+
+            // make sure caller is operator
+            if self.env().caller() != self.operator {
+
+                return Err(OtherError::CallerNotOperator);
+            }
+
+            self.operator = self.env().caller();
+
+            Ok(())
+        }
     }
 }
