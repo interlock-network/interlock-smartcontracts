@@ -15,13 +15,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
 
-pub use self::ilocktoken::{
-    ILOCKtoken,
-    ILOCKtokenRef,
+pub use self::ilockmvp::{
+    ILOCKmvp,
+    ILOCKmvpRef,
 };
 
 #[openbrush::contract]
-pub mod ilocktoken {
+pub mod ilockmvp {
 
     use ink_lang::{
         codegen::{EmitEvent, Env},
@@ -147,11 +147,10 @@ pub mod ilocktoken {
     }
 
 
-    /// . ILOCKtoken struct contains overall storage data for contract
-    #[openbrush::upgradeable_storage(STORAGE_KEY)]
+    /// . ILOCKmvp struct contains overall storage data for contract
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
-    pub struct ILOCKtoken {
+    pub struct ILOCKmvp {
 
         // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES, OR TYPE!!!
         // . TO ADD NEW VARIABLE, IT MUST BE APPENDED TO END OF LIST
@@ -174,10 +173,6 @@ pub mod ilocktoken {
         ports: Mapping<u16, Port>,        // port -> (hash of port contract, tax)
         sockets: Mapping<AccountId, Socket>,  // contract address -> socket
                                                         // socket == owneraddress:port
-<<<<<<< HEAD
-=======
-
->>>>>>> 4d9b6ca (ilock-mvp/lib.rs: tested upgradeable storage)
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -263,13 +258,13 @@ pub mod ilocktoken {
     /// . OtherError result type.
     pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
-    pub type Event = <ILOCKtoken as ContractEventBase>::Type;
+    pub type Event = <ILOCKmvp as ContractEventBase>::Type;
 
 ////////////////////////////////////////////////////////////////////////////
 /////// reimplement some functions /////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    impl PSP22 for ILOCKtoken {
+    impl PSP22 for ILOCKmvp {
         
         /// . override default total_supply getter
         /// . total supply reflects token in circulation
@@ -337,16 +332,16 @@ pub mod ilocktoken {
 
     }
 
-    impl PSP22Metadata for ILOCKtoken {}
+    impl PSP22Metadata for ILOCKmvp {}
 
-    impl Ownable for ILOCKtoken {
+    impl Ownable for ILOCKmvp {
         
         // PRIOR TO OWNER TRANSFER,
         // REMAINING OWNER NONCIRCULATING
         // BALANCE MUST BE TRANSFERRED TO NEW OWNER.
     }
 
-    impl PSP22Burnable for ILOCKtoken {
+    impl PSP22Burnable for ILOCKmvp {
 
         /// . override default burn doer
         /// . burn function to permanently remove tokens from circulation / supply
@@ -367,7 +362,7 @@ pub mod ilocktoken {
 	}
 
     // these implementations are because open brush does not implement
-    impl Internal for ILOCKtoken {
+    impl Internal for ILOCKmvp {
 
         fn _emit_transfer_event(
             &self,
@@ -375,7 +370,7 @@ pub mod ilocktoken {
             _to: Option<AccountId>,
             _amount: Balance,
         ) {
-            ILOCKtoken::emit_event(
+            ILOCKmvp::emit_event(
                 self.env(),
                 Event::Transfer(Transfer {
                     from: _from,
@@ -391,7 +386,7 @@ pub mod ilocktoken {
             _spender: AccountId,
             _amount: Balance
         ) {
-            ILOCKtoken::emit_event(
+            ILOCKmvp::emit_event(
                 self.env(),
                 Event::Approval(Approval {
                     owner: Some(_owner),
@@ -406,7 +401,7 @@ pub mod ilocktoken {
 /////// implement token contract ///////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    impl ILOCKtoken {
+    impl ILOCKmvp {
 
         // Pete said this was probably necessary
         /// . function for internal _emit_event implementations
@@ -1149,112 +1144,112 @@ pub mod ilocktoken {
         #[ink::test]
         fn constructor_works() {
 
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
             // the rest
-            assert_eq!(ILOCKtokenPSP22.monthspassed, 0);
-            assert_eq!(ILOCKtokenPSP22.nextpayout, ILOCKtokenPSP22.env().block_timestamp() + ONE_MONTH);
+            assert_eq!(ILOCKmvpPSP22.monthspassed, 0);
+            assert_eq!(ILOCKmvpPSP22.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
         }
 
         /// . test if name getter does its job
         #[ink::test]
         fn name_works() {
 
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.metadata.name, Some("Interlock Network".to_string()));
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Network".to_string()));
         }
 
         /// . test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
 
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.metadata.symbol, Some("ILOCK".to_string()));
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOCK".to_string()));
         }
         
         /// . test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
 
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            assert_eq!(ILOCKtokenPSP22.metadata.decimals, 18);
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            assert_eq!(ILOCKmvpPSP22.metadata.decimals, 18);
         }
 
         /// . test if balance getter does its job
         #[ink::test]
         fn balance_of_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // charge alice's account
-            ILOCKtokenPSP22.psp22.balances.insert(&accounts.alice, &100);
+            ILOCKmvpPSP22.psp22.balances.insert(&accounts.alice, &100);
 
-            assert_eq!(ILOCKtokenPSP22.balance_of(accounts.alice), 100);
+            assert_eq!(ILOCKmvpPSP22.balance_of(accounts.alice), 100);
         }
 
         /// . test if allowance getter does its job
         #[ink::test]
         fn allowance_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice has not yet approved Bob
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 0);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 0);
 
             // Alice approves Bob for tokens
-            assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
+            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
 
             // Bob's new allowance reflects this approval
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
         }
 
         /// . test if increase allowance does does its job
         #[ink::test]
         fn increase_allowance_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
-            assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
+            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
 
             // Bob is approved to spend tokens owned by Alice
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
 
             // Alice increases Bobs allowance
-            assert_eq!(ILOCKtokenPSP22.increase_allowance(accounts.bob, 10), Ok(()));
+            assert_eq!(ILOCKmvpPSP22.increase_allowance(accounts.bob, 10), Ok(()));
 
             // Bob is approved to spend extra tokens owned by Alice
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 20);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 20);
         }
 
         /// . test if decrease allowance does does its job
         #[ink::test]
         fn decrease_allowance_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
-            assert_eq!(ILOCKtokenPSP22.approve(accounts.bob, 10), Ok(()));
+            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
 
             // Bob is approved to spend tokens owned by Alice
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 10);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
 
             // Alice increases Bobs allowance
-            assert_eq!(ILOCKtokenPSP22.decrease_allowance(accounts.bob, 5), Ok(()));
+            assert_eq!(ILOCKmvpPSP22.decrease_allowance(accounts.bob, 5), Ok(()));
 
             // Bob is approved to spend extra tokens owned by Alice
-            assert_eq!(ILOCKtokenPSP22.allowance(accounts.alice, accounts.bob), 5);
+            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 5);
         }
 
         /// . test if wallet registration function works as intended 
         #[ink::test]
         fn register_stakeholder_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
 
             // bob's stakeholder data
@@ -1262,10 +1257,10 @@ pub mod ilocktoken {
             let pool: u8 = 3;
 
             // call registration function
-            ILOCKtokenPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
+            ILOCKmvpPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
 
             // verify registration stuck
-            let this_stakeholder = ILOCKtokenPSP22.stakeholderdata.get(accounts.bob).unwrap();
+            let this_stakeholder = ILOCKmvpPSP22.stakeholderdata.get(accounts.bob).unwrap();
             assert_eq!(this_stakeholder.paid, 0);
             assert_eq!(this_stakeholder.share, share);
             assert_eq!(this_stakeholder.pool, pool);
@@ -1275,9 +1270,9 @@ pub mod ilocktoken {
         #[ink::test]
         fn pool_data_works() {
 
-            let ILOCKtokenPSP22 = ILOCKtoken::new_token();
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let pool = &POOLS[1];
-            assert_eq!(ILOCKtokenPSP22.pool_data(1), (
+            assert_eq!(ILOCKmvpPSP22.pool_data(1), (
                 format!("pool: {:?} ", pool.name.to_string()),
                 format!("tokens alotted: {:?} ", pool.tokens),
                 format!("number of vests: {:?} ", pool.vests),
@@ -1289,9 +1284,9 @@ pub mod ilocktoken {
         #[ink::test]
         fn months_passed_works() {
 
-            let mut ILOCKtokenPSP22 = ILOCKtoken::new_token();
-            ILOCKtokenPSP22.monthspassed = 99;
-            assert_eq!(ILOCKtokenPSP22.months_passed(), 99);
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            ILOCKmvpPSP22.monthspassed = 99;
+            assert_eq!(ILOCKmvpPSP22.months_passed(), 99);
         }
 
 //

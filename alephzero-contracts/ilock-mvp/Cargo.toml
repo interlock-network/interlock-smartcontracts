@@ -1,5 +1,5 @@
 [package]
-name = "ilocktoken"
+name = "ilockmvp"
 version = "0.1.0"
 authors = ["[your_name] <[your_email]>"]
 edition = "2021"
@@ -27,7 +27,7 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 openbrush = { version = "~2.2.0", default-features = false, features = ["psp22", "ownable"] }
 
 [lib]
-name = "ilocktoken"
+name = "ilockmvp"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
