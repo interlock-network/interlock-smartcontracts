@@ -1,7 +1,7 @@
 [package]
 name = "ilockmvp"
 version = "0.1.0"
-authors = ["[your_name] <[your_email]>"]
+authors = ["Interlock Network, Blair Munro <blairmunroakusa@gmail.com>"]
 edition = "2021"
 
 # This is to enable unsigned integer division (floor division)
