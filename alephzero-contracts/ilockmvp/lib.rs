@@ -1,5 +1,5 @@
 //
-// INTERLOCK NETWORK MVP SMART CONTRACTS
+// INTERLOCK NETWORK MVP SMART CONTRACT
 //  - PSP22 TOKEN
 //  - REWARDS
 //
@@ -9,6 +9,7 @@
 // with provisions for enforcing a token distribution
 // vesting schedule, and for rewarding interlockers for
 // browsing the internet with the Interlock browser extension.
+//
 
 
 #![allow(non_snake_case)]
@@ -46,7 +47,8 @@ pub mod ilockmvp {
                 extensions::{metadata::*, burnable::*},
                 Internal,
             },
-            ownable::*},
+            ownable::*,
+        },
         traits::Storage,
     };
 
@@ -108,9 +110,7 @@ pub mod ilockmvp {
 //// structured data ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// . StakeholderData struct contains all pertinent information for each stakeholder
-    ///   (Besides balance and allowance mappings)
-    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout)]
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
@@ -122,7 +122,7 @@ pub mod ilockmvp {
         pool: u8,
     }
 
-    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default, )]
+    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
@@ -153,8 +153,8 @@ pub mod ilockmvp {
     #[derive(Default, SpreadAllocate, Storage)]
     pub struct ILOCKmvp {
 
-        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES, OR TYPE!!!
-        // . TO ADD NEW VARIABLE, IT MUST BE APPENDED TO END OF LIST
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
 
         #[storage_field]
         psp22: psp22::Data,
@@ -353,12 +353,10 @@ pub mod ilockmvp {
                     Some(difference) => self.circulatingsupply = difference,
                     None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
                 };
-
             }
 
             Ok(())
         }
-
     }
 
     impl PSP22Metadata for ILOCKmvp {}
@@ -432,7 +430,6 @@ pub mod ilockmvp {
 
     impl ILOCKmvp {
 
-        // Pete said this was probably necessary
         /// . function for internal _emit_event implementations
         pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
             emitter.emit_event(event);
@@ -712,11 +709,11 @@ pub mod ilockmvp {
         #[ink(message)]
         pub fn pool_data(
             &self,
-            pool: u8,
+            poolnumber: u8,
         ) -> (String, String, String, String) {
         
-            let pool = &POOLS[pool as usize];
-            // just grab up and send it out
+            let pool = &POOLS[poolnumber as usize];
+
             return (
                 format!("pool: {:?} ", pool.name.to_string()),
                 format!("tokens alotted: {:?} ", pool.tokens),
@@ -832,7 +829,6 @@ pub mod ilockmvp {
 
             // only withdraw what is available in pool
             if amount > self.taxpool {
-
                 return Err(OtherError::PaymentTooLarge.into());
             }
 
@@ -938,7 +934,6 @@ pub mod ilockmvp {
                 collected: 0,
                 owner: owner,
             };
-
             self.ports.insert(number, &port);
 
             Ok(())
@@ -958,7 +953,6 @@ pub mod ilockmvp {
 
             // make sure caller is a contact, return if not
             if !self.env().is_contract(&application) {
-
                 return Err(OtherError::NotContract);
             };
 
@@ -980,7 +974,6 @@ pub mod ilockmvp {
             //   . if port is locked then only interlock can create new socket with port
             //   . socket creation is only called by an external contract that the port represents
             if port.locked && (self.ownable.owner != operator) {
-
                 return Err(OtherError::PortLocked);
             }
             
@@ -1025,7 +1018,6 @@ pub mod ilockmvp {
 
             // make sure address is not contract; we do not want to reward contracts
             if self.env().is_contract(&address) {
-
                 return Err(OtherError::CannotRewardContract);
             }
 
@@ -1034,7 +1026,6 @@ pub mod ilockmvp {
                 Some(socket) => socket,
                 None => return Err(OtherError::NoSocket),
             };
-
 
             // get port info
             let port: Port = match self.ports.get(socket.portnumber) {
@@ -1105,7 +1096,6 @@ pub mod ilockmvp {
 
             // make sure this will not exceed port cap
             if port.cap < (port.paid + amount) {
-
                 return Err(OtherError::PortCapSurpassed.into());
             }
 
