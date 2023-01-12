@@ -711,10 +711,16 @@ pub mod ilockmvp {
             }
 
             // update total amount rewarded to interlocker
-            self.rewardedtotal += reward;
+            match self.rewardedtotal.checked_add(reward) {
+                Some(sum) => self.rewardedtotal = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
 
             // update rewards pool balance
-            self.poolbalances[REWARDS as usize] -= reward;
+            match self.poolbalances[REWARDS as usize].checked_sub(reward) {
+                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // transfer reward tokens from rewards pool to interlocker
             let _ = self.transfer(interlocker, reward, Default::default())?;
@@ -724,7 +730,13 @@ pub mod ilockmvp {
                 Some(total) => total,
                 None => 0,
             };
-            self.rewardedinterlocker.insert(interlocker, &(rewardedinterlockertotal + reward));
+
+            // compute and update new total awarded to interlocker
+            let newrewardedtotal: Balance = match rewardedinterlockertotal.checked_add(reward) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
+            self.rewardedinterlocker.insert(interlocker, &newrewardedtotal);
 
             // emit Reward event
             self.env().emit_event(Reward {
@@ -733,7 +745,7 @@ pub mod ilockmvp {
             });
 
             // this returns interlocker total reward amount for extension display purposes
-            Ok(rewardedinterlockertotal + reward)
+            Ok(newrewardedtotal)
         }
 
         /// . get amount rewarded to interlocker to date
