@@ -1099,8 +1099,14 @@ pub mod ilockmvp {
             };
 
             // update pools
-            self.taxpool += port.tax;
-            port.collected += port.tax;
+            match self.taxpool.checked_add(port.tax) {
+                Some(sum) => self.taxpool = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
+            match port.collected.checked_add(port.tax) {
+                Some(sum) => port.collected = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
 
             // transfer reward to reward recipient
             let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
@@ -1108,13 +1114,27 @@ pub mod ilockmvp {
                 Ok(()) => (),
             };
 
+            // compute amount adjusted to offset transfer function
+            let adjustedamount: Balance = match amount.checked_add(port.tax) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
+
             // update balance pool and totals
-            // (the port.tax subtraction is to offset rewardpool increase on transfer from token owner)
-            self.poolbalances[REWARDS as usize] -= amount + port.tax; // << extra port.tax term to
-            self.rewardedtotal += amount;                             // offset transfer function
+            match self.poolbalances[REWARDS as usize].checked_sub(adjustedamount) {
+                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string()).into()),
+            };
+            match self.rewardedtotal.checked_add(amount) {
+                Some(sum) => self.rewardedtotal = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
 
             // update port
-            port.paid += amount;
+            match port.paid.checked_add(amount) {
+                Some(sum) => port.paid = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
             self.ports.insert(portnumber, &port);
 
             // emit Reward event
