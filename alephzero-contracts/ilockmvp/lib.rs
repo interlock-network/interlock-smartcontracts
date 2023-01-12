@@ -790,8 +790,12 @@ pub mod ilockmvp {
             }
 
             let _ = self.transfer(wallet, amount, Default::default())?;
-
-            self.taxpool -= amount;
+            
+            // deduct withdraw amount
+            match self.taxpool.checked_sub(amount) {
+                Some(difference) => self.taxpool = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             Ok(())
         }
