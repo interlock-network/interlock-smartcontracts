@@ -278,7 +278,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.circulatingsupply + 999
+            self.circulatingsupply
         }
 
         /// . override default transfer doer
@@ -297,13 +297,24 @@ pub mod ilockmvp {
 
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
-                self.circulatingsupply += value;
+
+                match self.circulatingsupply.checked_add(value) {
+                    Some(sum) => self.circulatingsupply = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.poolbalances[REWARDS as usize] += value;
-                self.circulatingsupply -= value;
+
+                match self.poolbalances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
+                match self.circulatingsupply.checked_sub(value) {
+                    Some(difference) => self.circulatingsupply = difference,
+                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                };
             }
 
             Ok(())
@@ -324,13 +335,25 @@ pub mod ilockmvp {
 
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
-                self.circulatingsupply += value;
+
+                match self.circulatingsupply.checked_add(value) {
+                    Some(sum) => self.circulatingsupply = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.poolbalances[REWARDS as usize] += value;
-                self.circulatingsupply -= value;
+
+                match self.poolbalances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
+                match self.circulatingsupply.checked_sub(value) {
+                    Some(difference) => self.circulatingsupply = difference,
+                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                };
+
             }
 
             Ok(())
@@ -484,15 +507,11 @@ pub mod ilockmvp {
             &self
         ) -> Timestamp {
 
-            // add logic here to return 0 if overflow
-
-            let timeleft: Timestamp = (self.nextpayout - self.env().block_timestamp()) / 60_000;
-
-            // if time has run out, remaining time is zero and timeleft overflows
-            if timeleft > self.nextpayout {
-
-                return 0;
-            }
+            // calculate remaining time
+            let timeleft: Timestamp = match self.nextpayout.checked_sub(self.env().block_timestamp()) {
+                Some(difference) => difference,
+                None => return 0,
+            };
 
             timeleft
         }
@@ -512,6 +531,11 @@ pub mod ilockmvp {
             share: Balance,
             pool: u8,
         ) -> PSP22Result<()> {
+
+            // make sure share is > 0
+            if share == 0 {
+                return Err(PSP22Error::Custom("Share must be greater than zero.".to_string()));
+            }
 
             // create stakeholder struct
             let this_stakeholder = StakeholderData {
@@ -588,31 +612,51 @@ pub mod ilockmvp {
             }
 
             // calculate the payout owed
+            // ! no checked_div needed; pool.vests guaranteed to be nonzero
             let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
 
             // require that payout isn't repeatable for this month
+            // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
             let payments = this_stakeholder.paid / payout;
             if payments >= self.monthspassed as u128 {
                 return Err(OtherError::PayoutTooEarly.into())
             }
 
+            // calculate the new total paid to stakeholder
+            let newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
+
+            // calculate remaining share
+            let remainingshare: Balance = match this_stakeholder.paid.checked_sub(newpaidtotal) {
+                Some(difference) => difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
+
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
-            if this_stakeholder.share - this_stakeholder.paid - payout <
-                this_stakeholder.share / pool.vests as Balance {
+            // ! no checked_div needed; pool.vests guaranteed to be nonzero
+            if remainingshare < this_stakeholder.share / pool.vests as Balance {
 
                 // add remainder
-                payout += this_stakeholder.share % pool.vests as Balance;
+                match payout.checked_add(this_stakeholder.share % pool.vests as Balance) {
+                    Some(sum) => payout = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, payout, Default::default())?;
 
             // update pool balance
-            self.poolbalances[this_stakeholder.pool as usize] -= payout;
+            match self.poolbalances[this_stakeholder.pool as usize].checked_sub(payout) {
+                Some(difference) => self.poolbalances[this_stakeholder.pool as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // finally update stakeholder data struct state
-            this_stakeholder.paid += payout;
+            this_stakeholder.paid = newpaidtotal;
             self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             Ok(())
@@ -644,8 +688,11 @@ pub mod ilockmvp {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
-            // decrement pool balance
-            self.poolbalances[poolnumber as usize] -= amount;
+            // deduct payout amount
+            match self.poolbalances[poolnumber as usize].checked_sub(amount) {
+                Some(difference) => self.poolbalances[poolnumber as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
@@ -711,10 +758,16 @@ pub mod ilockmvp {
             }
 
             // update total amount rewarded to interlocker
-            self.rewardedtotal += reward;
+            match self.rewardedtotal.checked_add(reward) {
+                Some(sum) => self.rewardedtotal = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
 
             // update rewards pool balance
-            self.poolbalances[REWARDS as usize] -= reward;
+            match self.poolbalances[REWARDS as usize].checked_sub(reward) {
+                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // transfer reward tokens from rewards pool to interlocker
             let _ = self.transfer(interlocker, reward, Default::default())?;
@@ -724,7 +777,13 @@ pub mod ilockmvp {
                 Some(total) => total,
                 None => 0,
             };
-            self.rewardedinterlocker.insert(interlocker, &(rewardedinterlockertotal + reward));
+
+            // compute and update new total awarded to interlocker
+            let newrewardedtotal: Balance = match rewardedinterlockertotal.checked_add(reward) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
+            self.rewardedinterlocker.insert(interlocker, &newrewardedtotal);
 
             // emit Reward event
             self.env().emit_event(Reward {
@@ -733,7 +792,7 @@ pub mod ilockmvp {
             });
 
             // this returns interlocker total reward amount for extension display purposes
-            Ok(rewardedinterlockertotal + reward)
+            Ok(newrewardedtotal)
         }
 
         /// . get amount rewarded to interlocker to date
@@ -778,8 +837,12 @@ pub mod ilockmvp {
             }
 
             let _ = self.transfer(wallet, amount, Default::default())?;
-
-            self.taxpool -= amount;
+            
+            // deduct withdraw amount
+            match self.taxpool.checked_sub(amount) {
+                Some(difference) => self.taxpool = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             Ok(())
         }
@@ -1059,8 +1122,14 @@ pub mod ilockmvp {
             };
 
             // update pools
-            self.taxpool += port.tax;
-            port.collected += port.tax;
+            match self.taxpool.checked_add(port.tax) {
+                Some(sum) => self.taxpool = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
+            match port.collected.checked_add(port.tax) {
+                Some(sum) => port.collected = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
 
             // transfer reward to reward recipient
             let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
@@ -1068,13 +1137,27 @@ pub mod ilockmvp {
                 Ok(()) => (),
             };
 
+            // compute amount adjusted to offset transfer function
+            let adjustedamount: Balance = match amount.checked_add(port.tax) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
+
             // update balance pool and totals
-            // (the port.tax subtraction is to offset rewardpool increase on transfer from token owner)
-            self.poolbalances[REWARDS as usize] -= amount + port.tax; // << extra port.tax term to
-            self.rewardedtotal += amount;                             // offset transfer function
+            match self.poolbalances[REWARDS as usize].checked_sub(adjustedamount) {
+                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string()).into()),
+            };
+            match self.rewardedtotal.checked_add(amount) {
+                Some(sum) => self.rewardedtotal = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
 
             // update port
-            port.paid += amount;
+            match port.paid.checked_add(amount) {
+                Some(sum) => port.paid = sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+            };
             self.ports.insert(portnumber, &port);
 
             // emit Reward event
