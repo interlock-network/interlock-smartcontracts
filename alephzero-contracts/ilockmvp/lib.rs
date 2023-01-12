@@ -644,8 +644,11 @@ pub mod ilockmvp {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
-            // decrement pool balance
-            self.poolbalances[poolnumber as usize] -= amount;
+            // deduct payout amount
+            match self.poolbalances[poolnumber as usize].checked_sub(amount) {
+                Some(difference) => self.poolbalances[poolnumber as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, amount, Default::default())?;
