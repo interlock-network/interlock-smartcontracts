@@ -513,6 +513,11 @@ pub mod ilockmvp {
             pool: u8,
         ) -> PSP22Result<()> {
 
+            // make sure share is > 0
+            if share == 0 {
+                return Err(PSP22Error::Custom("Share must be greater than zero.".to_string()));
+            }
+
             // create stakeholder struct
             let this_stakeholder = StakeholderData {
                 paid: 0,
@@ -588,31 +593,51 @@ pub mod ilockmvp {
             }
 
             // calculate the payout owed
+            // ! no checked_div needed; pool.vests guaranteed to be nonzero
             let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
 
             // require that payout isn't repeatable for this month
+            // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
             let payments = this_stakeholder.paid / payout;
             if payments >= self.monthspassed as u128 {
                 return Err(OtherError::PayoutTooEarly.into())
             }
 
+            // calculate the new total paid to stakeholder
+            let newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
+                Some(sum) => sum,
+                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+            };
+
+            // calculate remaining share
+            let remainingshare: Balance = match this_stakeholder.paid.checked_sub(newpaidtotal) {
+                Some(difference) => difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
+
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
-            if this_stakeholder.share - this_stakeholder.paid - payout <
-                this_stakeholder.share / pool.vests as Balance {
+            // ! no checked_div needed; pool.vests guaranteed to be nonzero
+            if remainingshare < this_stakeholder.share / pool.vests as Balance {
 
                 // add remainder
-                payout += this_stakeholder.share % pool.vests as Balance;
+                match payout.checked_add(this_stakeholder.share % pool.vests as Balance) {
+                    Some(sum) => payout = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // now transfer tokens
             let _ = self.transfer(stakeholder, payout, Default::default())?;
 
             // update pool balance
-            self.poolbalances[this_stakeholder.pool as usize] -= payout;
+            match self.poolbalances[this_stakeholder.pool as usize].checked_sub(payout) {
+                Some(difference) => self.poolbalances[this_stakeholder.pool as usize] = difference,
+                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+            };
 
             // finally update stakeholder data struct state
-            this_stakeholder.paid += payout;
+            this_stakeholder.paid = newpaidtotal;
             self.stakeholderdata.insert(stakeholder, &this_stakeholder);
 
             Ok(())
