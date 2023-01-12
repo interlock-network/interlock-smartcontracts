@@ -81,6 +81,7 @@ pub mod application {
         #[ink(message)]
         pub fn change_operator(
             &mut self,
+            newoperator: AccountId,
         ) -> Result<(), OtherError> {
 
             // make sure caller is operator
@@ -89,7 +90,7 @@ pub mod application {
                 return Err(OtherError::CallerNotOperator);
             }
 
-            self.operator = self.env().caller();
+            self.operator = newoperator;
 
             Ok(())
         }
