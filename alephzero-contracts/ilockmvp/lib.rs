@@ -278,7 +278,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.circulatingsupply + 999
+            self.circulatingsupply
         }
 
         /// . override default transfer doer
@@ -297,13 +297,24 @@ pub mod ilockmvp {
 
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
-                self.circulatingsupply += value;
+
+                match self.circulatingsupply.checked_add(value) {
+                    Some(sum) => self.circulatingsupply = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.poolbalances[REWARDS as usize] += value;
-                self.circulatingsupply -= value;
+
+                match self.poolbalances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
+                match self.circulatingsupply.checked_sub(value) {
+                    Some(difference) => self.circulatingsupply = difference,
+                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                };
             }
 
             Ok(())
@@ -324,13 +335,25 @@ pub mod ilockmvp {
 
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
-                self.circulatingsupply += value;
+
+                match self.circulatingsupply.checked_add(value) {
+                    Some(sum) => self.circulatingsupply = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
             }
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
-                self.poolbalances[REWARDS as usize] += value;
-                self.circulatingsupply -= value;
+
+                match self.poolbalances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                };
+                match self.circulatingsupply.checked_sub(value) {
+                    Some(difference) => self.circulatingsupply = difference,
+                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                };
+
             }
 
             Ok(())
