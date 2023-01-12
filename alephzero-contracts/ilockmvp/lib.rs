@@ -484,15 +484,11 @@ pub mod ilockmvp {
             &self
         ) -> Timestamp {
 
-            // add logic here to return 0 if overflow
-
-            let timeleft: Timestamp = (self.nextpayout - self.env().block_timestamp()) / 60_000;
-
-            // if time has run out, remaining time is zero and timeleft overflows
-            if timeleft > self.nextpayout {
-
-                return 0;
-            }
+            // calculate remaining time
+            let timeleft: Timestamp = match self.nextpayout.checked_sub(self.env().block_timestamp()) {
+                Some(difference) => difference,
+                None => return 0,
+            };
 
             timeleft
         }
