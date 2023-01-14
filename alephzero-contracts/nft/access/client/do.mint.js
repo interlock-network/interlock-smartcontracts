@@ -26,8 +26,8 @@ const metadata_VIPMEMBERSHIP = require('../vipmembership/target/ink/metadata.jso
 const metadata_BOUNCERLICENSE = require('../bouncerlicense/target/ink/metadata.json');
 const contract_VIPMEMBERSHIP = process.env.CONTRACT_VIPMEMBERSHIP;
 const contract_BOUNCERLICENSE = process.env.CONTRACT_BOUNCERLICENSE;
-const OWNER_MNEMONIC = require('./.mnemonic.json');
-const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
+const OWNER_mnemonic = process.env.OWNER_MNEMONIC;
+
 
 // constants
 const MEG = 1000000;

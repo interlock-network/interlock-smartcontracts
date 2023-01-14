@@ -82,8 +82,7 @@ require('dotenv').config();
 // constants
 const metadata_ILOCKMVP = require('../target/ink/metadata.json');
 const contract_ILOCKMVP = process.env.CONTRACT_ILOCKMVP;
-const OWNER_MNEMONIC = require('./.mnemonic.json');
-const OWNER_mnemonic = OWNER_MNEMONIC.mnemonic;
+const OWNER_mnemonic = process.env.OWNER_MNEMONIC;
 
 async function queryContract(...args) {
 
