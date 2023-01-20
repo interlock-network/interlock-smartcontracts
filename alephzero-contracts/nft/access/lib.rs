@@ -545,5 +545,25 @@ pub mod psp34_nft {
             token_uri = token_uri + &token_id.to_string() + &String::from(".json");
             return token_uri;
         }
+
+        /// . modifies the code which is used to execute calls to this contract address
+        /// . this upgrades the token contract logic while using old state
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn update_contract(
+            &mut self,
+            code_hash: [u8; 32]
+        ) -> PSP22Result<()> {
+
+            // takes code hash of updates contract and modifies preexisting logic to match
+            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+                panic!(
+                    "Failed to `set_code_hash` to {:?} due to {:?}",
+                    code_hash, err
+                )
+            });
+
+            Ok(())
+        }
     }
 }
