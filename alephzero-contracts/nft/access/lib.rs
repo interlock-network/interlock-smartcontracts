@@ -254,6 +254,7 @@ pub mod psp34_nft {
         }
 
         /// . grant 'authenticated' status to interlocker
+        /// . indicate no longer waiting for authentication transfer
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_authenticated(
@@ -261,9 +262,36 @@ pub mod psp34_nft {
             id: Id
         ) -> Result<(), PSP34Error> {
 
+            // << insert custom logic here >>
+
             self._set_attribute(
                 id,
                 String::from("isauthenticated").into_bytes(),
+                String::from("true").into_bytes(),
+            );
+            self._set_attribute(
+                id,
+                String::from("iswaiting").into_bytes(),
+                String::from("false").into_bytes(),
+            );
+
+
+            Ok(())
+        }
+
+        /// . indicate that NFT is waiting for authentication transfer
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn set_waiting(
+            &mut self,
+            id: Id
+        ) -> Result<(), PSP34Error> {
+
+            // << insert custom logic here >>
+
+            self._set_attribute(
+                id,
+                String::from("iswaiting").into_bytes(),
                 String::from("true").into_bytes(),
             );
 
@@ -277,6 +305,8 @@ pub mod psp34_nft {
             &mut self,
             id: Id
         ) -> Result<(), PSP34Error> {
+
+            // << insert custom logic here >>
 
             self._set_attribute(
                 id,
