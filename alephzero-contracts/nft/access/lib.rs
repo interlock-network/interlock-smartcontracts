@@ -10,7 +10,7 @@ pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 pub mod psp34_nft {
 
     use ink_prelude::{
-        string::{String, toString},
+        string::{String, ToString},
         vec::Vec,
         format,
     };
@@ -19,12 +19,14 @@ pub mod psp34_nft {
         Mapping,
     };
     use ink_lang::codegen::Env;
-    use openbrush::contracts::{
-        ownable::*,
-        contracts::psp34::extensions::{enumerable::*, metadata::*},
+    use openbrush::{
+        contracts::{
+            ownable::*,
+            psp34::extensions::{enumerable::*, metadata::*},
+        },
         traits::Storage,
         modifiers,
-    }
+    };
 
     #[derive(Default, SpreadAllocate, Storage)]
     #[ink(storage)]
@@ -265,7 +267,7 @@ pub mod psp34_nft {
             // << insert custom logic here >>
 
             self._set_attribute(
-                id,
+                id.clone(),
                 String::from("isauthenticated").into_bytes(),
                 String::from("true").into_bytes(),
             );
@@ -427,6 +429,26 @@ pub mod psp34_nft {
 
             self._burn_from(caller, id)
         }
+
+        /// . modifies the code which is used to execute calls to this contract address
+        /// . this upgrades the token contract logic while using old state
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn update_contract(
+            &mut self,
+            code_hash: [u8; 32]
+        ) -> Result<(), PSP34Error> {
+
+            // takes code hash of updates contract and modifies preexisting logic to match
+            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+                panic!(
+                    "Failed to `set_code_hash` to {:?} due to {:?}",
+                    code_hash, err
+                )
+            });
+
+            Ok(())
+        }
     }
 
     impl Psp34Traits for Psp34Nft {
@@ -546,24 +568,5 @@ pub mod psp34_nft {
             return token_uri;
         }
 
-        /// . modifies the code which is used to execute calls to this contract address
-        /// . this upgrades the token contract logic while using old state
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn update_contract(
-            &mut self,
-            code_hash: [u8; 32]
-        ) -> PSP22Result<()> {
-
-            // takes code hash of updates contract and modifies preexisting logic to match
-            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
-                panic!(
-                    "Failed to `set_code_hash` to {:?} due to {:?}",
-                    code_hash, err
-                )
-            });
-
-            Ok(())
-        }
     }
 }
