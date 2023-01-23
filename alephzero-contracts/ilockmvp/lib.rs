@@ -320,7 +320,7 @@ pub mod ilockmvp {
 
                 match self.circulatingsupply.checked_add(value) {
                     Some(sum) => self.circulatingsupply = sum,
-                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
                 };
             }
 
@@ -329,11 +329,11 @@ pub mod ilockmvp {
 
                 match self.poolbalances[REWARDS as usize].checked_add(value) {
                     Some(sum) => self.poolbalances[REWARDS as usize] = sum,
-                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
                 };
                 match self.circulatingsupply.checked_sub(value) {
                     Some(difference) => self.circulatingsupply = difference,
-                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
                 };
             }
 
@@ -358,7 +358,7 @@ pub mod ilockmvp {
 
                 match self.circulatingsupply.checked_add(value) {
                     Some(sum) => self.circulatingsupply = sum,
-                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
                 };
             }
 
@@ -367,11 +367,11 @@ pub mod ilockmvp {
 
                 match self.poolbalances[REWARDS as usize].checked_add(value) {
                     Some(sum) => self.poolbalances[REWARDS as usize] = sum,
-                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
                 };
                 match self.circulatingsupply.checked_sub(value) {
                     Some(difference) => self.circulatingsupply = difference,
-                    None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
                 };
             }
 
@@ -553,7 +553,7 @@ pub mod ilockmvp {
 
             // make sure share is > 0
             if share == 0 {
-                return Err(PSP22Error::Custom("Share must be greater than zero.".to_string()));
+                return Err(PSP22Error::Custom("Share must be greater than zero.".as_bytes().to_vec()));
             }
 
             // create stakeholder struct
@@ -644,13 +644,13 @@ pub mod ilockmvp {
             // calculate the new total paid to stakeholder
             let newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
                 Some(sum) => sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
             };
 
             // calculate remaining share
             let remainingshare: Balance = match this_stakeholder.paid.checked_sub(newpaidtotal) {
                 Some(difference) => difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
             };
 
             // if this is final payment, add token remainder to payout
@@ -661,7 +661,7 @@ pub mod ilockmvp {
                 // add remainder
                 match payout.checked_add(this_stakeholder.share % pool.vests as Balance) {
                     Some(sum) => payout = sum,
-                    None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                    None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
                 };
             }
 
@@ -671,7 +671,7 @@ pub mod ilockmvp {
             // update pool balance
             match self.poolbalances[this_stakeholder.pool as usize].checked_sub(payout) {
                 Some(difference) => self.poolbalances[this_stakeholder.pool as usize] = difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
             };
 
             // finally update stakeholder data struct state
@@ -710,7 +710,7 @@ pub mod ilockmvp {
             // deduct payout amount
             match self.poolbalances[poolnumber as usize].checked_sub(amount) {
                 Some(difference) => self.poolbalances[poolnumber as usize] = difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
             };
 
             // now transfer tokens
@@ -779,13 +779,13 @@ pub mod ilockmvp {
             // update total amount rewarded to interlocker
             match self.rewardedtotal.checked_add(reward) {
                 Some(sum) => self.rewardedtotal = sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
             };
 
             // update rewards pool balance
             match self.poolbalances[REWARDS as usize].checked_sub(reward) {
                 Some(difference) => self.poolbalances[REWARDS as usize] = difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
             };
 
             // transfer reward tokens from rewards pool to interlocker
@@ -800,7 +800,7 @@ pub mod ilockmvp {
             // compute and update new total awarded to interlocker
             let newrewardedtotal: Balance = match rewardedinterlockertotal.checked_add(reward) {
                 Some(sum) => sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec())),
             };
             self.rewardedinterlocker.insert(interlocker, &newrewardedtotal);
 
@@ -859,7 +859,7 @@ pub mod ilockmvp {
             // deduct withdraw amount
             match self.taxpool.checked_sub(amount) {
                 Some(difference) => self.taxpool = difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string())),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec())),
             };
 
             Ok(())
@@ -1164,11 +1164,11 @@ pub mod ilockmvp {
             // update pools
             match self.taxpool.checked_add(port.tax) {
                 Some(sum) => self.taxpool = sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec()).into()),
             };
             match port.collected.checked_add(port.tax) {
                 Some(sum) => port.collected = sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec()).into()),
             };
 
             // transfer reward to reward recipient
@@ -1180,23 +1180,23 @@ pub mod ilockmvp {
             // compute amount adjusted to offset transfer function
             let adjustedamount: Balance = match amount.checked_add(port.tax) {
                 Some(sum) => sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec()).into()),
             };
 
             // update balance pool and totals
             match self.poolbalances[REWARDS as usize].checked_sub(adjustedamount) {
                 Some(difference) => self.poolbalances[REWARDS as usize] = difference,
-                None => return Err(PSP22Error::Custom("Underflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Underflow error.".as_bytes().to_vec()).into()),
             };
             match self.rewardedtotal.checked_add(amount) {
                 Some(sum) => self.rewardedtotal = sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec()).into()),
             };
 
             // update port
             match port.paid.checked_add(amount) {
                 Some(sum) => port.paid = sum,
-                None => return Err(PSP22Error::Custom("Overflow error.".to_string()).into()),
+                None => return Err(PSP22Error::Custom("Overflow error.".as_bytes().to_vec()).into()),
             };
             self.ports.insert(portnumber, &port);
 
@@ -1270,7 +1270,7 @@ pub mod ilockmvp {
         fn name_works() {
 
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Network".to_string()));
+            assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Networ.".as_bytes().to_vec()));
         }
 
         /// . test if symbol getter does its job
@@ -1278,7 +1278,7 @@ pub mod ilockmvp {
         fn symbol_works() {
 
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOCK".to_string()));
+            assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOC.".as_bytes().to_vec()));
         }
         
         /// . test if decimals getter does its job
