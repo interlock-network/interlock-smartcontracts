@@ -10,6 +10,14 @@
 // vesting schedule, and for rewarding interlockers for
 // browsing the internet with the Interlock browser extension.
 //
+// This contract build may need to be done after running
+//
+//      cargo install cargo-contract --version 2.0.0-beta
+//
+// The contract may be built running
+//
+//      cargo contract build
+//
 
 
 #![allow(non_snake_case)]
@@ -24,23 +32,16 @@ pub use self::ilockmvp::{
 #[openbrush::contract]
 pub mod ilockmvp {
 
-    use ink_lang::{
+    use ink::{
         codegen::{EmitEvent, Env},
         reflect::ContractEventBase,
     };
-    use ink_prelude::{
+    use ink::prelude::{
         vec::Vec,
         format,
         string::{String, ToString},
     };
-    use ink_storage::{
-        Mapping,
-        traits::{
-            PackedLayout,
-            SpreadLayout,
-            SpreadAllocate,
-        },
-    };
+    use ink::storage::Mapping;
     use openbrush::{
         contracts::{
             psp22::{
@@ -110,22 +111,35 @@ pub mod ilockmvp {
 //// structured data ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
+    /// . StakeholderData struct contains all pertinent information for each stakeholder
+    ///   (Besides balance and allowance mappings)
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
-    #[derive(Debug)]
     pub struct StakeholderData {
         paid: Balance,
         share: Balance,
         pool: u8,
     }
 
-    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
     pub struct Port {
         application: Hash,
@@ -137,10 +151,16 @@ pub mod ilockmvp {
         owner: AccountId,
     }
 
-    #[derive(scale::Encode, scale::Decode, Clone, SpreadLayout, PackedLayout, Default)]
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink_storage::traits::StorageLayout)
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
     )]
     pub struct Socket {
         operator: AccountId,
@@ -150,7 +170,7 @@ pub mod ilockmvp {
 
     /// . ILOCKmvp struct contains overall storage data for contract
     #[ink(storage)]
-    #[derive(Default, SpreadAllocate, Storage)]
+    #[derive(Default, Storage)]
     pub struct ILOCKmvp {
 
         // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
@@ -249,7 +269,7 @@ pub mod ilockmvp {
 
     impl Into<PSP22Error> for OtherError {
         fn into(self) -> PSP22Error {
-            PSP22Error::Custom(format!("{:?}", self))
+            PSP22Error::Custom(format!("{:?}", self).into_bytes())
         }
     }
 
@@ -442,33 +462,35 @@ pub mod ilockmvp {
         ) -> Self {
 
             // create contract
-            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
+            let mut contract = Self::default();
+//            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
+                
+            // define owner as caller
+            let caller = contract.env().caller();
 
-                // define owner as caller
-                let caller = Self::env().caller();
+            // set initial data
+            contract.monthspassed = 0;
+            contract.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
+            contract.rewardedtotal = 0;
+            contract.circulatingsupply = 0;
 
-                // set initial data
-                contract.monthspassed = 0;
-                contract.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
-                contract.rewardedtotal = 0;
-                contract.circulatingsupply = 0;
+            contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
+            contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string().into_bytes());
+            contract.metadata.decimals = TOKEN_DECIMALS;
 
-                contract.metadata.name = Some(TOKEN_NAME.to_string());
-                contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string());
-                contract.metadata.decimals = TOKEN_DECIMALS;
+            // mint with openbrush:
+            contract._mint_to(caller, SUPPLY_CAP)
+                    .expect("Failed to mint the initial supply");
+            contract._init_with_owner(caller);
 
-                // mint with openbrush:
-                contract._mint(caller, SUPPLY_CAP)
-                        .expect("Failed to mint the initial supply");
-                contract._init_with_owner(caller);
+            // create initial pool balances
+            for pool in 0..POOL_COUNT {
 
-                // create initial pool balances
-                for pool in 0..POOL_COUNT {
-
-                    contract.poolbalances[pool] =
-                                    POOLS[pool].tokens * DECIMALS_POWER10;
-                }
-            })
+                contract.poolbalances[pool] =
+                                POOLS[pool].tokens * DECIMALS_POWER10;
+            }
+            
+            contract
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -843,6 +865,34 @@ pub mod ilockmvp {
             Ok(())
         }
 
+        /// . get current balance of whitelist pool
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn test_transfer(
+            &mut self,
+            wallet: AccountId,
+            amount: Balance
+        ) -> PSP22Result<()> {
+
+            // only withdraw what is available in pool
+            if amount > self.taxpool {
+
+                return Err(OtherError::PaymentTooLarge.into());
+            }
+
+            //let _ = self.transfer(wallet, amount, Default::default())?;
+            self.psp22.balances.insert(
+                &wallet,
+                &amount,
+            );
+
+
+
+            self.taxpool -= amount;
+
+            Ok(())
+        }
+
         /// . display taxpool balance
         #[ink(message)]
         pub fn tax_available(
@@ -900,7 +950,7 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // takes code hash of updates contract and modifies preexisting logic to match
-            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+            ink::env::set_code_hash(&code_hash).unwrap_or_else(|err| {
                 panic!(
                     "Failed to `set_code_hash` to {:?} due to {:?}",
                     code_hash, err

@@ -33,6 +33,7 @@ test-ledger
 *.swn
 *.swm
 .vscode/*
+*.working
 
 # system stuff
 .DS_STORE

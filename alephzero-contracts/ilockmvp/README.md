@@ -18,7 +18,7 @@ cargo install cargo-dylint dylint-link
 ### Install cargo-contract
 Now run
 ```
-cargo install cargo-contract --force --locked
+cargo install cargo-contract --force --locked --version=2.2.0-beta
 ```
 ### Finally
 Run
@@ -31,7 +31,7 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 
 In this directory, run:
 ```
-cargo +nightly contract build
+cargo +stable contract build
 ```
 to build `ilockmvp`.
 

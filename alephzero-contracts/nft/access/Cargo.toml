@@ -1,26 +1,20 @@
 [package]
-name = "psp34_nft"
-version = "1.2.0"
-authors = ["ArtZero <admin@artzero.io>"]
+name = "interlock_access_nft"
+version = "0.0.1"
+authors = ["Blair Munro <blairmunroakusa@gmail.com>, ArtZero <admin@artzero.io>"]
 edition = "2021"
 
 [dependencies]
-ink_primitives = { version = "~3.3.0", default-features = false }
-ink_metadata = { version = "~3.3.0", default-features = false, features = ["derive"], optional = true }
-ink_env = { version = "~3.3.0", default-features = false }
-ink_storage = { version = "~3.3.0", default-features = false }
-ink_lang = { version = "~3.3.0", default-features = false }
-ink_prelude = { version = "~3.3.0", default-features = false }
-ink_engine = { version = "~3.3.0", default-features = false, optional = true }
+# This unstable ink commit is required by Openbrush
+ink = { git = "https://github.com/paritytech/ink", rev = "4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
-scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
+scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
-# These dependencies
-openbrush = { tag = "v2.2.0", git = "https://github.com/Supercolony-net/openbrush-contracts", default-features = false, features = ["ownable","psp34"] }
+openbrush = { tag = "3.0.0-beta", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp34", "ownable"] }
 
 [lib]
-name = "psp34_nft"
+name = "interlock_access_nft"
 path = "lib.rs"
 crate-type = [
     # Used for normal contract Wasm blobs.
@@ -31,24 +25,13 @@ crate-type = [
 [features]
 default = ["std"]
 std = [
-    "ink_primitives/std",
-    "ink_metadata",
-    "ink_metadata/std",
-    "ink_env/std",
-    "ink_storage/std",
-    "ink_lang/std",
+    "ink/std",
     "scale/std",
-    "scale-info",
     "scale-info/std",
 
-    # These dependencies
     "openbrush/std",
 ]
 ink-as-dependency = []
-
-[profile.dev]
-codegen-units = 16
-overflow-checks = false
 
 [profile.release]
 overflow-checks = false
