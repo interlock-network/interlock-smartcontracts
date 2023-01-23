@@ -447,7 +447,7 @@ pub mod psp34_nft {
         ) -> Result<(), PSP34Error> {
 
             // takes code hash of updates contract and modifies preexisting logic to match
-            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+            ink::env::set_code_hash(&code_hash).unwrap_or_else(|err| {
                 panic!(
                     "Failed to `set_code_hash` to {:?} due to {:?}",
                     code_hash, err
