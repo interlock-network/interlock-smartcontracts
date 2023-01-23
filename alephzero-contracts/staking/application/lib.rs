@@ -4,14 +4,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ink_lang as ink;
-
 #[ink::contract]
 pub mod application {
 
     use ilockmvp::ILOCKmvpRef;
     use ilockmvp::ilockmvp::OtherError;
-    use ink_prelude::vec::Vec;
+    use ink::prelude::vec::Vec;
 
     // this is the number designating application type's
     // port (the contract hash, owner, cap, tax, paid, collected, etc)
@@ -33,7 +31,7 @@ pub mod application {
         ) -> Self {
             
             // create a reference to the deployed token contract
-            let token_instance: ILOCKmvpRef = ink_env::call::FromAccountId::from_account_id(token_address);
+            let token_instance: ILOCKmvpRef = ink::env::call::FromAccountId::from_account_id(token_address);
             let operator: AccountId = Self::env().caller();
 
             Self { token_instance, operator }
