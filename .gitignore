@@ -34,6 +34,7 @@ test-ledger
 *.swm
 .vscode/*
 *.working
+package*
 
 # system stuff
 .DS_STORE
