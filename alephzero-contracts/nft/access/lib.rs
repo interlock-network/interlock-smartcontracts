@@ -258,6 +258,7 @@ pub mod psp34_nft {
         }
 
         /// . grant 'authenticated' status to interlocker
+        /// . indicate no longer waiting for authentication transfer
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_authenticated(
@@ -265,9 +266,36 @@ pub mod psp34_nft {
             id: Id
         ) -> Result<(), PSP34Error> {
 
+            // << insert custom logic here >>
+
+            self._set_attribute(
+                id.clone(),
+                String::from("isauthenticated").into_bytes(),
+                String::from("true").into_bytes(),
+            );
             self._set_attribute(
                 id,
-                String::from("isauthenticated").into_bytes(),
+                String::from("iswaiting").into_bytes(),
+                String::from("false").into_bytes(),
+            );
+
+
+            Ok(())
+        }
+
+        /// . indicate that NFT is waiting for authentication transfer
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn set_waiting(
+            &mut self,
+            id: Id
+        ) -> Result<(), PSP34Error> {
+
+            // << insert custom logic here >>
+
+            self._set_attribute(
+                id,
+                String::from("iswaiting").into_bytes(),
                 String::from("true").into_bytes(),
             );
 
@@ -281,6 +309,8 @@ pub mod psp34_nft {
             &mut self,
             id: Id
         ) -> Result<(), PSP34Error> {
+
+            // << insert custom logic here >>
 
             self._set_attribute(
                 id,
@@ -406,6 +436,26 @@ pub mod psp34_nft {
 
             self._burn_from(caller, id)
         }
+
+        /// . modifies the code which is used to execute calls to this contract address
+        /// . this upgrades the token contract logic while using old state
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn update_contract(
+            &mut self,
+            code_hash: [u8; 32]
+        ) -> Result<(), PSP34Error> {
+
+            // takes code hash of updates contract and modifies preexisting logic to match
+            ink_env::set_code_hash(&code_hash).unwrap_or_else(|err| {
+                panic!(
+                    "Failed to `set_code_hash` to {:?} due to {:?}",
+                    code_hash, err
+                )
+            });
+
+            Ok(())
+        }
     }
 
     impl Psp34Traits for Psp34Nft {
@@ -527,5 +577,6 @@ pub mod psp34_nft {
             token_uri = token_uri + &token_id.to_string() + &String::from(".json");
             return token_uri;
         }
+
     }
 }

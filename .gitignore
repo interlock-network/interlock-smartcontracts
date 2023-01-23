@@ -14,6 +14,7 @@ venv
 .mnemonic*
 bigtable-admin.json
 bigtable-writer.json
+*.working
 
 
 # rust stuff

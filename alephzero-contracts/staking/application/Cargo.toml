@@ -1,19 +1,19 @@
 [package]
-name = "port"
+name = "application"
 version = "0.1.0"
-authors = ["Interlock Network, blairmunroakusa@wp.computer"]
+authors = ["Interlock Network, Blair Munro <blairmunroakusa@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 ink = { git = "https://github.com/paritytech/ink", rev = "4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false }
 
-ilocktoken = { path = "../../ilock-mvp", default-features = false, features = ["ink-as-dependency"] }
+ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
 [lib]
-name = "port"
+name = "application"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
@@ -27,7 +27,7 @@ std = [
     "scale/std",
     "scale-info/std",
 
-    "ilocktoken/std",
+    "ilockmvp/std"
 ]
 ink-as-dependency = []
 

@@ -38,7 +38,6 @@ You will only need this if you find that compiling produces this error:
 ERROR: No 'ink_lang' dependency found
 ```
 
-
 ### Finally
 Run
 ```
@@ -48,9 +47,9 @@ rustup target add wasm32-unknown-unknown --toolchain nightly
 
 ## How to build
 
-In this directory, run from the `access` directory:
+Run from the `access` directory:
 ```
 cargo contract build
 ```
 To run a contract, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
-*(NOTE: testnet only supports ink!3 at the time being, so you will need to create your own node.)*
+
