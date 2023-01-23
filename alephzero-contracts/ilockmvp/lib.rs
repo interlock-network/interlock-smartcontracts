@@ -832,6 +832,34 @@ pub mod ilocktoken {
             Ok(())
         }
 
+        /// . get current balance of whitelist pool
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn test_transfer(
+            &mut self,
+            wallet: AccountId,
+            amount: Balance
+        ) -> PSP22Result<()> {
+
+            // only withdraw what is available in pool
+            if amount > self.taxpool {
+
+                return Err(OtherError::PaymentTooLarge.into());
+            }
+
+            //let _ = self.transfer(wallet, amount, Default::default())?;
+            self.psp22.balances.insert(
+                &wallet,
+                &amount,
+            );
+
+
+
+            self.taxpool -= amount;
+
+            Ok(())
+        }
+
         /// . display taxpool balance
         #[ink(message)]
         pub fn tax_available(

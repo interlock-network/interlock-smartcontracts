@@ -1,8 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "@polkadot/api": "^9.5.1",
-    "@polkadot/api-contract": "^9.5.1",
-    "dotenv": "^16.0.3"
-  }
-}
