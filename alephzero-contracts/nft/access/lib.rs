@@ -41,8 +41,9 @@ pub mod psp34_nft {
         attribute_names: Mapping<u32, Vec<u8>>,
         locked_tokens: Mapping<Id, u8>,
         locked_token_count: u64,
-        nfts_held: Mapping<AccountId, Vec<Id>>,
+        collection: Mapping<AccountId, Vec<Id>>,
         cap: u64,
+        credentials: Mapping<Id, Hash>,
     }
 
     #[openbrush::wrapper]
@@ -51,7 +52,7 @@ pub mod psp34_nft {
     impl PSP34 for Psp34Nft {
 
         /// . override transfer function to reset each NFT to 'not authenticated' on transfer
-        /// . also updates 'collection' status (nfts_held)
+        /// . also updates 'collection' status (collection)
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -70,7 +71,7 @@ pub mod psp34_nft {
             );
 
             // update sender's collection
-            let mut from_collection = match self.nfts_held.get(from) {
+            let mut from_collection = match self.collection.get(from) {
                 Some(collection) => collection,
                 None => return Err(PSP34Error::Custom(
                         format!("No collection, fatal error").into_bytes())),
@@ -81,15 +82,15 @@ pub mod psp34_nft {
                         format!("No NFT in collection, fatal error").into_bytes())),
             };
             from_collection.remove(index);
-            self.nfts_held.insert(from, &from_collection);
+            self.collection.insert(from, &from_collection);
 
             // update recipient's collection
-            let mut to_collection = match self.nfts_held.get(to) {
+            let mut to_collection = match self.collection.get(to) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
             to_collection.push(id);
-            self.nfts_held.insert(to, &to_collection);
+            self.collection.insert(to, &to_collection);
 
             Ok(())
         }
@@ -142,7 +143,7 @@ pub mod psp34_nft {
             name: String,
             symbol: String,
             class: String,
-            cap: u64
+            cap: u64,
         ) -> Self {
             
             // create the contract
@@ -195,14 +196,14 @@ pub mod psp34_nft {
             let _ = self._mint_to(recipient, psp34::Id::U64(self.last_token_id))?;
 
             // get nft collection of recipient if already holding
-            let mut collection = match self.nfts_held.get(recipient) {
+            let mut collection = match self.collection.get(recipient) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
 
             // add id to recipient's nft collection
             collection.push(psp34::Id::U64(self.last_token_id));
-            self.nfts_held.insert(recipient, &collection);
+            self.collection.insert(recipient, &collection);
 
             // set metadata specific to token
             
@@ -247,12 +248,12 @@ pub mod psp34_nft {
             let _ = self.set_multiple_attributes(Id::U64(self.last_token_id), attributes, values)?;
 
             // update recipient's collection
-            let mut collection = match self.nfts_held.get(recipient) {
+            let mut collection = match self.collection.get(recipient) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
             collection.push(Id::U64(self.last_token_id));
-            self.nfts_held.insert(recipient, &collection);
+            self.collection.insert(recipient, &collection);
 
             Ok(())
         }
@@ -263,7 +264,7 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn set_authenticated(
             &mut self,
-            id: Id
+            id: Id,
         ) -> Result<(), PSP34Error> {
 
             // << insert custom logic here >>
@@ -279,7 +280,6 @@ pub mod psp34_nft {
                 String::from("false").into_bytes(),
             );
 
-
             Ok(())
         }
 
@@ -288,7 +288,7 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn set_waiting(
             &mut self,
-            id: Id
+            id: Id,
         ) -> Result<(), PSP34Error> {
 
             // << insert custom logic here >>
@@ -302,12 +302,28 @@ pub mod psp34_nft {
             Ok(())
         }
 
+        /// . store hashed username password pair
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn set_credential(
+            &mut self,
+            id: Id,
+            hash: Hash,
+        ) -> Result<(), PSP34Error> {
+
+            // << insert custom logic here >>
+
+            self.credentials.insert(id, &hash);
+
+            Ok(())
+        }
+
         /// . revoke 'authenticated' status from interlocker
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_not_authenticated(
             &mut self,
-            id: Id
+            id: Id,
         ) -> Result<(), PSP34Error> {
 
             // << insert custom logic here >>
@@ -321,18 +337,35 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . get collection of nfts held by particular ilocker
+        /// . get collection of nfts held by particular wallet
         #[ink(message)]
-        pub fn ilocker_collection(
+        pub fn get_collection(
             &self,
-            ilocker: AccountId
+            ilocker: AccountId,
         ) -> Result<Vec<Id>, PSP34Error> {
 
             // retrieve the collection
-            match self.nfts_held.get(ilocker) {
+            match self.collection.get(ilocker) {
                 Some(vec) => Ok(vec),
                 None => Err(PSP34Error::Custom(
                         format!("The user {:?} does not have a collection.", ilocker).into_bytes())),
+            }
+        }
+
+        /// . get hashed username password pair
+        #[ink(message)]
+        pub fn get_credential(
+            &mut self,
+            id: Id,
+        ) -> Result<Hash, PSP34Error> {
+
+            // << insert custom logic here >>
+
+            // retrieve the collection
+            match self.credentials.get(id.clone()) {
+                Some(hash) => Ok(hash),
+                None => Err(PSP34Error::Custom(
+                        format!("NFT ID {:?} does not have credentials assigned.", id).into_bytes())),
             }
         }
 
