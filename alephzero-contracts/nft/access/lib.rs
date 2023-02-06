@@ -309,13 +309,13 @@ pub mod psp34_nft {
         pub fn set_credential(
             &mut self,
             id: Id,
-            username: Hash,
-            password: Hash,
+            userhash: Hash,
+            passhash: Hash,
         ) -> Result<(), PSP34Error> {
 
             // << insert custom logic here >>
 
-            self.credentials.insert(username, &(password, id));
+            self.credentials.insert(userhash, &(passhash, id));
 
             Ok(())
         }
@@ -358,14 +358,14 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn check_credential(
             &mut self,
-            username: Hash,
+            userhash: Hash,
         ) -> Result<(Hash, Id), PSP34Error> {
 
             // << insert custom logic here >>
 
             // retrieve the collection
-            match self.credentials.get(username) {
-                Some((password, id)) => Ok((password, id)),
+            match self.credentials.get(userhash) {
+                Some((passhash, id)) => Ok((passhash, id)),
                 None => Err(PSP34Error::Custom(
                         format!("Credentials nonexistent.").into_bytes())),
             }
