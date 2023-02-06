@@ -43,7 +43,7 @@ pub mod psp34_nft {
         locked_token_count: u64,
         collection: Mapping<AccountId, Vec<Id>>,
         cap: u64,
-        credentials: Mapping<Id, Hash>,
+        credentials: Mapping<Hash, Id>,
     }
 
     #[openbrush::wrapper]
@@ -313,7 +313,7 @@ pub mod psp34_nft {
 
             // << insert custom logic here >>
 
-            self.credentials.insert(id, &hash);
+            self.credentials.insert(hash, &id);
 
             Ok(())
         }
@@ -356,16 +356,16 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn get_credential(
             &mut self,
-            id: Id,
-        ) -> Result<Hash, PSP34Error> {
+            hash: Hash,
+        ) -> Result<Id, PSP34Error> {
 
             // << insert custom logic here >>
 
             // retrieve the collection
-            match self.credentials.get(id.clone()) {
-                Some(hash) => Ok(hash),
+            match self.credentials.get(hash) {
+                Some(id) => Ok(id),
                 None => Err(PSP34Error::Custom(
-                        format!("NFT ID {:?} does not have credentials assigned.", id).into_bytes())),
+                        format!("Credentials nonexistent or incorrect.").into_bytes())),
             }
         }
 
