@@ -43,7 +43,8 @@ pub mod psp34_nft {
         locked_token_count: u64,
         collection: Mapping<AccountId, Vec<Id>>,
         cap: u64,
-        credentials: Mapping<Hash, Id>,
+        credentials: Mapping<Hash, (Hash, Id)>,
+        // username hash -> (password hash, nft ID)
     }
 
     #[openbrush::wrapper]
@@ -308,12 +309,13 @@ pub mod psp34_nft {
         pub fn set_credential(
             &mut self,
             id: Id,
-            hash: Hash,
+            username: Hash,
+            password: Hash,
         ) -> Result<(), PSP34Error> {
 
             // << insert custom logic here >>
 
-            self.credentials.insert(hash, &id);
+            self.credentials.insert(username, &(password, id));
 
             Ok(())
         }
@@ -341,31 +343,31 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn get_collection(
             &self,
-            ilocker: AccountId,
+            wallet: AccountId,
         ) -> Result<Vec<Id>, PSP34Error> {
 
             // retrieve the collection
-            match self.collection.get(ilocker) {
+            match self.collection.get(wallet) {
                 Some(vec) => Ok(vec),
                 None => Err(PSP34Error::Custom(
-                        format!("The user {:?} does not have a collection.", ilocker).into_bytes())),
+                        format!("The wallet {:?} does not have a collection.", wallet).into_bytes())),
             }
         }
 
         /// . get hashed username password pair
         #[ink(message)]
-        pub fn get_credential(
+        pub fn check_credential(
             &mut self,
-            hash: Hash,
-        ) -> Result<Id, PSP34Error> {
+            username: Hash,
+        ) -> Result<(Hash, Id), PSP34Error> {
 
             // << insert custom logic here >>
 
             // retrieve the collection
-            match self.credentials.get(hash) {
-                Some(id) => Ok(id),
+            match self.credentials.get(username) {
+                Some((password, id)) => Ok((password, id)),
                 None => Err(PSP34Error::Custom(
-                        format!("Credentials nonexistent or incorrect.").into_bytes())),
+                        format!("Credentials nonexistent.").into_bytes())),
             }
         }
 
