@@ -27,7 +27,6 @@ pub mod psp34_nft {
 
     use ilockmvp::ILOCKmvpRef;
     use ilockmvp::ilockmvp::OtherError;
-    use ink::prelude::vec::Vec;
 
     pub const PORT: u16;
 
@@ -237,7 +236,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . mint a universal access nft to self at token_price in ILOCK
+        /// . mint a universal access nft to self at token_price in PSP22 token
         #[ink(message)]
         pub fn self_mint(
             &mut self,
@@ -309,6 +308,44 @@ pub mod psp34_nft {
             self.collections.insert(recipient, &collection);
 
             Ok(())
+        }
+
+        /// . register this universal access nft contract with PSP22 token contract to allow self-minting
+        /// . only operator may call
+        #[ink(message)]
+        pub fn create_socket(
+            &mut self
+        ) -> Result<(), OtherError> {
+
+            // make sure caller is operator
+            if self.env().caller() != self.operator {
+
+                return Err(OtherError::CallerNotOperator);
+            }
+
+            self.token_instance.create_socket(self.env().caller(), PORT)
+        }
+
+        /// . make call to universal access nft socket with token contract
+        ///   (ie, transfer token from recipient to contract owner within PSP22 contract
+        /// . only operator may call
+        #[ink(message)]
+        pub fn call_socket(
+            &mut self,
+            address: AccountId,
+            amount: Balance,
+            data: Vec<u8>,                  // <--! data vector to pass custom information to token
+            ) -> Result<(), OtherError> {   //      contract logic
+
+            // make sure caller is operator
+            if self.env().caller() != self.operator {
+
+                return Err(OtherError::CallerNotOperator);
+            }
+
+            // < do stuff here, then reward user >
+
+            self.token_instance.call_socket(address, amount, data)
         }
 
         /// . store hashed username password pair
