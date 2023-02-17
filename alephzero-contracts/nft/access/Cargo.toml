@@ -8,6 +8,8 @@ edition = "2021"
 # This unstable ink commit is required by Openbrush
 ink = { git = "https://github.com/paritytech/ink", rev = "4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false }
 
+ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
+
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
@@ -30,6 +32,7 @@ std = [
     "scale-info/std",
 
     "openbrush/std",
+    "ilockmvp/std"
 ]
 ink-as-dependency = []
 
