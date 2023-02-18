@@ -55,7 +55,6 @@ pub mod psp34_nft {
                         // username hash -> (password hash, nft ID)
         userhashes: Mapping<Id, Hash>,
                         // uanft ID -> username hash
-
         
         // application state forming socket to ILOCK token contract
         token_instance: ILOCKmvpRef,
@@ -85,6 +84,15 @@ pub mod psp34_nft {
                 String::from("isauthenticated").into_bytes(),
                 String::from("false").into_bytes(),
             );
+
+            // revoke access if uanft registered to prior owner
+            match self.userhashes.get(id.clone()) {
+                Some(hash) => {
+                    self.credentials.remove(hash);
+                    self.userhashes.remove(id.clone());
+                },
+                None => (),
+            };
 
             // update sender's collection
             let mut from_collection = match self.collections.get(from) {
