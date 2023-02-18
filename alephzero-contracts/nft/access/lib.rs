@@ -396,16 +396,22 @@ pub mod psp34_nft {
         }
 
         /// . store hashed username password pair
+        /// . associate uanft id with username
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_credential(
             &mut self,
             id: Id,
-            username: Hash,
-            password: Hash,
+            userhash: Hash,
+            passhash: Hash,
         ) -> Result<(), PSP34Error> {
 
-            self.credentials.insert(username, &(password, id));
+            // password and uanft id info affiliated with username
+            self.credentials.insert(userhash, &(passhash, id));
+
+            // username affiliated with uanft id
+            // ...this is necessary to revoke access upon uanft transfer
+            self.userhashes.insert(id, &userhash);
 
             Ok(())
         }
