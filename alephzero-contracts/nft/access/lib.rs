@@ -48,10 +48,14 @@ pub mod psp34_nft {
         attribute_names: Mapping<u32, Vec<u8>>,
         locked_tokens: Mapping<Id, u8>,
         locked_token_count: u64,
-        collections: Mapping<AccountId, Vec<Id>>,
+
         cap: u64,
+        collections: Mapping<AccountId, Vec<Id>>,
         credentials: Mapping<Hash, (Hash, Id)>,
-        // username hash -> (password hash, nft ID)
+                        // username hash -> (password hash, nft ID)
+        userhashes: Mapping<Id, Hash>,
+                        // uanft ID -> username hash
+
         
         // application state forming socket to ILOCK token contract
         token_instance: ILOCKmvpRef,
@@ -273,7 +277,7 @@ pub mod psp34_nft {
                        format!("Minter cannot affort NFT at current price of {:?}.", price).into_bytes()))
             }
 
-            // if can afford, initiate PSP22 token transfer now
+            // if can afford, initiate PSP22 token transfer to contract operator now
             let _ = self.call_socket(minter, price, Vec::new());
 
             // mint next id
@@ -289,8 +293,6 @@ pub mod psp34_nft {
             collection.push(psp34::Id::U64(self.last_token_id));
             self.collections.insert(minter, &collection);
 
-            // set metadata specific to token
-            
             // initial authentication status is false
             self._set_attribute(
                 psp34::Id::U64(self.last_token_id),
@@ -390,6 +392,17 @@ pub mod psp34_nft {
                        format!("Caller does not own UANFT id {:?}.", id).into_bytes()))
             }
 
+            // make sure uanft is not already authenticated
+
+            // make sure username is not already taken
+            match self.get_credential(userhash) {
+                Ok(credential) => return Err(PSP34Error::Custom(
+                                         format!("Username already taken by UANFT ID {:?}.",
+                                                 credential.1).into_bytes())),
+                // error means username is not registered thus is available
+                Err(_error) => (),
+            };
+
             // set nft 'authenticated'
             let _ = self.set_authenticated(id.clone())?;
 
@@ -487,7 +500,7 @@ pub mod psp34_nft {
 
         /// . get hashed username password pair
         #[ink(message)]
-        pub fn check_credential(
+        pub fn get_credential(
             &mut self,
             username: Hash,
         ) -> Result<(Hash, Id), PSP34Error> {
