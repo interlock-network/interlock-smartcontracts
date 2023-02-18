@@ -317,7 +317,7 @@ pub mod psp34_nft {
             // make sure cap is not surpassed
             if self.last_token_id >= self.cap {
                 return Err(PSP34Error::Custom(
-                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
             // mint and set
@@ -366,6 +366,39 @@ pub mod psp34_nft {
             self.token_instance.call_socket(address, amount, data)
         }
 
+        /// . authenticate NFT
+        /// . store hashed username password pair to register credentials
+        #[ink(message)]
+        pub fn register(
+            &mut self,
+            id: Id,
+            userhash: Hash,
+            passhash: Hash,
+        ) -> Result<(), PSP34Error> {
+    
+            // get nft owner
+            let owner: AccountId = match self.owner_of(id.clone()) {
+                Some(owner) => owner,
+                None => return Err(PSP34Error::Custom(
+                               format!("NFT id {:?} does not exist.", id).into_bytes())),
+            };
+
+            // make sure signing caller owns UANFT
+            if self.env().caller() != owner {
+
+                return Err(PSP34Error::Custom(
+                       format!("Caller does not own UANFT id {:?}.", id).into_bytes()))
+            }
+
+            // set nft 'authenticated'
+            let _ = self.set_authenticated(id.clone())?;
+
+            // set access credential hashes
+            let _ = self.set_credential(id, userhash, passhash)?;
+
+            Ok(())
+        }
+
         /// . store hashed username password pair
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
@@ -375,8 +408,6 @@ pub mod psp34_nft {
             username: Hash,
             password: Hash,
         ) -> Result<(), PSP34Error> {
-
-            // << insert custom logic here >>
 
             self.credentials.insert(username, &(password, id));
 
@@ -413,8 +444,6 @@ pub mod psp34_nft {
             id: Id,
         ) -> Result<(), PSP34Error> {
 
-            // << insert custom logic here >>
-
             self._set_attribute(
                 id.clone(),
                 String::from("isauthenticated").into_bytes(),
@@ -431,8 +460,6 @@ pub mod psp34_nft {
             &mut self,
             id: Id,
         ) -> Result<(), PSP34Error> {
-
-            // << insert custom logic here >>
 
             self._set_attribute(
                 id,
