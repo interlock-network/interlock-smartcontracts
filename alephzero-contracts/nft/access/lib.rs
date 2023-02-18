@@ -66,7 +66,7 @@ pub mod psp34_nft {
 
     impl PSP34 for Psp34Nft {
 
-        /// . override transfer function to reset each NFT to 'not authenticated' on transfer
+        /// . override transfer function to revoke access credentials if existent
         /// . also updates 'collection' status (collection)
         #[ink(message)]
         fn transfer(
@@ -76,21 +76,15 @@ pub mod psp34_nft {
             data: Vec<u8>
         ) -> Result<(), PSP34Error> {
 
-            // revoke authenticated status
-            let from = self.env().caller();
-            let _ = self._transfer_token(to, id.clone(), data)?;
-            self._set_attribute(
-                id.clone(),
-                String::from("isauthenticated").into_bytes(),
-                String::from("false").into_bytes(),
-            );
-
             // revoke access if uanft registered to prior owner
             match self.userhashes.get(id.clone()) {
+                
+                // aunft registered by prior owner
                 Some(hash) => {
                     self.credentials.remove(hash);
                     self.userhashes.remove(id.clone());
                 },
+                // aunft never registered by prior owner
                 None => (),
             };
 
@@ -238,15 +232,6 @@ pub mod psp34_nft {
             collection.push(psp34::Id::U64(self.last_token_id));
             self.collections.insert(recipient, &collection);
 
-            // set metadata specific to token
-            
-            // initial authentication status is false
-            self._set_attribute(
-                psp34::Id::U64(self.last_token_id),
-                String::from("isauthenticated").into_bytes(),
-                String::from("false").into_bytes(),
-            );
-
             Ok(())
         }
 
@@ -300,13 +285,6 @@ pub mod psp34_nft {
             // add id to recipient's nft collection
             collection.push(psp34::Id::U64(self.last_token_id));
             self.collections.insert(minter, &collection);
-
-            // initial authentication status is false
-            self._set_attribute(
-                psp34::Id::U64(self.last_token_id),
-                String::from("isauthenticated").into_bytes(),
-                String::from("false").into_bytes(),
-            );
 
             Ok(())
         }
@@ -411,9 +389,6 @@ pub mod psp34_nft {
                 Err(_error) => (),
             };
 
-            // set nft 'authenticated'
-            let _ = self.set_authenticated(id.clone())?;
-
             // set access credential hashes
             let _ = self.set_credential(id, userhash, passhash)?;
 
@@ -457,39 +432,6 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . grant 'authenticated' status to holder
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn set_authenticated(
-            &mut self,
-            id: Id,
-        ) -> Result<(), PSP34Error> {
-
-            self._set_attribute(
-                id.clone(),
-                String::from("isauthenticated").into_bytes(),
-                String::from("true").into_bytes(),
-            );
-
-            Ok(())
-        }
-
-        /// . revoke 'authenticated' status from holder
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn set_not_authenticated(
-            &mut self,
-            id: Id,
-        ) -> Result<(), PSP34Error> {
-
-            self._set_attribute(
-                id,
-                String::from("isauthenticated").into_bytes(),
-                String::from("false").into_bytes(),
-            );
-
-            Ok(())
-        }
 
         /// . get collection of nfts held by particular address
         #[ink(message)]
