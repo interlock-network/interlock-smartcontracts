@@ -453,6 +453,7 @@ pub mod ilockmvp {
         }
     }
 
+    // this is for linking openbrush PSP34 contract
     impl Default for ILOCKmvpRef {
 
         fn default() -> ILOCKmvpRef {
@@ -1095,20 +1096,56 @@ pub mod ilockmvp {
             };
 
             // get port info
-            let port: Port = match self.ports.get(socket.portnumber) {
+            let mut port: Port = match self.ports.get(socket.portnumber) {
                 Some(port) => port,
                 None => return Err(OtherError::NoPort),
             };
 
-            // tax socket owner, inject port logic, transfer reward
+            // apply custom logic for given port
             match socket.portnumber {
 
                 // NOTE: injecting custom logic into port requires Interlock Token
                 //       contract codehash update after internal port contract audit
                 
-                // reserved Interlock ports
-                0 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
+                // PORT 0 == Interlock-owned UANFTs
+                //
+                // This socket call is a UANFT self-mint operation
+                0 => { 
+
+                    // deduct cost of uanft from minter's account
+                    let mut minterbalance: Balance = self.psp22.balance_of(address);
+                    match minterbalance.checked_sub(amount) {
+                        Some(difference) => minterbalance = difference,
+                        None => return Err(OtherError::Custom("Underflow error.".to_string())),
+                    };
+                    self.psp22.balances.insert(&address, &minterbalance);
+                
+                    // update pools
+                    match self.poolbalances[REWARDS as usize].checked_add(amount) {
+                        Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                        None => return Err(OtherError::Custom("Overflow error.".to_string())),
+                    };
+                    match self.circulatingsupply.checked_sub(amount) {
+                        Some(difference) => self.circulatingsupply = difference,
+                        None => return Err(OtherError::Custom("Underflow error.".to_string())),
+                    };
+
+                    // update port
+                    match port.paid.checked_add(amount) {
+                        Some(sum) => port.paid = sum,
+                        None => return Err(OtherError::Custom("Overflow error.".to_string())),
+                    };
+                    self.ports.insert(0, &port);
+
+                    return Ok(())
+                },
+
+                // PORT 1 == Non-Interlock UANFTs
+                //
+                // This socket call is for a UANFT self-mint operation that is taxed by Interlock
                 1 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
+
+                // reserved Interlock ports
                 2 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
                 3 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
                 4 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
