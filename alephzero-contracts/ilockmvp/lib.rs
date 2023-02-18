@@ -29,6 +29,8 @@ pub use self::ilockmvp::{
     ILOCKmvpRef,
 };
 
+
+
 #[openbrush::contract]
 pub mod ilockmvp {
 
@@ -279,12 +281,19 @@ pub mod ilockmvp {
         }
     }
 
+    impl From<OwnableError> for OtherError {
+        fn from(error: OwnableError) -> Self {
+            OtherError::Custom(format!("{:?}", error))
+        }
+    }
+
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
     /// . OtherError result type.
     pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
     pub type Event = <ILOCKmvp as ContractEventBase>::Type;
+
 
 ////////////////////////////////////////////////////////////////////////////
 /////// reimplement some functions /////////////////////////////////////////
@@ -441,6 +450,14 @@ pub mod ilockmvp {
                     amount: _amount,
                 }),
             );
+        }
+    }
+
+    impl Default for ILOCKmvpRef {
+
+        fn default() -> ILOCKmvpRef {
+
+            ink::env::call::FromAccountId::from_account_id(AccountId::from([0_u8; 32]))
         }
     }
 

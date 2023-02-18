@@ -24,11 +24,12 @@ pub mod psp34_nft {
         traits::Storage,
         modifiers,
     };
+    use openbrush::contracts::psp22::psp22_external::PSP22;
 
     use ilockmvp::ILOCKmvpRef;
     use ilockmvp::ilockmvp::OtherError;
 
-    pub const PORT: u16;
+    pub const PORT: u16 = 0;
 
     #[derive(Default, Storage)]
     #[ink(storage)]
@@ -41,8 +42,7 @@ pub mod psp34_nft {
         #[storage_field]
         ownable: ownable::Data,
 
-        nft_price_coin: u64,
-        nft_price_token: u64,
+        nft_price_token: Balance,
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
@@ -54,7 +54,7 @@ pub mod psp34_nft {
         // username hash -> (password hash, nft ID)
         
         // application state forming socket to ILOCK token contract
-        token_instance: ILOCKtokenRef,
+        token_instance: ILOCKmvpRef,
         operator: AccountId,
     }
 
@@ -156,7 +156,8 @@ pub mod psp34_nft {
             symbol: String,
             class: String,
             cap: u64,
-            token_address: 
+            price: Balance,
+            token_address: AccountId,
         ) -> Self {
             
             // create the contract
@@ -182,14 +183,15 @@ pub mod psp34_nft {
             // assign caller as owner
             contract._init_with_owner(contract.env().caller());
 
-            // create reference to deployed token contract
-            
             // create a reference to the deployed token contract
             contract.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
             contract.operator = Self::env().caller();
 
             // set cap
             contract.cap = cap;
+
+            // set nft price in PSP22 token
+            contract.nft_price_token = price;
 
             contract
         }
@@ -240,10 +242,14 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn self_mint(
             &mut self,
+            price: Balance,
         ) -> Result<(), PSP34Error> {
 
             // next token id
             self.last_token_id += 1;
+
+            // mint recipient
+            let minter: AccountId = self.env().caller();
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.cap {
@@ -251,18 +257,37 @@ pub mod psp34_nft {
                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
-            // if cap not surpassed, mint next id
-            let _ = self._mint_to(self.env().caller(), psp34::Id::U64(self.last_token_id))?;
+            // make sure asking price matches nft_price_token
+            // ...this is to ensure that contract owner doesn't hike up token price between the
+            //    time somebody checks the price, and the time that somebody submits tx to
+            //    self-mint for that given price
+            if self.nft_price_token > price {
+                return Err(PSP34Error::Custom(
+                       format!("Current NFT price greater than agreed sale price of {:?}.", price).into_bytes()))
+            }
+            
+            // make sure mint recipient can afford the PSP22 token price
+            let recipient_balance: Balance = self.token_instance.balance_of(minter);
+            if recipient_balance < price {
+                return Err(PSP34Error::Custom(
+                       format!("Minter cannot affort NFT at current price of {:?}.", price).into_bytes()))
+            }
+
+            // if can afford, initiate PSP22 token transfer now
+            let _ = self.call_socket(minter, price, Vec::new());
+
+            // mint next id
+            let _ = self._mint_to(minter, psp34::Id::U64(self.last_token_id))?;
 
             // get nft collection of recipient if already holding
-            let mut collection = match self.collections.get(recipient) {
+            let mut collection = match self.collections.get(minter) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
 
             // add id to recipient's nft collection
             collection.push(psp34::Id::U64(self.last_token_id));
-            self.collections.insert(recipient, &collection);
+            self.collections.insert(minter, &collection);
 
             // set metadata specific to token
             
@@ -311,7 +336,8 @@ pub mod psp34_nft {
         }
 
         /// . register this universal access nft contract with PSP22 token contract to allow self-minting
-        /// . only operator may call
+        /// . only contract owner may create a socket between this contract and the PSP22 token
+        #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn create_socket(
             &mut self
@@ -326,8 +352,8 @@ pub mod psp34_nft {
             self.token_instance.create_socket(self.env().caller(), PORT)
         }
 
-        /// . make call to universal access nft socket with token contract
-        ///   (ie, transfer token from recipient to contract owner within PSP22 contract
+        /// . make call through universal access nft socket to PSP22 token contract
+        ///   (ie, transfer token from recipient to contract owner within PSP22 contract)
         /// . only operator may call
         #[ink(message)]
         pub fn call_socket(
@@ -336,14 +362,6 @@ pub mod psp34_nft {
             amount: Balance,
             data: Vec<u8>,                  // <--! data vector to pass custom information to token
             ) -> Result<(), OtherError> {   //      contract logic
-
-            // make sure caller is operator
-            if self.env().caller() != self.operator {
-
-                return Err(OtherError::CallerNotOperator);
-            }
-
-            // < do stuff here, then reward user >
 
             self.token_instance.call_socket(address, amount, data)
         }
@@ -369,9 +387,9 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn get_token_price(
             &self,
-        ) -> u64 {
+        ) -> Balance {
 
-            self.token_price
+            self.nft_price_token
         }
 
         /// . change the price that self-minter must pay for universal access nft
@@ -379,10 +397,10 @@ pub mod psp34_nft {
         #[ink(message)]
         pub fn set_token_price(
             &mut self,
-            price: u64,
+            price: Balance,
         ) -> Result<(), PSP34Error> {
 
-            self.token_price = price;
+            self.nft_price_token = price;
 
             Ok(())
         }
