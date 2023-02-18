@@ -55,6 +55,7 @@ pub mod psp34_nft {
                         // username hash -> (password hash, nft ID)
         userhashes: Mapping<Id, Hash>,
                         // uanft ID -> username hash
+        // userhashes mapping is for revoking access on uanft transfer
         
         // application state forming socket to ILOCK token contract
         token_instance: ILOCKmvpRef,
@@ -75,6 +76,10 @@ pub mod psp34_nft {
             id: Id,
             data: Vec<u8>
         ) -> Result<(), PSP34Error> {
+
+            // transfer
+            let from = self.env().caller();
+            let _ = self._transfer_token(to, id.clone(), data)?;
 
             // revoke access if uanft registered to prior owner
             match self.userhashes.get(id.clone()) {
@@ -354,7 +359,6 @@ pub mod psp34_nft {
             self.token_instance.call_socket(address, amount, data)
         }
 
-        /// . authenticate NFT
         /// . store hashed username password pair to register credentials
         #[ink(message)]
         pub fn register(
@@ -378,13 +382,19 @@ pub mod psp34_nft {
                        format!("Caller does not own UANFT id {:?}.", id).into_bytes()))
             }
 
-            // make sure uanft is not already authenticated
-
             // make sure username is not already taken
             match self.get_credential(userhash) {
-                Ok(credential) => return Err(PSP34Error::Custom(
-                                         format!("Username already taken by UANFT ID {:?}.",
-                                                 credential.1).into_bytes())),
+
+                // if id matches id in credential mapping, then duplicate username belongs to
+                // caller, and caller is effectively resetting password
+                Ok(credential) => {
+
+                    if credential.1 != id {
+                        return Err(PSP34Error::Custom(
+                               format!("Username already taken by UANFT ID {:?}.",
+                                       credential.1).into_bytes()))
+                    }
+                },
                 // error means username is not registered thus is available
                 Err(_error) => (),
             };
@@ -407,11 +417,35 @@ pub mod psp34_nft {
         ) -> Result<(), PSP34Error> {
 
             // password and uanft id info affiliated with username
-            self.credentials.insert(userhash, &(passhash, id));
+            self.credentials.insert(userhash, &(passhash, id.clone()));
 
             // username affiliated with uanft id
             // ...this is necessary to revoke access upon uanft transfer
             self.userhashes.insert(id, &userhash);
+
+            Ok(())
+        }
+
+        /// . revoke access for particular user
+        #[openbrush::modifiers(only_owner)]
+        #[ink(message)]
+        pub fn revoke_access(
+            &mut self,
+            userhash: Hash,
+        ) -> Result<(), PSP34Error> {
+
+            // get the uanft id associated with username
+            let uanft: Id = match self.credentials.get(userhash) {
+                Some(credential) => credential.1,
+                None => return Err(PSP34Error::Custom(
+                               format!("Username not registered.").into_bytes())),
+            };
+
+            // remove hash pair
+            self.credentials.remove(userhash);
+
+            // remove uanft id mapping to userhash
+            self.userhashes.remove(uanft);
 
             Ok(())
         }
@@ -460,8 +494,6 @@ pub mod psp34_nft {
             &mut self,
             username: Hash,
         ) -> Result<(Hash, Id), PSP34Error> {
-
-            // << insert custom logic here >>
 
             // retrieve the collection
             match self.credentials.get(username) {
