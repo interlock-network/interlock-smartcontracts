@@ -31,6 +31,29 @@ pub mod psp34_nft {
 
     pub const PORT: u16 = 0;
 
+    /// . wrap AccountId type to implement Default
+    #[derive(scale::Encode, scale::Decode, Clone)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout
+        )
+    )]
+    pub struct Operator {
+        address: AccountId,
+    }
+    impl Default for Operator {
+        fn default() -> Operator {
+            Operator {
+                address: AccountId::from([1_u8;32]),
+            }
+        }
+    }
+
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
@@ -59,7 +82,7 @@ pub mod psp34_nft {
         
         // application state forming socket to ILOCK token contract
         token_instance: ILOCKmvpRef,
-        operator: AccountId,
+        operator: Operator,
     }
 
     #[openbrush::wrapper]
@@ -68,7 +91,7 @@ pub mod psp34_nft {
     impl PSP34 for Psp34Nft {
 
         /// . override transfer function to revoke access credentials if existent
-        /// . also updates 'collection' status (collection)
+        /// . also updates collection
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -89,6 +112,7 @@ pub mod psp34_nft {
                     self.credentials.remove(hash);
                     self.userhashes.remove(id.clone());
                 },
+
                 // aunft never registered by prior owner
                 None => (),
             };
@@ -196,7 +220,7 @@ pub mod psp34_nft {
 
             // create a reference to the deployed token contract
             contract.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
-            contract.operator = Self::env().caller();
+            contract.operator.address = Self::env().caller();
 
             // set cap
             contract.cap = cap;
@@ -221,7 +245,7 @@ pub mod psp34_nft {
             // make sure cap is not surpassed
             if self.last_token_id >= self.cap {
                 return Err(PSP34Error::Custom(
-                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
             // if cap not surpassed, mint next id
@@ -337,7 +361,7 @@ pub mod psp34_nft {
         ) -> Result<(), OtherError> {
 
             // make sure caller is operator
-            if self.env().caller() != self.operator {
+            if self.env().caller() != self.operator.address {
 
                 return Err(OtherError::CallerNotOperator);
             }
@@ -389,6 +413,7 @@ pub mod psp34_nft {
                 // caller, and caller is effectively resetting password
                 Ok(credential) => {
 
+                    // no id match thus username registered with different uanft
                     if credential.1 != id {
                         return Err(PSP34Error::Custom(
                                format!("Username already taken by UANFT ID {:?}.",

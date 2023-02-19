@@ -1,22 +1,23 @@
 [package]
-name = "psp34_nft"
+name = "interlock_access_nft"
 version = "0.0.1"
 authors = ["Blair Munro <blairmunroakusa@gmail.com>, ArtZero <admin@artzero.io>"]
 edition = "2021"
 
 [dependencies]
 # This unstable ink commit is required by Openbrush
-ink = { git = "https://github.com/paritytech/ink", rev = "4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false }
+ink = { version = "~4.0.0", default-features = false}
+
 
 ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
-openbrush = { tag = "3.0.0-beta", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp34", "ownable"] }
+openbrush = { tag = "3.0.0", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp34", "ownable"] }
 
 [lib]
-name = "psp34_nft"
+name = "interlock_access_nft"
 path = "lib.rs"
 crate-type = [
     # Used for normal contract Wasm blobs.
