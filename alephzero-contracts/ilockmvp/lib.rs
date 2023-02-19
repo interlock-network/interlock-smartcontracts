@@ -1056,18 +1056,34 @@ pub mod ilockmvp {
                 // contract that created the socket may start calling socket to receive rewards
                 self.sockets.insert(application, &socket);
             
-                // give socket allowance up to port cap
-                //   . connecting contracts will not be able to reward
-                //     more than cap specified by interlock (this may be a stipend, for example)
-                //   . rewards fail to transfer if the amount paid plus the reward exceeds cap
-                self.psp22.allowances.insert(
-                    &(&self.ownable.owner, &application),
-                    &port.cap
-                );
+                // setup socket according to port type
+                match portnumber {
 
-                self._emit_approval_event(self.ownable.owner, application, port.cap);
+                    // Interlock-owned UANFTs
+                    0 => { /* do nothing */ },
 
-                return Ok(()); 
+                    // non-Interlock-owned UANFTs
+                    1 => { /* do nothing */ },
+
+                    // Interlock gray area staking applications
+                    2 => {
+
+                        // give socket allowance up to port cap
+                        //   . connecting contracts will not be able to reward
+                        //     more than cap specified by interlock (this may be a stipend, for example)
+                        //   . rewards fail to transfer if the amount paid plus the reward exceeds cap
+                        self.psp22.allowances.insert(
+                            &(&self.ownable.owner, &application),
+                            &port.cap
+                        );
+
+                        self._emit_approval_event(self.ownable.owner, application, port.cap);
+                    },
+                    _ => return Err(OtherError::Custom(format!("Socket registering with invalid port."))),
+
+                };
+
+                return Ok(()) 
             }
 
             // returns error if calling staking application contract is not a known
@@ -1075,7 +1091,7 @@ pub mod ilockmvp {
             Err(OtherError::UnsafeContract)
         }
 
-        /// . check for socket and charge owner per port spec
+        /// . check for socket and apply custom logic
         #[ink(message)]
         pub fn call_socket(
             &mut self,
@@ -1109,7 +1125,8 @@ pub mod ilockmvp {
                 
                 // PORT 0 == Interlock-owned UANFTs
                 //
-                // This socket call is a UANFT self-mint operation
+                // This socket call is a UANFT self-mint operation with ILOCK proceeds returning to
+                // rewards pool
                 0 => { 
 
                     // deduct cost of uanft from minter's account
@@ -1136,38 +1153,36 @@ pub mod ilockmvp {
                         None => return Err(OtherError::Custom("Overflow error.".to_string())),
                     };
                     self.ports.insert(0, &port);
-
-                    return Ok(())
                 },
 
-                // PORT 1 == Non-Interlock UANFTs
+                // PORT 1 == Non-Interlock-owned UANFTs
                 //
                 // This socket call is for a UANFT self-mint operation that is taxed by Interlock
-                1 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
+                // but mint ILOCK proceeds go to socket operator instead of Interlock
+                1 => {
 
-                // reserved Interlock ports
-                2 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                3 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                4 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                5 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                6 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                7 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                8 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                9 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
+                    // deduct cost of uanft from minter's account
+                    let mut minterbalance: Balance = self.psp22.balance_of(address);
+                    match minterbalance.checked_sub(amount) {
+                        Some(difference) => minterbalance = difference,
+                        None => return Err(OtherError::Custom("Underflow error.".to_string())),
+                    };
+                    self.psp22.balances.insert(&address, &minterbalance);
 
-                // reserved community node ports
-                10 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                11 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                12 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                13 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                14 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                15 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                16 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                17 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                18 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
-                19 => { self.tax_and_reward(address, amount, port, socket.portnumber)? },
+                    // increment cost of uanft to operator's account
+                    let mut operatorbalance: Balance = self.psp22.balance_of(socket.operator);
+                    match operatorbalance.checked_add(amount) {
+                        Some(sum) => operatorbalance = sum,
+                        None => return Err(OtherError::Custom("Overflow error.".to_string())),
+                    };
+                    self.psp22.balances.insert(&socket.operator, &operatorbalance);
+                },
 
+                // PORT 2 == reserved for Interlock gray-area staking applications
                 //
+                // reserved Interlock ports
+                2 => { /* gray area staking rewards logic here */ },
+
                 // .
                 // .
                 // .
@@ -1178,9 +1193,6 @@ pub mod ilockmvp {
 
                     // < inject custom logic here BEFORE tax_and_reward >
                     // <    (ie, do stuff with port and socket data)    >
-
-                    // then reward and tax
-                    self.tax_and_reward(address, amount, port, socket.portnumber)?
                 },
 
                 _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
