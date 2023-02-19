@@ -10,15 +10,14 @@
 // vesting schedule, and for rewarding interlockers for
 // browsing the internet with the Interlock browser extension.
 //
-// This contract build may need to be done after running
+// Build with cargo-contract version 2.0.0
 //
-//      cargo install cargo-contract --force --version 2
+//      cargo install cargo-contract --force --version 2.0.0
 //
-// The contract may be built running
+// Build
 //
 //      cargo contract build
 //
-
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -687,7 +686,7 @@ pub mod ilockmvp {
             };
 
             // calculate remaining share
-            let remainingshare: Balance = match this_stakeholder.paid.checked_sub(newpaidtotal) {
+            let remainingshare: Balance = match this_stakeholder.share.checked_sub(newpaidtotal) {
                 Some(difference) => difference,
                 None => return Err(OtherError::Underflow.into()),
             };
@@ -790,7 +789,7 @@ pub mod ilockmvp {
             pool: u8,
         ) -> (String, Balance) {
 
-            (format!("pool: {:?} balance: {:?}", 
+            (format!("pool: {:?}, balance: {:?}", 
                     POOLS[pool as usize].name.to_string(),
                     self.poolbalances[pool as usize]),
              self.poolbalances[pool as usize])
@@ -925,8 +924,6 @@ pub mod ilockmvp {
                 &amount,
             );
 
-
-
             self.taxpool -= amount;
 
             Ok(())
@@ -954,7 +951,7 @@ pub mod ilockmvp {
         #[ink(message)]
         pub fn cap(
             &self,
-        ) -> u128 {
+        ) -> Balance {
 
             SUPPLY_CAP
         }
