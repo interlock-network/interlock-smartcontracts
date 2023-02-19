@@ -12,7 +12,7 @@
 //
 // This contract build may need to be done after running
 //
-//      cargo install cargo-contract --version 2.0.0-beta
+//      cargo install cargo-contract --force --version 2
 //
 // The contract may be built running
 //
@@ -28,8 +28,6 @@ pub use self::ilockmvp::{
     ILOCKmvp,
     ILOCKmvpRef,
 };
-
-
 
 #[openbrush::contract]
 pub mod ilockmvp {
@@ -132,7 +130,7 @@ pub mod ilockmvp {
         pool: u8,
     }
 
-    #[derive(scale::Encode, scale::Decode, Clone, Default)]
+    #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
     derive(
@@ -153,7 +151,21 @@ pub mod ilockmvp {
         owner: AccountId,
     }
 
-    #[derive(scale::Encode, scale::Decode, Clone, Default)]
+    impl Default for Port {
+        fn default() -> Port {
+            Port {
+                application: Default::default(),
+                tax: 0,
+                cap: 0,
+                locked: true,
+                paid: 0,
+                collected: 0,
+                owner: AccountId::from([1_u8;32]),
+            }
+        }
+    }
+
+    #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
     derive(
@@ -169,6 +181,14 @@ pub mod ilockmvp {
         portnumber: u16,
     }
 
+    impl Default for Socket {
+        fn default() -> Socket {
+            Socket {
+                operator: AccountId::from([1_u8;32]),
+                portnumber: 0,
+            }
+        }
+    }
 
     /// . ILOCKmvp struct contains overall storage data for contract
     #[ink(storage)]
@@ -460,7 +480,7 @@ pub mod ilockmvp {
     // this is for linking openbrush PSP34 contract
     impl Default for ILOCKmvpRef {
         fn default() -> ILOCKmvpRef {
-            ink::env::call::FromAccountId::from_account_id(AccountId::from([0_u8; 32]))
+            ink::env::call::FromAccountId::from_account_id(AccountId::from([1_u8; 32]))
         }
     }
 
