@@ -501,7 +501,6 @@ pub mod psp34_nft {
             Ok(())
         }
 
-
         /// . get collection of nfts held by particular address
         #[ink(message)]
         pub fn get_collection(
@@ -529,6 +528,20 @@ pub mod psp34_nft {
                 Some((password, id)) => Ok((password, id)),
                 None => Err(PSP34Error::Custom(
                         format!("Credentials nonexistent.").into_bytes())),
+            }
+        }
+
+        /// . check to see if uanft is authenticated
+        #[ink(message)]
+        pub fn is_authenticated(
+            &mut self,
+            id: Id,
+        ) -> Result<bool, PSP34Error> {
+
+            // if userhash exists, then uanft is authenticated
+            match self.userhashes.get(id) {
+                Some(_hash) => Ok(true),
+                None => Ok(false),
             }
         }
 
