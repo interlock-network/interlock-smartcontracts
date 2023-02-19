@@ -424,8 +424,12 @@ pub mod psp34_nft {
                 Err(_error) => (),
             };
 
-            // set access credential hashes
-            let _ = self.set_credential(id, userhash, passhash)?;
+            // password and uanft id info affiliated with username
+            self.credentials.insert(userhash, &(passhash, id.clone()));
+
+            // username affiliated with uanft id
+            // ...this is necessary to revoke access upon uanft transfer
+            self.userhashes.insert(id, &userhash);
 
             Ok(())
         }
