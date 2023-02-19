@@ -130,6 +130,7 @@ pub mod ilockmvp {
         pool: u8,
     }
 
+    // ink4 has no AccountId Default impl thus struct Default cannot be derived
     #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
@@ -150,7 +151,6 @@ pub mod ilockmvp {
         collected: Balance,
         owner: AccountId,
     }
-
     impl Default for Port {
         fn default() -> Port {
             Port {
@@ -165,6 +165,7 @@ pub mod ilockmvp {
         }
     }
 
+    // ink4 has no AccountId Default impl thus struct Default cannot be derived
     #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
@@ -180,7 +181,6 @@ pub mod ilockmvp {
         operator: AccountId,
         portnumber: u16,
     }
-
     impl Default for Socket {
         fn default() -> Socket {
             Socket {
@@ -305,6 +305,7 @@ pub mod ilockmvp {
         }
     }
 
+    // for ILOCKmvpRef used in PSP34 contract
     impl From<OwnableError> for OtherError {
         fn from(error: OwnableError) -> Self {
             OtherError::Custom(format!("{:?}", error))
@@ -313,7 +314,6 @@ pub mod ilockmvp {
 
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
-    /// . OtherError result type.
     pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
     pub type Event = <ILOCKmvp as ContractEventBase>::Type;
@@ -342,7 +342,7 @@ pub mod ilockmvp {
             to: AccountId,
             value: Balance,
             data: Vec<u8>,
-        ) -> Result<(), PSP22Error> {
+        ) -> PSP22Result<()> {
 
             let from = self.env().caller();
 
@@ -382,7 +382,7 @@ pub mod ilockmvp {
             to: AccountId,
             value: Balance,
             data: Vec<u8>,
-        ) -> Result<(), PSP22Error> {
+        ) -> PSP22Result<()> {
 
             let _ = self._transfer_from_to(from, to, value, data)?;
 
@@ -503,7 +503,6 @@ pub mod ilockmvp {
 
             // create contract
             let mut contract = Self::default();
-//            ink_lang::codegen::initialize_contract(|contract: &mut Self| {
                 
             // define owner as caller
             let caller = contract.env().caller();
