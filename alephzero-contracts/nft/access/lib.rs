@@ -407,11 +407,11 @@ pub mod psp34_nft {
             }
 
             // make sure username is not already taken
-            match self.get_credential(userhash) {
+            match self.credentials.get(userhash) {
 
                 // if id matches id in credential mapping, then duplicate username belongs to
                 // caller, and caller is effectively resetting password
-                Ok(credential) => {
+                Some(credential) => {
 
                     // no id match thus username registered with different uanft
                     if credential.1 != id {
@@ -420,8 +420,23 @@ pub mod psp34_nft {
                                        credential.1).into_bytes()))
                     }
                 },
-                // error means username is not registered thus is available
-                Err(_error) => (),
+
+                // None means username is not registered thus is available
+                None => (),
+            };
+
+            // make sure uanft owner hasn't already registered different credentials
+            match self.userhashes.get(id.clone()) {
+
+                // if entry exists, owner has already registered under different userhash
+                Some(userhash) => {
+
+                    // eliminate entry to deduplicate credentials
+                    self.credentials.remove(userhash);
+                },
+
+                // None means this is first time registering credentials with uanft
+                None => (),
             };
 
             // password and uanft id info affiliated with username
