@@ -60,13 +60,10 @@ pub mod psp34_nft {
     #[derive(Default, Debug)]
     #[openbrush::upgradeable_storage(MANAGER_KEY)]
     pub struct ManagerData {
-        pub last_token_id: u64,
-    pub attribute_count: u32,
-    pub attribute_names: Mapping<u32, Vec<u8>>,
-    pub locked_tokens: Mapping<Id, bool>,
-    pub locked_token_count: u64,
-    pub _reserved: Option<()>
-}
+        pub ,
+        pub _reserved: Option<()>
+    }
+
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
@@ -78,7 +75,7 @@ pub mod psp34_nft {
         #[storage_field]
         ownable: ownable::Data,
 
-        nft_price_token: Balance,
+        nft_price_psp22token: Balance,
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
@@ -239,7 +236,7 @@ pub mod psp34_nft {
             contract.cap = cap;
 
             // set nft price in PSP22 token
-            contract.nft_price_token = price;
+            contract.nft_price_psp22token = price;
 
             contract
         }
@@ -296,11 +293,11 @@ pub mod psp34_nft {
                        format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
             }
 
-            // make sure asking price matches nft_price_token
+            // make sure asking price matches nft_price_psp22token
             // ...this is to ensure that contract owner doesn't hike up token price between the
             //    time somebody checks the price, and the time that somebody submits tx to
             //    self-mint for that given price
-            if self.nft_price_token > price {
+            if self.nft_price_psp22token > price {
                 return Err(PSP34Error::Custom(
                        format!("Current NFT price greater than agreed sale price of {:?}.", price).into_bytes()))
             }
@@ -513,7 +510,7 @@ pub mod psp34_nft {
             &self,
         ) -> Balance {
 
-            self.nft_price_token
+            self.nft_price_psp22token
         }
 
         /// . change the price that self-minter must pay for universal access nft
@@ -524,7 +521,7 @@ pub mod psp34_nft {
             price: Balance,
         ) -> Result<(), PSP34Error> {
 
-            self.nft_price_token = price;
+            self.nft_price_psp22token = price;
 
             Ok(())
         }
