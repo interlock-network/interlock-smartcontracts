@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="This macro allows you to define a wrapper type for traits defined via `#[openbrush::trait_definition]`. It is a wrapper for `AccountId` that knows how to do cross-contract calls to another contract."><title>wrapper in openbrush_lang_macro - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../static.files/ayu-18b4181a2f3fb862.css"><script src="../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../openbrush_lang_macro/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../openbrush_lang_macro/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><div class="sidebar-elems"><h2><a href="index.html">In openbrush_lang_macro</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Attribute Macro <a href="index.html">openbrush_lang_macro</a>::<wbr><a class="attr" href="#">wrapper</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/openbrush_lang_macro/lib.rs.html#422-424">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>#[wrapper]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>This macro allows you to define a wrapper type for traits defined via
+<a href="attr.trait_definition.html" title="attr openbrush_lang_macro::trait_definition"><code>#[openbrush::trait_definition]</code></a>.
+It is a wrapper for <code>AccountId</code> that knows how to do cross-contract calls to another contract.</p>
+<p>To define a wrapper you need to use the follow construction:
+<code>type TraitName = dyn Trait_1 + Trait_2 ... + Trait_n</code>, where <code>Trait_i</code> contains ink! messages
+and defined via <a href="attr.trait_definition.html" title="attr openbrush_lang_macro::trait_definition"><code>#[openbrush::trait_definition]</code></a>.
+If <code>Trait_i</code> doesn’t contain ink! messages, then you don’t need to create a wrapper for that trait,
+because the wrapped methods are created only for ink! messages. Otherwise, you will get an error like</p>
+<p><code>use of undeclared crate or module </code>trait_i_external``</p>
+<p>** Note ** The first argument of method should be a reference on <code>AccountId</code> of callee
+contract(even if the signature of the method requires a mutable reference).
+** Note ** Crated wrapper is only a type, so you can’t create an instance of this object.
+** Note ** The wrapper contains only ink’s methods of the trait, it doesn’t include a method of super traits.
+If you want to wrap them too, you need to explicitly specify them.</p>
+<h2 id="example-definition"><a href="#example-definition">Example: Definition</a></h2>
+<div class="example-wrap should_panic"><a href="#" class="tooltip" title="This example panics">ⓘ</a><pre class="rust rust-example-rendered"><code>{
+<span class="kw">use </span>openbrush::traits::AccountId;
+
+<span class="attr">#[openbrush::trait_definition]
+</span><span class="kw">pub trait </span>Trait1 {
+    <span class="attr">#[ink(message)]
+    </span><span class="kw">fn </span>foo(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool;
+}
+
+<span class="attr">#[openbrush::wrapper]
+</span><span class="kw">type </span>Trait1Ref = <span class="kw">dyn </span>Trait1;
+
+<span class="attr">#[openbrush::trait_definition]
+</span><span class="kw">pub trait </span>Trait2 {
+    <span class="attr">#[ink(message)]
+    </span><span class="kw">fn </span>bar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, callee: openbrush::traits::AccountId) {
+        <span class="kw">let </span>foo_bool = Trait1Ref::foo(<span class="kw-2">&amp;</span>callee);
+    }
+}
+
+<span class="attr">#[openbrush::wrapper]
+</span><span class="kw">type </span>Trait1and2Ref = <span class="kw">dyn </span>Trait1 + Trait2;
+
+<span class="comment">// Example of explicit call
+</span><span class="kw">let </span>to: AccountId = [<span class="number">0</span>; <span class="number">32</span>].into();
+<span class="kw">let </span>callee: AccountId = [<span class="number">0</span>; <span class="number">32</span>].into();
+Trait1and2Ref::bar(<span class="kw-2">&amp;</span>to, callee);
+
+<span class="comment">// Example of implicit call
+</span><span class="kw">let </span>to: <span class="kw-2">&amp;</span>Trait1and2Ref = <span class="kw-2">&amp;</span>to;
+to.bar(callee);
+
+<span class="comment">// Example how to get ink! call builder
+</span><span class="kw">let </span>to: AccountId = [<span class="number">0</span>; <span class="number">32</span>].into();
+<span class="kw">let </span>builder_for_foo: ::ink::env::call::CallBuilder&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt; = Trait1and2Ref::foo_builder(<span class="kw-2">&amp;</span>to);
+<span class="kw">let </span>ink_result: <span class="prelude-ty">Result</span>&lt;bool, ink::LangError&gt; = builder_for_foo.try_invoke().unwrap();
+}</code></pre></div>
+</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="openbrush_lang_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (4507fdaaa 2023-02-18)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"ilockmvp":[["impl <a class=\"trait\" href=\"ink/reflect/event/trait.ContractEventBase.html\" title=\"trait ink::reflect::event::ContractEventBase\">ContractEventBase</a> for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.ILOCKmvp.html\" title=\"struct ilockmvp::ilockmvp::ILOCKmvp\">ILOCKmvp</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

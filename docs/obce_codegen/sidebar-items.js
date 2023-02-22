@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["format_err_spanned"],"mod":["definition","error","mock"],"struct":["ChainExtensionImplementation"]};

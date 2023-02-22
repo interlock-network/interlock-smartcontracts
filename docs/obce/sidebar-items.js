@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["definition","error","implementation","mock"],"mod":["codegen","ink_lang"]};

@@ -1,0 +1,127 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Defines extensible trait in the scope of openbrush::contract. It is a common rust trait, so you can use any features of rust inside of this trait. If this trait contains some methods marked with `#[ink(message)]` or `#[ink(constructor)]` attributes, this macro will extract these attributes and will put them into a separate trait (the separate trait only is used to call methods from the original trait), but the macro will not touch methods."><title>trait_definition in openbrush_lang_macro - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../static.files/ayu-18b4181a2f3fb862.css"><script src="../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../openbrush_lang_macro/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../openbrush_lang_macro/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><div class="sidebar-elems"><h2><a href="index.html">In openbrush_lang_macro</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Attribute Macro <a href="index.html">openbrush_lang_macro</a>::<wbr><a class="attr" href="#">trait_definition</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/openbrush_lang_macro/lib.rs.html#186-188">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>#[trait_definition]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Defines extensible trait in the scope of openbrush::contract.
+It is a common rust trait, so you can use any features of rust inside of this trait.
+If this trait contains some methods marked with <code>#[ink(message)]</code> or <code>#[ink(constructor)]</code> attributes,
+this macro will extract these attributes and will put them into a separate trait
+(the separate trait only is used to call methods from the original trait), but the macro will not touch methods.</p>
+<p>This macro stores definition of the trait in a temporary file during build process.
+Based on this definition <a href="attr.contract.html" title="attr openbrush_lang_macro::contract"><code>#[openbrush::contract]</code></a>
+will generate implementation of additional traits.</p>
+<p>** Note ** The name of the trait defined via this macro must be unique for the whole project.
+** Note ** You can’t use aliases, generics, and other rust’s stuff in signatures of ink!’s methods.</p>
+<h2 id="example-definition"><a href="#example-definition">Example: Definition</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">mod </span>doc {
+<span class="kw">use </span>ink::prelude::collections::BTreeMap;
+<span class="kw">use </span>openbrush::traits::{ AccountId, Balance, Storage, OccupyStorage };
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Data {
+    <span class="kw">pub </span>balances: BTreeMap&lt;AccountId, Balance&gt;,
+}
+
+<span class="kw">impl </span>OccupyStorage <span class="kw">for </span>Data {
+    <span class="kw">const </span>KEY: u32 = <span class="number">0x123</span>;
+}
+
+<span class="attr">#[openbrush::trait_definition]
+</span><span class="kw">pub trait </span>PSP22: Storage&lt;Data&gt; {
+    <span class="doccomment">/// Returns the account Balance for the specified `owner`.
+    </span><span class="attr">#[ink(message)]
+    </span><span class="kw">fn </span>balance_of(<span class="kw-2">&amp;</span><span class="self">self</span>, owner: AccountId) -&gt; Balance {
+        <span class="self">self</span>.data().balances.get(<span class="kw-2">&amp;</span>owner).copied().unwrap_or(<span class="number">0</span>)
+    }
+
+    <span class="doccomment">/// Transfers `value` amount of tokens from the caller&#39;s account to account `to`.
+    </span><span class="attr">#[ink(message)]
+    </span><span class="kw">fn </span>transfer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, to: AccountId, value: Balance) {
+        <span class="self">self</span>._transfer_from_to(to, to, value)
+    }
+
+    <span class="kw">fn </span>_transfer_from_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: AccountId, to: AccountId, amount: Balance) {
+        <span class="kw">let </span>from_balance = <span class="self">self</span>.balance_of(from);
+        <span class="macro">assert!</span>(from_balance &gt;= amount, <span class="string">&quot;InsufficientBalance&quot;</span>);
+        <span class="self">self</span>.data().balances.insert(from, from_balance - amount);
+        <span class="kw">let </span>to_balance = <span class="self">self</span>.balance_of(to);
+        <span class="self">self</span>.data().balances.insert(to, to_balance + amount);
+    }
+}
+}</code></pre></div>
+<h2 id="example-implementation"><a href="#example-implementation">Example: Implementation</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[openbrush::contract]
+</span><span class="kw">mod </span>base_psp22 {
+    <span class="kw">use </span>ink::prelude::collections::BTreeMap;
+    <span class="kw">use </span>openbrush::traits::Storage;
+
+    <span class="kw">const </span>STORAGE_KEY: u32 = <span class="number">123</span>;
+
+    <span class="attr">#[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(STORAGE_KEY)]
+    </span><span class="kw">pub struct </span>Data {
+        <span class="kw">pub </span>supply: Balance,
+        <span class="kw">pub </span>balances: BTreeMap&lt;AccountId, Balance&gt;,
+        <span class="kw">pub </span>allowances: BTreeMap&lt;(AccountId, AccountId), Balance&gt;,
+    }
+
+    <span class="attr">#[openbrush::trait_definition]
+    </span><span class="kw">pub trait </span>PSP22Example: Storage&lt;Data&gt; {
+        <span class="doccomment">/// Returns the account Balance for the specified `owner`.
+        </span><span class="attr">#[ink(message)]
+        </span><span class="kw">fn </span>balance_of(<span class="kw-2">&amp;</span><span class="self">self</span>, owner: AccountId) -&gt; Balance {
+            <span class="self">self</span>.data().balances.get(<span class="kw-2">&amp;</span>owner).copied().unwrap_or(<span class="number">0</span>)
+        }
+
+        <span class="doccomment">/// Transfers `value` amount of tokens from the caller&#39;s account to account `to`.
+        </span><span class="attr">#[ink(message)]
+        </span><span class="kw">fn </span>transfer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, to: AccountId, value: Balance) {
+            <span class="kw">let </span>from = <span class="self">Self</span>::env().caller();
+            <span class="self">self</span>._transfer_from_to(from, to, value)
+        }
+
+        <span class="kw">fn </span>_transfer_from_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: AccountId, to: AccountId, amount: Balance) {
+            <span class="kw">let </span>from_balance = <span class="self">self</span>.balance_of(from);
+            <span class="macro">assert!</span>(from_balance &gt;= amount, <span class="string">&quot;InsufficientBalance&quot;</span>);
+            <span class="self">self</span>.data().balances.insert(from, from_balance - amount);
+            <span class="kw">let </span>to_balance = <span class="self">self</span>.balance_of(to);
+            <span class="self">self</span>.data().balances.insert(to, to_balance + amount);
+        }
+    }
+
+    <span class="attr">#[ink(storage)]
+    #[derive(Storage)]
+    </span><span class="kw">pub struct </span>PSP22Struct {
+        <span class="attr">#[storage_field]
+        </span>example: Data,
+        hated_account: AccountId,
+    }
+
+    <span class="kw">impl </span>Default <span class="kw">for </span>PSP22Struct {
+        <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+            <span class="self">Self </span>{
+                example: Data::default(),
+                hated_account: AccountId::from([<span class="number">0x0</span>; <span class="number">32</span>]),
+            }
+        }
+    }
+
+    <span class="kw">impl </span>PSP22Example <span class="kw">for </span>PSP22Struct {
+        <span class="comment">// Let&#39;s override method to reject transactions to bad account
+        </span><span class="kw">fn </span>_transfer_from_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: AccountId, to: AccountId, amount: Balance) {
+            <span class="macro">assert!</span>(to != <span class="self">self</span>.hated_account, <span class="string">&quot;I hate this account!&quot;</span>);
+
+            <span class="kw">let </span>from_balance = <span class="self">self</span>.balance_of(from);
+            <span class="macro">assert!</span>(from_balance &gt;= amount, <span class="string">&quot;InsufficientBalance&quot;</span>);
+            <span class="self">self</span>.get_mut().balances.insert(from, from_balance - amount);
+            <span class="kw">let </span>to_balance = <span class="self">self</span>.balance_of(to);
+            <span class="self">self</span>.get_mut().balances.insert(to, to_balance + amount);
+        }
+    }
+
+    <span class="kw">impl </span>PSP22Struct {
+        <span class="attr">#[ink(constructor)]
+        </span><span class="kw">pub fn </span>new(hated_account: AccountId) -&gt; <span class="self">Self </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>instance = <span class="self">Self</span>::default();
+            instance.hated_account = hated_account;
+            instance
+        }
+    }
+}</code></pre></div>
+</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="openbrush_lang_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (4507fdaaa 2023-02-18)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

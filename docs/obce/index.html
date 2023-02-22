@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="OBCE is a library that provides tools to create custom chain extensions with automatic generation of bindings for both ink! smart contracts and Substrate-based chains."><title>obce - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../static.files/ayu-18b4181a2f3fb862.css"><script src="../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../obce/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../obce/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate obce</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.1.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#attributes">Attribute Macros</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">obce</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/obce/lib.rs.html#22-158">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>OBCE is a library that provides tools to create custom chain extensions
+with automatic generation of bindings for both ink! smart contracts and
+Substrate-based chains.</p>
+<h2 id="usage"><a href="#usage">Usage</a></h2>
+<p><a href="attr.definition.html" title="attr obce::definition"><code>obce::definition</code></a> macro is OBCE’s entrypoint. Using this macro you can
+define the API of your chain extension for usage in both ink! and Substrate:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[obce::definition]
+</span><span class="kw">pub trait </span>MyChainExtension {
+    <span class="kw">fn </span>chain_extension_method(<span class="kw-2">&amp;</span><span class="self">self</span>, val: u32) -&gt; u64;
+}</code></pre></div>
+<p>With <code>ink</code> feature enabled, <a href="attr.definition.html" title="attr obce::definition"><code>obce::definition</code></a> automatically produces
+glue code to correctly call Substrate part of a chain extension. This glue code
+takes care of argument encoding/decoding, identifier matching, etc.</p>
+<p>On the other hand, when <code>substrate</code> feature is enabled, the usage of <a href="attr.implementation.html" title="attr obce::implementation"><code>obce::implementation</code></a>
+is required to complete the chain extension implementation.</p>
+<p><a href="attr.implementation.html" title="attr obce::implementation"><code>obce::implementation</code></a> is used on an <code>impl</code> block to
+generate the code necessary for usage in Substrate:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">use </span>obce::substrate::{
+    frame_system::Config <span class="kw">as </span>SysConfig,
+    pallet_contracts::{
+        chain_extension::Ext,
+        Config <span class="kw">as </span>ContractConfig,
+    },
+    sp_runtime::traits::StaticLookup,
+    ExtensionContext
+};
+
+<span class="attr">#[obce::definition]
+</span><span class="kw">pub trait </span>MyChainExtension {
+    <span class="kw">fn </span>chain_extension_method(<span class="kw-2">&amp;</span><span class="self">self</span>, val: u32) -&gt; u64;
+}
+
+<span class="kw">pub struct </span>ChainExtension;
+
+<span class="attr">#[obce::implementation]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E, T&gt; MyChainExtension <span class="kw">for </span>ExtensionContext&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E, T, ChainExtension&gt;
+<span class="kw">where
+    </span>T: SysConfig + ContractConfig,
+    &lt;&lt;T <span class="kw">as </span>SysConfig&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source: From&lt;&lt;T <span class="kw">as </span>SysConfig&gt;::AccountId&gt;,
+    E: Ext&lt;T = T&gt;,
+{
+    <span class="kw">fn </span>chain_extension_method(<span class="kw-2">&amp;</span><span class="self">self</span>, val: u32) -&gt; u64 {
+        val <span class="kw">as </span>u64
+    }
+}</code></pre></div>
+<p>There are various configuration options available for both <a href="attr.definition.html" title="attr obce::definition"><code>obce::definition</code></a>
+and <a href="attr.implementation.html" title="attr obce::implementation"><code>obce::implementation</code></a>, all of which are documented
+in corresponding API sections.</p>
+<h2 id="custom-errors"><a href="#custom-errors">Custom errors</a></h2>
+<p>Your chain extension may have chain-specific errors, some of which
+may terminate contract execution itself. You may use <a href="attr.error.html" title="attr obce::error"><code>obce::error</code></a>
+macro to create your custom error type, with an optional variant that holds critical errors:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">use </span>obce::substrate::CriticalError;
+
+<span class="attr">#[obce::error]
+</span><span class="kw">enum </span>Error {
+    One(u32),
+
+    <span class="attr">#[obce(critical)]
+    </span>Two(CriticalError)
+}</code></pre></div>
+<h2 id="testing"><a href="#testing">Testing</a></h2>
+<p>OBCE also provides infrastructure for testing your chain extension
+using <a href="attr.mock.html" title="attr obce::mock"><code>obce::mock</code></a>.</p>
+<p>To start testing your chain extension, mark chain extension definition
+<code>impl</code> block as <a href="attr.mock.html" title="attr obce::mock"><code>obce::mock</code></a>, and fill the <code>impl</code> block
+with the required methods:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[obce::definition]
+</span><span class="kw">pub trait </span>MyChainExtension {
+    <span class="kw">fn </span>chain_extension_method(<span class="kw-2">&amp;</span><span class="self">self</span>, val: u32) -&gt; u64;
+}
+
+<span class="comment">// Contract code...
+
+</span><span class="kw">mod </span>simple_test {
+    <span class="kw">struct </span>Context;
+
+    <span class="attr">#[obce::mock]
+    </span><span class="kw">impl </span><span class="kw">crate</span>::ChainExtension <span class="kw">for </span>Context {
+        <span class="kw">fn </span>chain_extension_method(<span class="kw-2">&amp;</span><span class="self">self</span>, val: u32) -&gt; u64 {
+            val <span class="kw">as </span>u64
+        }
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>call_contract() {
+        register_chain_extensions(Context);
+        <span class="comment">// Call the contract as usual
+    </span>}
+}</code></pre></div>
+<p>For a complete usage example, as well as more details on how to use the macro
+correctly see the <a href="attr.mock.html" title="attr obce::mock">corresponding API section</a>.</p>
+</div></details><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><div class="item-table"><div class="item-row"><div class="item-left"><a class="mod" href="codegen/index.html" title="mod obce::codegen">codegen</a></div><div class="item-right docblock-short">Automatically generated traits that provide the necessary information
+about the chain extension.</div></div><div class="item-row"><div class="item-left"><a class="mod" href="ink_lang/index.html" title="mod obce::ink_lang">ink_lang</a></div><div class="item-right docblock-short">ink!-specific OBCE types</div></div></div><h2 id="attributes" class="small-section-header"><a href="#attributes">Attribute Macros</a></h2><div class="item-table"><div class="item-row"><div class="item-left"><a class="attr" href="attr.definition.html" title="attr obce::definition">definition</a></div><div class="item-right docblock-short">Chain extension definition for use with Substrate-based nodes and ink! smart contracts.</div></div><div class="item-row"><div class="item-left"><a class="attr" href="attr.error.html" title="attr obce::error">error</a></div><div class="item-right docblock-short">Chain extension error.</div></div><div class="item-row"><div class="item-left"><a class="attr" href="attr.implementation.html" title="attr obce::implementation">implementation</a></div><div class="item-right docblock-short">Chain extension implementation for use with Substrate-based nodes.</div></div><div class="item-row"><div class="item-left"><a class="attr" href="attr.mock.html" title="attr obce::mock">mock</a></div><div class="item-right docblock-short">Chain extension mocking utility.</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="obce" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (4507fdaaa 2023-02-18)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

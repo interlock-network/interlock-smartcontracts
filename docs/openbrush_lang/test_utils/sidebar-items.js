@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["accounts","change_caller","encoded_into_hash"],"struct":["PrefixedValue"]};

@@ -1,0 +1,79 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Decodes an ink! dispatch input into a known selector and its expected parameters."><title>DecodeDispatch in ink::reflect - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../../static.files/ayu-18b4181a2f3fb862.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://use.ink/crate-docs/favicon.png"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../../ink/index.html"><img src="https://use.ink/img/crate-docs/logo.png" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../../ink/index.html">
+                <img src="https://use.ink/img/crate-docs/logo.png" alt="logo"></a><h2 class="location"><a href="#">DecodeDispatch</a></h2><div class="sidebar-elems"><section><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.decode_dispatch">decode_dispatch</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In ink::reflect</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../index.html">ink</a>::<wbr><a href="index.html">reflect</a>::<wbr><a class="trait" href="#">DecodeDispatch</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../../src/ink/reflect/dispatch.rs.html#727-729">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait DecodeDispatch: <a class="trait" href="../../parity_scale_codec/codec/trait.Decode.html" title="trait parity_scale_codec::codec::Decode">Decode</a> {
+    // Required method
+    fn <a href="#tymethod.decode_dispatch" class="fn">decode_dispatch</a>&lt;I: <a class="trait" href="../../parity_scale_codec/codec/trait.Input.html" title="trait parity_scale_codec::codec::Input">Input</a>&gt;(input: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut I</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="enum.DispatchError.html" title="enum ink::reflect::DispatchError">DispatchError</a>&gt;;
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Decodes an ink! dispatch input into a known selector and its expected parameters.</p>
+<h2 id="note"><a href="#note">Note</a></h2>
+<p>This trait is automatically implemented for ink! message and constructor decoders.</p>
+<h2 id="errors"><a href="#errors">Errors</a></h2>
+<p>Returns an error if any of the decode steps failed:</p>
+<ul>
+<li><code>InvalidSelector</code>: The first four bytes could not properly decoded into the selector.</li>
+<li><code>UnknownSelector</code>: The decoded selector did not match any of the expected ones.</li>
+<li><code>InvalidParameters</code>: Failed to decoded the parameters for the selected dispatchable.</li>
+</ul>
+<p>The other dispatch errors are handled by other structures usually.</p>
+<h2 id="usage"><a href="#usage">Usage</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="attr">#[ink::contract]
+</span><span class="kw">pub mod </span>contract {
+    <span class="attr">#[ink(storage)]
+    </span><span class="kw">pub struct </span>Contract {}
+
+    <span class="kw">impl </span>Contract {
+        <span class="attr">#[ink(constructor)]
+        </span><span class="kw">pub fn </span>constructor() -&gt; <span class="self">Self </span>{ <span class="self">Self </span>{} }
+
+        <span class="attr">#[ink(message)]
+        </span><span class="kw">pub fn </span>message(<span class="kw-2">&amp;</span><span class="self">self</span>, input_1: bool, input_2: i32) {}
+    }
+}
+
+<span class="kw">use </span>contract::Contract;
+
+<span class="kw">fn </span>main() {
+    <span class="comment">// Valid call to `message`:
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>input_bytes = Vec::new();
+        input_bytes.extend(<span class="macro">selector_bytes!</span>(<span class="string">&quot;message&quot;</span>));
+        input_bytes.extend(<span class="bool-val">true</span>.encode());
+        input_bytes.extend(<span class="number">42i32</span>.encode());
+        <span class="macro">assert!</span>(
+            &lt;&lt;Contract <span class="kw">as </span>ContractMessageDecoder&gt;::Type <span class="kw">as </span>DecodeDispatch&gt;::decode_dispatch(
+                <span class="kw-2">&amp;mut &amp;</span>input_bytes[..]).is_ok()
+        );
+    }
+    <span class="comment">// Invalid call with invalid selector (or empty input).
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>input_bytes = Vec::new();
+        <span class="macro">assert_eq!</span>(
+            &lt;&lt;Contract <span class="kw">as </span>ContractMessageDecoder&gt;::Type
+                <span class="kw">as </span>DecodeDispatch&gt;::decode_dispatch(<span class="kw-2">&amp;mut &amp;</span>input_bytes[..])
+                .unwrap_err(),
+            DispatchError::InvalidSelector,
+        );
+    }
+    <span class="comment">// Invalid call to `message` with unknown selector.
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>input_bytes = Vec::new();
+        input_bytes.extend(<span class="macro">selector_bytes!</span>(<span class="string">&quot;unknown_selector&quot;</span>));
+        <span class="macro">assert_eq!</span>(
+            &lt;&lt;Contract <span class="kw">as </span>ContractMessageDecoder&gt;::Type
+                <span class="kw">as </span>DecodeDispatch&gt;::decode_dispatch(<span class="kw-2">&amp;mut &amp;</span>input_bytes[..])
+                .unwrap_err(),
+            DispatchError::UnknownSelector,
+        );
+    }
+    <span class="comment">// Invalid call to `message` with invalid (or missing) parameters.
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>input_bytes = Vec::new();
+        input_bytes.extend(<span class="macro">selector_bytes!</span>(<span class="string">&quot;message&quot;</span>));
+        <span class="macro">assert_eq!</span>(
+            &lt;&lt;Contract <span class="kw">as </span>ContractMessageDecoder&gt;::Type
+                <span class="kw">as </span>DecodeDispatch&gt;::decode_dispatch(<span class="kw-2">&amp;mut &amp;</span>input_bytes[..])
+                .unwrap_err(),
+            DispatchError::InvalidParameters,
+        );
+    }
+}</code></pre></div>
+</div></details><h2 id="required-methods" class="small-section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><section id="tymethod.decode_dispatch" class="method"><a class="srclink rightside" href="../../src/ink/reflect/dispatch.rs.html#728">source</a><h4 class="code-header">fn <a href="#tymethod.decode_dispatch" class="fn">decode_dispatch</a>&lt;I: <a class="trait" href="../../parity_scale_codec/codec/trait.Input.html" title="trait parity_scale_codec::codec::Input">Input</a>&gt;(input: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut I</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="enum.DispatchError.html" title="enum ink::reflect::DispatchError">DispatchError</a>&gt;</h4></section></div><h2 id="implementors" class="small-section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"></div><script src="../../implementors/ink/reflect/dispatch/trait.DecodeDispatch.js" async></script></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ink" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (4507fdaaa 2023-02-18)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

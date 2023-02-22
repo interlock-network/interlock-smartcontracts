@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AutoKey","ManualKey","ResolverKey"],"trait":["AutoStorableHint","Packed","Storable","StorableHint","StorageKey","StorageLayout"]};

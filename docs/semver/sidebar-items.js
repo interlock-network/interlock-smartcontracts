@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Compat","Identifier","ReqParseError","SemVerError"],"struct":["Version","VersionReq"]};

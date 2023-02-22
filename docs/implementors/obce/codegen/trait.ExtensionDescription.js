@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"pallet_assets_chain_extension":[["impl&lt;T: <a class=\"trait\" href=\"pallet_assets_chain_extension/traits/trait.Environment.html\" title=\"trait pallet_assets_chain_extension::traits::Environment\">Environment</a>&gt; <a class=\"trait\" href=\"obce/codegen/trait.ExtensionDescription.html\" title=\"trait obce::codegen::ExtensionDescription\">ExtensionDescription</a> for dyn <a class=\"trait\" href=\"pallet_assets_chain_extension/traits/trait.PalletAssets.html\" title=\"trait pallet_assets_chain_extension::traits::PalletAssets\">PalletAssets</a>&lt;T&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

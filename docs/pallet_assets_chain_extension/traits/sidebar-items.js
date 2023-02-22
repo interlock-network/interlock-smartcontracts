@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Origin"],"trait":["Environment","PalletAssets"]};
