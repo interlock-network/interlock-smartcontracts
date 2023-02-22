@@ -56,12 +56,12 @@ pub mod ilockmvp {
 //// constants /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// . magic numbers
+    /// - magic numbers
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
     pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
 
-    /// . token data
+    /// - token data
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
     pub const DECIMALS_POWER10: u128 = 1_000_000_000_000_000_000;   // 10^18
     pub const SUPPLY_CAP: u128 = TOKEN_CAP * DECIMALS_POWER10;      // 10^27
@@ -77,7 +77,7 @@ pub mod ilockmvp {
         cliffs: u8,
     }
 
-    /// . pool data
+    /// - pool data
     pub const POOLS: [PoolData; POOL_COUNT] = [
         PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
@@ -245,6 +245,7 @@ pub mod ilockmvp {
         /// - See detailed struct below.
         ///
         /// ports:         port number -> port(app contract hash, metadata, port owner)
+        ///
         pub ports: Mapping<u16, Port>,
 
         /// - Contains information specifying a particular _instance_ of an application
@@ -264,6 +265,7 @@ pub mod ilockmvp {
         /// - See detailed struct below.
         ///
         /// sockets:         application contract address -> socket(app operator address : port)
+        ///
         pub sockets: Mapping<AccountId, Socket>,
 
         /// - Expand storage related to the application/socket/port functionality.
@@ -389,7 +391,7 @@ pub mod ilockmvp {
         }
     }
 
-    /// . ILOCKmvp struct contains overall storage data for contract
+    /// - ILOCKmvp struct contains overall storage data for contract
     #[ink(storage)]
     #[derive(Default, Storage)]
     pub struct ILOCKmvp {
@@ -430,7 +432,7 @@ pub mod ilockmvp {
 //// events and errors /////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// . specify transfer event
+    /// - specify transfer event
     #[ink(event)]
     pub struct Transfer {
         #[ink(topic)]
@@ -440,7 +442,7 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// . specify approve event
+    /// - specify approve event
     #[ink(event)]
     pub struct Approval {
         #[ink(topic)]
@@ -450,7 +452,7 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// . specify reward event
+    /// - specify reward event
     #[ink(event)]
     pub struct Reward {
         #[ink(topic)]
@@ -458,7 +460,7 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// . Other contract error types
+    /// - Other contract error types
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(
         feature = "std",
@@ -532,8 +534,8 @@ pub mod ilockmvp {
 
     impl PSP22 for ILOCKmvp {
         
-        /// . override default total_supply getter
-        /// . total supply reflects token in circulation
+        /// - override default total_supply getter
+        /// - total supply reflects token in circulation
         #[ink(message)]
         fn total_supply(&self) -> Balance {
 
@@ -541,8 +543,8 @@ pub mod ilockmvp {
             self.pool.circulating
         }
 
-        /// . override default transfer doer
-        /// . transfer from owner increases total supply
+        /// - override default transfer doer
+        /// - transfer from owner increases total supply
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -580,8 +582,8 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . override default transfer_from_to doer
-        /// . transfer from owner increases total supply
+        /// - override default transfer_from_to doer
+        /// - transfer from owner increases total supply
         #[ink(message)]
         fn transfer_from(
             &mut self,
@@ -630,8 +632,8 @@ pub mod ilockmvp {
 
     impl PSP22Burnable for ILOCKmvp {
 
-        /// . override default burn doer
-        /// . burn function to permanently remove tokens from circulation / supply
+        /// - override default burn doer
+        /// - burn function to permanently remove tokens from circulation / supply
         #[ink(message)]
 		#[openbrush::modifiers(only_owner)]
         fn burn(
@@ -697,13 +699,13 @@ pub mod ilockmvp {
 
     impl ILOCKmvp {
 
-        /// . function for internal _emit_event implementations
+        /// - function for internal _emit_event implementations
         pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
             emitter.emit_event(event);
         }
 
-        /// . constructor to initialize contract
-        /// . note: pool contracts must be created prior to construction (for args)
+        /// - constructor to initialize contract
+        /// - note: pool contracts must be created prior to construction (for args)
         #[ink(constructor)]
         pub fn new_token(
         ) -> Self {
@@ -743,9 +745,9 @@ pub mod ilockmvp {
 /////// timing /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . function to check if enough time has passed to collect next payout
-        /// . this function ensures Interlock cannot rush the vesting schedule
-        /// . this function must be called before the next round of token distributions
+        /// - function to check if enough time has passed to collect next payout
+        /// - this function ensures Interlock cannot rush the vesting schedule
+        /// - this function must be called before the next round of token distributions
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn check_time(
@@ -766,7 +768,7 @@ pub mod ilockmvp {
             return Err(OtherError::PayoutTooEarly.into())
         }
         
-        /// . time in seconds until next payout in minutes
+        /// - time in seconds until next payout in minutes
         #[ink(message)]
         pub fn remaining_time_until_next_payout(
             &self
@@ -785,9 +787,9 @@ pub mod ilockmvp {
 /////// stakeholders  //////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . function that registers a stakeholder's wallet and vesting info
-        /// . used to calculate monthly payouts and track net paid
-        /// . stakeholder data also used for stakeholder to verify their place in vesting schedule
+        /// - function that registers a stakeholder's wallet and vesting info
+        /// - used to calculate monthly payouts and track net paid
+        /// - stakeholder data also used for stakeholder to verify their place in vesting schedule
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn register_stakeholder(
@@ -815,9 +817,9 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . function that returns a stakeholder's payout and other data
-        /// . this will allow stakeholders to verify their stake from explorer if so motivated
-        /// . returns tuple (paidout, payremaining, payamount, poolnumber)
+        /// - function that returns a stakeholder's payout and other data
+        /// - this will allow stakeholders to verify their stake from explorer if so motivated
+        /// - returns tuple (paidout, payremaining, payamount, poolnumber)
         #[ink(message)]
         pub fn stakeholder_data(
             &self,
@@ -849,9 +851,9 @@ pub mod ilockmvp {
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . general function to transfer the token share a stakeholder is currently entitled to
-        /// . this is called once per stakeholder by Interlock, Interlock paying fees
-        /// . pools are guaranteed to have enough tokens for all stakeholders
+        /// - general function to transfer the token share a stakeholder is currently entitled to
+        /// - this is called once per stakeholder by Interlock, Interlock paying fees
+        /// - pools are guaranteed to have enough tokens for all stakeholders
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn distribute_tokens(
@@ -927,7 +929,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . function used to payout tokens to pools with no vesting schedule
+        /// - function used to payout tokens to pools with no vesting schedule
         /// POOL ARGUMENTS:
         ///      PARTNERS
         ///      WHITELIST
@@ -969,11 +971,11 @@ pub mod ilockmvp {
 /////// pool data //////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . function that returns pool data
-        /// . this will allow observers to verify vesting parameters for each pool (esp. theirs)
-        /// . observers may verify pool data from explorer if so motivated
-        /// . pool numbers range from 0-11
-        /// . returns (name, tokens, vests, cliff)
+        /// - function that returns pool data
+        /// - this will allow observers to verify vesting parameters for each pool (esp. theirs)
+        /// - observers may verify pool data from explorer if so motivated
+        /// - pool numbers range from 0-11
+        /// - returns (name, tokens, vests, cliff)
         #[ink(message)]
         pub fn pool_data(
             &self,
@@ -990,7 +992,7 @@ pub mod ilockmvp {
             )
         }
         
-        /// . get current balance of whitelist pool
+        /// - get current balance of whitelist pool
         #[ink(message)]
         pub fn pool_balance(
             &self,
@@ -1007,8 +1009,8 @@ pub mod ilockmvp {
 //// rewarding  ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . reward the interlocker for browsing
-        /// . this is a manual rewarding function, to override the socket formalism
+        /// - reward the interlocker for browsing
+        /// - this is a manual rewarding function, to override the socket formalism
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn reward_interlocker(
@@ -1060,7 +1062,7 @@ pub mod ilockmvp {
             Ok(newrewardedtotal)
         }
 
-        /// . get amount rewarded to interlocker to date
+        /// - get amount rewarded to interlocker to date
         #[ink(message)]
         pub fn rewarded_interlocker_total(
             &self,
@@ -1073,7 +1075,7 @@ pub mod ilockmvp {
             }
         }
 
-        /// . get total amount rewarded to date
+        /// - get total amount rewarded to date
         #[ink(message)]
         pub fn rewarded_total(
             &self
@@ -1086,7 +1088,7 @@ pub mod ilockmvp {
 //// misc  /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
         
-        /// . get current balance of whitelist pool
+        /// - get current balance of whitelist pool
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn withdraw_tax(
@@ -1111,7 +1113,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . get current balance of whitelist pool
+        /// - get current balance of whitelist pool
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn test_transfer(
@@ -1137,7 +1139,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . display taxpool balance
+        /// - display taxpool balance
         #[ink(message)]
         pub fn tax_available(
             &self,
@@ -1146,7 +1148,7 @@ pub mod ilockmvp {
             self.pool.tax
         }
 
-        /// . function to get the number of months passed for contract
+        /// - function to get the number of months passed for contract
         #[ink(message)]
         pub fn months_passed(
             &self,
@@ -1155,7 +1157,7 @@ pub mod ilockmvp {
             self.vest.monthspassed
         }
 
-        /// . function to get the supply cap minted on TGE
+        /// - function to get the supply cap minted on TGE
         #[ink(message)]
         pub fn cap(
             &self,
@@ -1164,7 +1166,7 @@ pub mod ilockmvp {
             SUPPLY_CAP
         }
 
-        /// . function to increment monthspassed for testing
+        /// - function to increment monthspassed for testing
         /// 
         ///
         ///     MUST BE DELETED PRIOR TO AUDIT
@@ -1184,8 +1186,8 @@ pub mod ilockmvp {
 //// portability and extensibility  ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// . modifies the code which is used to execute calls to this contract address
-        /// . this upgrades the token contract logic while using old state
+        /// - modifies the code which is used to execute calls to this contract address
+        /// - this upgrades the token contract logic while using old state
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
@@ -1204,9 +1206,9 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . create a new port that rewards contract can register with
-        /// . eaech port tracks amount rewarded, tax collected, and if it is locked or not
-        /// . a locked port may only be registered by the interlock network foundation
+        /// - create a new port that rewards contract can register with
+        /// - eaech port tracks amount rewarded, tax collected, and if it is locked or not
+        /// - a locked port may only be registered by the interlock network foundation
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn create_port(
@@ -1233,8 +1235,8 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . rewards/staking contracts register with token contract here
-        /// . contract must first register with token contract to allow reward transfers
+        /// - rewards/staking contracts register with token contract here
+        /// - contract must first register with token contract to allow reward transfers
         #[ink(message)]
         pub fn create_socket(
             &mut self,
@@ -1317,7 +1319,7 @@ pub mod ilockmvp {
             Err(OtherError::UnsafeContract)
         }
 
-        /// . check for socket and apply custom logic
+        /// - check for socket and apply custom logic
         #[ink(message)]
         pub fn call_socket(
             &mut self,
@@ -1427,7 +1429,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . tax and reward socket
+        /// - tax and reward socket
         pub fn tax_and_reward(
             &mut self,
             address: AccountId,
@@ -1501,7 +1503,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// . get socket info
+        /// - get socket info
         #[ink(message)]
         pub fn socket(
             &self,
@@ -1514,7 +1516,7 @@ pub mod ilockmvp {
             }
         }
 
-        /// . get port info
+        /// - get port info
         #[ink(message)]
         pub fn port(
             &self,
@@ -1546,7 +1548,7 @@ pub mod ilockmvp {
         use ink_lang as ink;
         use ink_lang::codegen::Env;
 
-        /// . test if the default constructor does its job
+        /// - test if the default constructor does its job
         #[ink::test]
         fn constructor_works() {
 
@@ -1557,7 +1559,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
         }
 
-        /// . test if name getter does its job
+        /// - test if name getter does its job
         #[ink::test]
         fn name_works() {
 
@@ -1565,7 +1567,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Networ.".as_bytes().to_vec()));
         }
 
-        /// . test if symbol getter does its job
+        /// - test if symbol getter does its job
         #[ink::test]
         fn symbol_works() {
 
@@ -1573,7 +1575,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOC.".as_bytes().to_vec()));
         }
         
-        /// . test if decimals getter does its job
+        /// - test if decimals getter does its job
         #[ink::test]
         fn decimals_works() {
 
@@ -1581,7 +1583,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.metadata.decimals, 18);
         }
 
-        /// . test if balance getter does its job
+        /// - test if balance getter does its job
         #[ink::test]
         fn balance_of_works() {
 
@@ -1594,7 +1596,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.balance_of(accounts.alice), 100);
         }
 
-        /// . test if allowance getter does its job
+        /// - test if allowance getter does its job
         #[ink::test]
         fn allowance_works() {
 
@@ -1611,7 +1613,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
         }
 
-        /// . test if increase allowance does does its job
+        /// - test if increase allowance does does its job
         #[ink::test]
         fn increase_allowance_works() {
 
@@ -1631,7 +1633,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 20);
         }
 
-        /// . test if decrease allowance does does its job
+        /// - test if decrease allowance does does its job
         #[ink::test]
         fn decrease_allowance_works() {
 
@@ -1651,7 +1653,7 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 5);
         }
 
-        /// . test if wallet registration function works as intended 
+        /// - test if wallet registration function works as intended 
         #[ink::test]
         fn register_stakeholder_works() {
 
@@ -1672,7 +1674,7 @@ pub mod ilockmvp {
             assert_eq!(this_stakeholder.pool, pool);
         }
      
-        /// . test if pool data getter does its job
+        /// - test if pool data getter does its job
         #[ink::test]
         fn pool_data_works() {
 
@@ -1686,7 +1688,7 @@ pub mod ilockmvp {
             ));
         }
 
-        /// . test if months passed getter does its job
+        /// - test if months passed getter does its job
         #[ink::test]
         fn months_passed_works() {
 
