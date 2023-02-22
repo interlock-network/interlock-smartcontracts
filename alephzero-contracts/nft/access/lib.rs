@@ -32,15 +32,14 @@ pub mod psp34_nft {
     pub const PORT: u16 = 0;
 
     /// . wrap AccountId type to implement Default
-    #[derive(scale::Encode, scale::Decode, Clone)]
+    #[derive(scale::Encode, scale::Decode, Clone, Debug)]
     #[cfg_attr(
     feature = "std",
     derive(
-        Debug,
         PartialEq,
         Eq,
         scale_info::TypeInfo,
-        ink::storage::traits::StorageLayout
+        ink::storage::traits::StorageLayout,
         )
     )]
     pub struct AccountID {
@@ -54,13 +53,47 @@ pub mod psp34_nft {
         }
     }
 
-
-    pub const MANAGER_KEY: u32 = openbrush::storage_unique_key!(ManagerData);
-
+    // this is upgradable storage for the access features for this
+    // universal access nft contract
+    pub const ACCESS_KEY: u32 = openbrush::storage_unique_key!(AccessData);
     #[derive(Default, Debug)]
-    #[openbrush::upgradeable_storage(MANAGER_KEY)]
-    pub struct ManagerData {
-        pub ,
+    #[openbrush::upgradeable_storage(ACCESS_KEY)]
+    pub struct AccessData {
+
+        pub cap: u64,
+
+        // nft sale price in ILOCK (or other) PSP22 token
+        pub nft_psp22price: Balance,
+
+        //  collections:         user accress -> vector of uanft IDs in collection
+        pub collections: Mapping<AccountId, Vec<Id>>,
+
+        //  credentials:         username hash -> (password hash, uanft ID)
+        pub credentials: Mapping<Hash, (Hash, Id)>,
+
+        //  userhashes:         uanft ID - > username hash
+        pub userhashes: Mapping<Id, Hash>,
+
+        // to expand storage related to this uanft's access functionality
+        pub _reserved: Option<()>
+    }
+
+    // this is upgradable storage for the features that allow this universal
+    // access nft contract to connect as an application to the ILOCK (or other)
+    // PSP22 contract the application socket abstraction
+    pub const APP_KEY: u32 = openbrush::storage_unique_key!(AppData);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(APP_KEY)]
+    pub struct AppData {
+
+        // PSP22 token contract that this uanft application connects to via socket
+        pub token_instance: ILOCKmvpRef,
+
+        // address that manages this uanft contract and receives ILOCK
+        // (or other) PSP22 token for self-mint transactions
+        pub operator: AccountID,
+
+        // to expand storage related to this uanft application functionality
         pub _reserved: Option<()>
     }
 
@@ -68,6 +101,7 @@ pub mod psp34_nft {
     #[ink(storage)]
     pub struct Psp34Nft {
 
+        // openbrush storage fields
         #[storage_field]
         psp34: psp34::Data<enumerable::Balances>,
         #[storage_field]
@@ -75,24 +109,17 @@ pub mod psp34_nft {
         #[storage_field]
         ownable: ownable::Data,
 
-        nft_price_psp22token: Balance,
+        // uanft storage fields
+        #[storage_field]
+        access: AccessData,
+        #[storage_field]
+        app: AppData,
+
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
         locked_tokens: Mapping<Id, u8>,
         locked_token_count: u64,
-
-        cap: u64,
-        collections: Mapping<AccountId, Vec<Id>>,
-        credentials: Mapping<Hash, (Hash, Id)>,
-                        // username hash -> (password hash, nft ID)
-        userhashes: Mapping<Id, Hash>,
-                        // uanft ID -> username hash
-        // userhashes mapping is for revoking access on uanft transfer
-        
-        // application state forming socket to ILOCK token contract
-        token_instance: ILOCKmvpRef,
-        operator: AccountID,
     }
 
     #[openbrush::wrapper]
@@ -115,12 +142,12 @@ pub mod psp34_nft {
             let _ = self._transfer_token(to, id.clone(), data)?;
 
             // revoke access if uanft registered to prior owner
-            match self.userhashes.get(id.clone()) {
+            match self.access.userhashes.get(id.clone()) {
                 
                 // aunft registered by prior owner
                 Some(hash) => {
-                    self.credentials.remove(hash);
-                    self.userhashes.remove(id.clone());
+                    self.access.credentials.remove(hash);
+                    self.access.userhashes.remove(id.clone());
                 },
 
                 // aunft never registered by prior owner
@@ -128,7 +155,7 @@ pub mod psp34_nft {
             };
 
             // update sender's collection
-            let mut from_collection = match self.collections.get(from) {
+            let mut from_collection = match self.access.collections.get(from) {
                 Some(collection) => collection,
                 None => return Err(PSP34Error::Custom(
                         format!("No collection, fatal error").into_bytes())),
@@ -139,15 +166,15 @@ pub mod psp34_nft {
                         format!("token not in collection").into_bytes())),
             };
             from_collection.remove(index);
-            self.collections.insert(from, &from_collection);
+            self.access.collections.insert(from, &from_collection);
 
             // update recipient's collection
-            let mut to_collection = match self.collections.get(to) {
+            let mut to_collection = match self.access.collections.get(to) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
             to_collection.push(id);
-            self.collections.insert(to, &to_collection);
+            self.access.collections.insert(to, &to_collection);
 
             Ok(())
         }
@@ -229,14 +256,14 @@ pub mod psp34_nft {
             contract._init_with_owner(contract.env().caller());
 
             // create a reference to the deployed token contract
-            contract.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
-            contract.operator.address = Self::env().caller();
+            contract.app.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
+            contract.app.operator.address = Self::env().caller();
 
             // set cap
-            contract.cap = cap;
+            contract.access.cap = cap;
 
             // set nft price in PSP22 token
-            contract.nft_price_psp22token = price;
+            contract.access.nft_psp22price = price;
 
             contract
         }
@@ -253,23 +280,23 @@ pub mod psp34_nft {
             self.last_token_id += 1;
 
             // make sure cap is not surpassed
-            if self.last_token_id >= self.cap {
+            if self.last_token_id >= self.access.cap {
                 return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
             }
 
             // if cap not surpassed, mint next id
             let _ = self._mint_to(recipient, psp34::Id::U64(self.last_token_id))?;
 
             // get nft collection of recipient if already holding
-            let mut collection = match self.collections.get(recipient) {
+            let mut collection = match self.access.collections.get(recipient) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
 
             // add id to recipient's nft collection
             collection.push(psp34::Id::U64(self.last_token_id));
-            self.collections.insert(recipient, &collection);
+            self.access.collections.insert(recipient, &collection);
 
             Ok(())
         }
@@ -288,22 +315,22 @@ pub mod psp34_nft {
             let minter: AccountId = self.env().caller();
 
             // make sure cap is not surpassed
-            if self.last_token_id >= self.cap {
+            if self.last_token_id >= self.access.cap {
                 return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
             }
 
-            // make sure asking price matches nft_price_psp22token
+            // make sure asking price matches nft_psp22price
             // ...this is to ensure that contract owner doesn't hike up token price between the
             //    time somebody checks the price, and the time that somebody submits tx to
             //    self-mint for that given price
-            if self.nft_price_psp22token > price {
+            if self.access.nft_psp22price > price {
                 return Err(PSP34Error::Custom(
                        format!("Current NFT price greater than agreed sale price of {:?}.", price).into_bytes()))
             }
             
             // make sure mint recipient can afford the PSP22 token price
-            let recipient_balance: Balance = self.token_instance.balance_of(minter);
+            let recipient_balance: Balance = self.app.token_instance.balance_of(minter);
             if recipient_balance < price {
                 return Err(PSP34Error::Custom(
                        format!("Minter cannot affort NFT at current price of {:?}.", price).into_bytes()))
@@ -316,14 +343,14 @@ pub mod psp34_nft {
             let _ = self._mint_to(minter, psp34::Id::U64(self.last_token_id))?;
 
             // get nft collection of recipient if already holding
-            let mut collection = match self.collections.get(minter) {
+            let mut collection = match self.access.collections.get(minter) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
 
             // add id to recipient's nft collection
             collection.push(psp34::Id::U64(self.last_token_id));
-            self.collections.insert(minter, &collection);
+            self.access.collections.insert(minter, &collection);
 
             Ok(())
         }
@@ -342,9 +369,9 @@ pub mod psp34_nft {
             self.last_token_id += 1;
 
             // make sure cap is not surpassed
-            if self.last_token_id >= self.cap {
+            if self.last_token_id >= self.access.cap {
                 return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.cap).into_bytes()))
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
             }
 
             // mint and set
@@ -352,12 +379,12 @@ pub mod psp34_nft {
             let _ = self.set_multiple_attributes(Id::U64(self.last_token_id), attributes, values)?;
 
             // update recipient's collection
-            let mut collection = match self.collections.get(recipient) {
+            let mut collection = match self.access.collections.get(recipient) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
             collection.push(Id::U64(self.last_token_id));
-            self.collections.insert(recipient, &collection);
+            self.access.collections.insert(recipient, &collection);
 
             Ok(())
         }
@@ -371,12 +398,12 @@ pub mod psp34_nft {
         ) -> Result<(), OtherError> {
 
             // make sure caller is operator
-            if self.env().caller() != self.operator.address {
+            if self.env().caller() != self.app.operator.address {
 
                 return Err(OtherError::CallerNotOperator);
             }
 
-            self.token_instance.create_socket(self.env().caller(), PORT)
+            self.app.token_instance.create_socket(self.env().caller(), PORT)
         }
 
         /// . make call through universal access nft socket to PSP22 token contract
@@ -390,7 +417,7 @@ pub mod psp34_nft {
             data: Vec<u8>,                  // <--! data vector to pass custom information to token
             ) -> Result<(), OtherError> {   //      contract logic
 
-            self.token_instance.call_socket(address, amount, data)
+            self.app.token_instance.call_socket(address, amount, data)
         }
 
         /// . store hashed username password pair to register credentials
@@ -417,7 +444,7 @@ pub mod psp34_nft {
             }
 
             // make sure username is not already taken
-            match self.credentials.get(userhash) {
+            match self.access.credentials.get(userhash) {
 
                 // if id matches id in credential mapping, then duplicate username belongs to
                 // caller, and caller is effectively resetting password
@@ -436,13 +463,13 @@ pub mod psp34_nft {
             };
 
             // make sure uanft owner hasn't already registered different credentials
-            match self.userhashes.get(id.clone()) {
+            match self.access.userhashes.get(id.clone()) {
 
                 // if entry exists, owner has already registered under different userhash
                 Some(userhash) => {
 
                     // eliminate entry to deduplicate credentials
-                    self.credentials.remove(userhash);
+                    self.access.credentials.remove(userhash);
                 },
 
                 // None means this is first time registering credentials with uanft
@@ -450,11 +477,11 @@ pub mod psp34_nft {
             };
 
             // password and uanft id info affiliated with username
-            self.credentials.insert(userhash, &(passhash, id.clone()));
+            self.access.credentials.insert(userhash, &(passhash, id.clone()));
 
             // username affiliated with uanft id
             // ...this is necessary to revoke access upon uanft transfer
-            self.userhashes.insert(id, &userhash);
+            self.access.userhashes.insert(id, &userhash);
 
             Ok(())
         }
@@ -471,11 +498,11 @@ pub mod psp34_nft {
         ) -> Result<(), PSP34Error> {
 
             // password and uanft id info affiliated with username
-            self.credentials.insert(userhash, &(passhash, id.clone()));
+            self.access.credentials.insert(userhash, &(passhash, id.clone()));
 
             // username affiliated with uanft id
             // ...this is necessary to revoke access upon uanft transfer
-            self.userhashes.insert(id, &userhash);
+            self.access.userhashes.insert(id, &userhash);
 
             Ok(())
         }
@@ -489,17 +516,17 @@ pub mod psp34_nft {
         ) -> Result<(), PSP34Error> {
 
             // get the uanft id associated with username
-            let uanft: Id = match self.credentials.get(userhash) {
+            let uanft: Id = match self.access.credentials.get(userhash) {
                 Some(credential) => credential.1,
                 None => return Err(PSP34Error::Custom(
                                format!("Username not registered.").into_bytes())),
             };
 
             // remove hash pair
-            self.credentials.remove(userhash);
+            self.access.credentials.remove(userhash);
 
             // remove uanft id mapping to userhash
-            self.userhashes.remove(uanft);
+            self.access.userhashes.remove(uanft);
 
             Ok(())
         }
@@ -510,7 +537,7 @@ pub mod psp34_nft {
             &self,
         ) -> Balance {
 
-            self.nft_price_psp22token
+            self.access.nft_psp22price
         }
 
         /// . change the price that self-minter must pay for universal access nft
@@ -521,7 +548,7 @@ pub mod psp34_nft {
             price: Balance,
         ) -> Result<(), PSP34Error> {
 
-            self.nft_price_psp22token = price;
+            self.access.nft_psp22price = price;
 
             Ok(())
         }
@@ -534,7 +561,7 @@ pub mod psp34_nft {
         ) -> Result<Vec<Id>, PSP34Error> {
 
             // retrieve the collection
-            match self.collections.get(address) {
+            match self.access.collections.get(address) {
                 Some(vec) => Ok(vec),
                 None => Err(PSP34Error::Custom(
                         format!("The address {:?} does not have a collection.", address).into_bytes())),
@@ -549,7 +576,7 @@ pub mod psp34_nft {
         ) -> Result<(Hash, Id), PSP34Error> {
 
             // retrieve the collection
-            match self.credentials.get(username) {
+            match self.access.credentials.get(username) {
                 Some((password, id)) => Ok((password, id)),
                 None => Err(PSP34Error::Custom(
                         format!("Credentials nonexistent.").into_bytes())),
@@ -564,7 +591,7 @@ pub mod psp34_nft {
         ) -> Result<bool, PSP34Error> {
 
             // if userhash exists, then uanft is authenticated
-            match self.userhashes.get(id) {
+            match self.access.userhashes.get(id) {
                 Some(_hash) => Ok(true),
                 None => Ok(false),
             }
