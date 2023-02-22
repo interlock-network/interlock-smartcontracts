@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"ilockmvp":[["impl <a class=\"trait\" href=\"ink/codegen/dispatch/info/trait.ContractCallBuilder.html\" title=\"trait ink::codegen::dispatch::info::ContractCallBuilder\">ContractCallBuilder</a> for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.ILOCKmvp.html\" title=\"struct ilockmvp::ilockmvp::ILOCKmvp\">ILOCKmvp</a>"]]
+"ilockmvp":[["impl ContractCallBuilder for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.ILOCKmvp.html\" title=\"struct ilockmvp::ilockmvp::ILOCKmvp\">ILOCKmvp</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
