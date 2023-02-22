@@ -9,29 +9,41 @@ pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 #[openbrush::contract]
 pub mod psp34_nft {
 
-    use ink::codegen::Env;
-    use ink::prelude::{
-        string::{String, ToString},
-        vec::Vec,
-        format,
+    // ink 4 imports
+    use ink::{
+        codegen::Env,
+        storage::Mapping,
+        prelude::{
+            string::{String, ToString},
+            vec::Vec,
+            format,
+        },
     };
-    use ink::storage::Mapping;
+
+    // openbrush 3 imports
     use openbrush::{
+        traits::Storage,
+        modifiers,
         contracts::{
             ownable::*,
             psp34::extensions::{enumerable::*, metadata::*},
+            psp22::psp22_external::PSP22,
         },
-        traits::Storage,
-        modifiers,
     };
-    use openbrush::contracts::psp22::psp22_external::PSP22;
 
-    use ilockmvp::ILOCKmvpRef;
-    use ilockmvp::ilockmvp::OtherError;
+    // we use these to interface as uanft application
+    // with the Interlock Network PSP22 contract
+    use ilockmvp::{
+        ILOCKmvpRef,
+        ilockmvp::OtherError,
+    };
 
-    pub const PORT: u16 = 0;
-
-    /// . wrap AccountId type to implement Default
+    // this is a type wrapper to implement Default method
+    // on AccountId type. Ink 4 stable eliminated AccountId Default
+    // (which was zero address, that has known private key)
+    // ...we only really need this because Openbrush contract
+    //    relies on deriving Default for contract storage, and
+    //    our AccesData struct contains AccountId
     #[derive(scale::Encode, scale::Decode, Clone, Debug)]
     #[cfg_attr(
     feature = "std",
@@ -60,6 +72,7 @@ pub mod psp34_nft {
     #[openbrush::upgradeable_storage(ACCESS_KEY)]
     pub struct AccessData {
 
+        // uanft token cap
         pub cap: u64,
 
         // nft sale price in ILOCK (or other) PSP22 token
@@ -96,7 +109,14 @@ pub mod psp34_nft {
         // to expand storage related to this uanft application functionality
         pub _reserved: Option<()>
     }
+    // port number for this type of uanft application socket connections to ILOCK (or other)
+    // PSP22 token contract...
+    // ...PORT 0 designates uanft contracts owned by Interlock Network.
+    //    This port is locked by default (only Interlock Network may connect this uanft
+    //    contract via socket to ILOCK PSP22 contrac.
+    pub const PORT: u16 = 0;
 
+    // main contract storage
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
@@ -115,6 +135,7 @@ pub mod psp34_nft {
         #[storage_field]
         app: AppData,
 
+        // art zero storage fields
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
