@@ -110,8 +110,85 @@ pub mod ilockmvp {
 //// structured data ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// . StakeholderData struct contains all pertinent information for each stakeholder
-    ///   (Besides balance and allowance mappings)
+    /// - This is upgradable storage for the token rewarding feature of this
+    /// PSP22 contract.
+    pub const REWARD_KEY: u32 = openbrush::storage_unique_key!(RewardData);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(REWARD_KEY)]
+    pub struct RewardData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - How much ILOCK have we rewarded each Interlocker?
+        interlocker: Mapping<AccountId, Balance>,
+
+        /// - In total, how much ILOCK have we rewarded to Interlockers?
+        total: Balance,
+
+        /// - Expand storage related to the pool accounting functionality.
+        pub _reserved: Option<()>,
+    }
+
+    /// - This is upgradable storage for the token pool management and accounting feature of this
+    /// PSP22 contract.
+    pub const POOL_KEY: u32 = openbrush::storage_unique_key!(TokenPools);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(POOL_KEY)]
+    pub struct TokenPools {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - What are the current balances of all the vesting pools?
+        /// - This includes the rewards pool balance.
+        balances: [Balance; POOL_COUNT],
+
+        /// - How much ILOCK is circulating right now?
+        /// - This includes token held by liquidity pools/exchanges.
+        /// - This is the value of `total_supply()` getter.
+        circulating: Balance,
+
+        /// - How much do we have available in collected taxes/fees from port owners
+        /// and application contract operators?
+        tax: Balance,
+
+        /// - Expand storage related to the pool accounting functionality.
+        pub _reserved: Option<()>,
+    }
+
+    /// - This is upgradable storage for the application connection feature of this
+    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
+    pub const VEST_KEY: u32 = openbrush::storage_unique_key!(VestData);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(VEST_KEY)]
+    pub struct VestData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Contains information about stakeholders and the vesting
+        /// status.
+        /// - See detailed struct below.
+        ///
+        /// stakeholder:         stakeholder account address -> info about stakeholder
+        pub stakeholder: Mapping<AccountId, StakeholderData>,
+
+        /// - Counter responsible for keeping track of how many months have passed
+        /// along the vesting schedule.
+        /// - Used in part to calculate and compare token amount paid out vs token amount owed.
+        pub monthspassed: u16,
+
+        /// - Stores the date timestamp one month ahead of the last increment of
+        /// `monthspassed`
+        pub nextpayout: Timestamp,
+
+        /// - Expand storage related to the vesting functionality.
+        pub _reserved: Option<()>,
+    }
+    /// - StakeholderData struct contains all pertinent information for each stakeholder
+    /// (Besides balance and allowance mappings).
+    /// - This is primarily for managing and implementing the vesting schedule.
     #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
     feature = "std",
@@ -124,12 +201,76 @@ pub mod ilockmvp {
         )
     )]
     pub struct StakeholderData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - How much so far has this stakeholder been paid in ILOCK?
         paid: Balance,
+
+        /// - What is the overall ILOCK token share for this stakeholder?
         share: Balance,
+
+        /// - Which vesting pool does this stakeholder belong to?
+        /// - The pool determines the vesting schedule.
         pool: u8,
     }
 
-    // ink4 has no AccountId Default impl thus struct Default cannot be derived
+    /// - This is upgradable storage for the application connection feature of this
+    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
+    pub const APP_KEY: u32 = openbrush::storage_unique_key!(ApplicationData);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(APP_KEY)]
+    pub struct AppData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Contains information specifying a particular _type_ of connecting
+        /// external application contract via the application/socket abstraction.
+        /// - When an application contract creates a connecting socket with this token
+        /// contract with a particular port, it adheres to the logic and protocol
+        /// specified by the port type.
+        /// - For example, PORT 0 in this contract only accepts connections from universal
+        /// access NFT contract owned by Interlock, and for every socket call from a UANFT contract 
+        /// application, tokens in the amount of the set NFT price are transferred from the calling minter
+        /// to this ILOCK contract's owner account. On the application side, once the ILOCK
+        /// tokens are successfully transferred via the port protocol, a UANFT is minted to
+        /// the caller.
+        /// - For example, PORT 1 in this contract is the same as PORT 0, but UANFT application
+        /// contracts are owned by different operators, and on each socket call, the protocol
+        /// includes an additional tax in ILOCK, which Interlock Network collects.
+        /// - The mapping is from port number, to port details and specs.
+        /// - Only this contract's owner has the authority to create or edit a port.
+        /// - See detailed struct below.
+        ///
+        /// ports:         port number -> port(app contract hash, metadata, port owner)
+        pub ports: Mapping<u16, Port>,
+
+        /// - Contains information specifying a particular _instance_ of an application
+        /// (as defined by port application hash) contract's connection to this PSP22
+        /// contract.
+        /// - Similar to the standard TCP/IP address:port format, the port specifies the
+        /// protocol, and the address specifies the operator of that particular instance
+        /// of the application contract connecting to this PSP22 contract.
+        /// - In the example of PORT 1, the address of a socket connection is the address
+        /// that receives the ILOCK token transfer, ultimately in exchange for the UANFT
+        /// mint back on the application side.
+        /// - The mapping is from application address, to socket operator address and port number.
+        /// - One socket may serve multiple applications (ie, the same operator address:port
+        /// number pair) which is a slight deviation from the socket formality in TCP/IP.
+        /// - Any agent with a verified application contract may connect to this PSP22 contract
+        /// without permission from this contract's owner.
+        /// - See detailed struct below.
+        ///
+        /// sockets:         application contract address -> socket(app operator address : port)
+        pub sockets: Mapping<AccountId, Socket>,
+
+        /// - Expand storage related to the application/socket/port functionality.
+        pub _reserved: Option<()>,
+    }
+    /// - Information pertaining to port definition in application/socket/port contract
+    /// connectivity formalism.
     #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
@@ -142,14 +283,50 @@ pub mod ilockmvp {
         )
     )]
     pub struct Port {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - What is the codehash of the application smart contract associated with
+        /// this port?
+        /// - This codehash is the application template that numerous individual application 
+        /// contracts may be instantiated and connected to this PSP22 contract via socket
+        /// without signed permission from this ILOCK contract's owner.
+        /// - This codehash is essential to making sure that only safe and approved application
+        /// contracts are able to connect to this token contract and manipulate its owneronly
+        /// functionalities (as defined per respective port protocol).
         application: Hash,
+
+        /// - How much does Interlock tax transaction taking place within a port protocol's
+        /// socket call?
         tax: Balance,
+
+        /// - For withdrawing rewards from ILOCK rewards pool, what is the max this particular
+        /// port owner's application type can withdraw from rewards pool?
         cap: Balance,
+
+        /// - If locked, only Interlock token contract owner can create a socket connection with
+        /// this token contract using the appropriate application codehash.
         locked: bool,
+
+        /// - How much ILOCK has this port been rewarded or issued throughout the course of
+        /// its operation (in case where protocol rewards or issues ILOCK, that is)?
         paid: Balance,
+
+        /// - How much has Interlock collected from this port in taxes or other collections?
         collected: Balance,
+
+        /// - Who is the overall owner of this port?
+        /// - Socket operators are not necessarily owners of the port.
+        /// - For example, a restaurant franchise has one owner, whereas the franchise may have
+        /// numberous restaurant locations, each with it's own operator, each operator/franchise
+        /// pair forming a separate socket connection.
         owner: AccountId,
     }
+    /// - Ink 4 has no AccountId Default impl thus struct Default cannot be derived
+    /// due to `owner` field.
+    /// - Default derivation is required by openbrush contract implementation of
+    /// contract storage.
     impl Default for Port {
         fn default() -> Port {
             Port {
@@ -163,8 +340,8 @@ pub mod ilockmvp {
             }
         }
     }
-
-    // ink4 has no AccountId Default impl thus struct Default cannot be derived
+    /// - Information pertaining to socket definition in application/socket/port contract
+    /// connectivity formalism.
     #[derive(scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(
     feature = "std",
@@ -177,9 +354,32 @@ pub mod ilockmvp {
         )
     )]
     pub struct Socket {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Who operates (owns usually) a specific instance of a connecting application
+        /// contract?
+        /// - Using the restaurant franchise metaphor again, the operator may have several
+        /// different instances of the port's application contract.
+        /// - Each instance of the application contract has its own address, but each restaurant
+        /// has the same operator.
+        /// - The socket (operator:franchise or operator:port#) is like the single business franchise
+        /// agreement between the restaurant operator and the franchise owner.
+        /// - There is only one agreement between the franchise and the restaurant operator,
+        /// regardless of how many restaurants the operator has.
         operator: AccountId,
+
+        /// - What port is this operator connected to?
+        /// - Using the restaurant franchise metaphor again, the port is like the franchise
+        /// itself.
+        /// - The port number is what identifies a particular franchise and its protocols,
+        /// procedures, metadata, and ultimately business model and standards for any
+        /// franchisees.
         portnumber: u16,
     }
+    /// - Ink 4 has no AccountId Default impl thus struct Default cannot be derived
+    /// due to `operator` field.
     impl Default for Socket {
         fn default() -> Socket {
             Socket {
@@ -197,24 +397,33 @@ pub mod ilockmvp {
         // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
         // OR TYPES IF UPGRADING THIS CONTRACT!!!
 
+        /// - Openbrush PSP22.
         #[storage_field]
         psp22: psp22::Data,
+
+        /// - Openbrush ownership extension.
         #[storage_field]
 		ownable: ownable::Data,
+
+        /// - Openbrush metadata extension.
         #[storage_field]
         metadata: metadata::Data,
 
-        stakeholderdata: Mapping<AccountId, StakeholderData>,
-        rewardedinterlocker: Mapping<AccountId, Balance>,
-        poolbalances: [Balance; POOL_COUNT],
-        rewardedtotal: Balance,
-        circulatingsupply: Balance,
-        taxpool: Balance,
-        monthspassed: u16,
-        nextpayout: Timestamp,
-        ports: Mapping<u16, Port>,
-        sockets: Mapping<AccountId, Socket>,  // application address -> socket
-                                              //                        socket == operatoraddress:port
+        /// - ILOCK Rewards info.
+        #[storage_field]
+        reward: RewardData,
+
+        /// - ILOCK token pool info.
+        #[storage_field]
+        pool: TokenPools,
+
+        /// - ILOCK vesting info.
+        #[storage_field]
+        vest: VestData,
+
+        /// - ILOCK connecting application contract info
+        #[storage_field]
+        app: AppData,
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -329,7 +538,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.circulatingsupply
+            self.pool.circulating
         }
 
         /// . override default transfer doer
@@ -349,8 +558,8 @@ pub mod ilockmvp {
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
 
-                match self.circulatingsupply.checked_add(value) {
-                    Some(sum) => self.circulatingsupply = sum,
+                match self.pool.circulating.checked_add(value) {
+                    Some(sum) => self.pool.circulating = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
@@ -358,12 +567,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.poolbalances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                match self.pool.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.pool.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.circulatingsupply.checked_sub(value) {
-                    Some(difference) => self.circulatingsupply = difference,
+                match self.pool.circulating.checked_sub(value) {
+                    Some(difference) => self.pool.circulating = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -387,8 +596,8 @@ pub mod ilockmvp {
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
 
-                match self.circulatingsupply.checked_add(value) {
-                    Some(sum) => self.circulatingsupply = sum,
+                match self.pool.circulating.checked_add(value) {
+                    Some(sum) => self.pool.circulating = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
@@ -396,12 +605,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.poolbalances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                match self.pool.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.pool.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.circulatingsupply.checked_sub(value) {
-                    Some(difference) => self.circulatingsupply = difference,
+                match self.pool.circulating.checked_sub(value) {
+                    Some(difference) => self.pool.circulating = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -433,7 +642,7 @@ pub mod ilockmvp {
 
             // burn the tokens
             let _ = self._burn_from(donor, amount)?;
-            self.circulatingsupply -= amount;
+            self.pool.circulating -= amount;
 
             Ok(())
         }
@@ -506,10 +715,10 @@ pub mod ilockmvp {
             let caller = contract.env().caller();
 
             // set initial data
-            contract.monthspassed = 0;
-            contract.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
-            contract.rewardedtotal = 0;
-            contract.circulatingsupply = 0;
+            contract.vest.monthspassed = 0;
+            contract.vest.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
+            contract.reward.total = 0;
+            contract.pool.circulating = 0;
 
             contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
             contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string().into_bytes());
@@ -523,7 +732,7 @@ pub mod ilockmvp {
             // create initial pool balances
             for pool in 0..POOL_COUNT {
 
-                contract.poolbalances[pool] =
+                contract.pool.balances[pool] =
                                 POOLS[pool].tokens * DECIMALS_POWER10;
             }
             
@@ -544,11 +753,11 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // test to see if current time falls beyond time for next payout
-            if self.env().block_timestamp() > self.nextpayout {
+            if self.env().block_timestamp() > self.vest.nextpayout {
 
                 // update time variables
-                self.nextpayout += ONE_MONTH;
-                self.monthspassed += 1;
+                self.vest.nextpayout += ONE_MONTH;
+                self.vest.monthspassed += 1;
 
                 return Ok(());
             }
@@ -564,7 +773,7 @@ pub mod ilockmvp {
         ) -> Timestamp {
 
             // calculate remaining time
-            let timeleft: Timestamp = match self.nextpayout.checked_sub(self.env().block_timestamp()) {
+            let timeleft: Timestamp = match self.vest.nextpayout.checked_sub(self.env().block_timestamp()) {
                 Some(difference) => difference,
                 None => return 0,
             };
@@ -601,7 +810,7 @@ pub mod ilockmvp {
             };
 
             // insert stakeholder struct into mapping
-            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
+            self.vest.stakeholder.insert(stakeholder, &this_stakeholder);
 
             Ok(())
         }
@@ -616,7 +825,7 @@ pub mod ilockmvp {
         ) -> (String, String, String, String) {
 
             // get pool and stakeholder data structs first
-            let this_stakeholder = self.stakeholderdata.get(stakeholder).unwrap();
+            let this_stakeholder = self.vest.stakeholder.get(stakeholder).unwrap();
             let pool = &POOLS[this_stakeholder.pool as usize];
 
             // how much has stakeholder already claimed?
@@ -651,14 +860,14 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // get data structs
-            let mut this_stakeholder = match self.stakeholderdata.get(stakeholder) {
+            let mut this_stakeholder = match self.vest.stakeholder.get(stakeholder) {
                 Some(s) => s,
                 None => { return Err(OtherError::StakeholderNotFound.into()) },
             };
             let pool = &POOLS[this_stakeholder.pool as usize];
 
             // require cliff to have been surpassed
-            if self.monthspassed < pool.cliffs as u16 {
+            if self.vest.monthspassed < pool.cliffs as u16 {
                 return Err(OtherError::CliffNotPassed.into())
             }
 
@@ -674,7 +883,7 @@ pub mod ilockmvp {
             // require that payout isn't repeatable for this month
             // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
             let payments = this_stakeholder.paid / payout;
-            if payments >= self.monthspassed as u128 {
+            if payments >= self.vest.monthspassed as u128 {
                 return Err(OtherError::PayoutTooEarly.into())
             }
 
@@ -706,14 +915,14 @@ pub mod ilockmvp {
             let _ = self.transfer(stakeholder, payout, Default::default())?;
 
             // update pool balance
-            match self.poolbalances[this_stakeholder.pool as usize].checked_sub(payout) {
-                Some(difference) => self.poolbalances[this_stakeholder.pool as usize] = difference,
+            match self.pool.balances[this_stakeholder.pool as usize].checked_sub(payout) {
+                Some(difference) => self.pool.balances[this_stakeholder.pool as usize] = difference,
                 None => return Err(OtherError::Underflow.into()),
             };
 
             // finally update stakeholder data struct state
             this_stakeholder.paid = newpaidtotal;
-            self.stakeholderdata.insert(stakeholder, &this_stakeholder);
+            self.vest.stakeholder.insert(stakeholder, &this_stakeholder);
 
             Ok(())
         }
@@ -740,13 +949,13 @@ pub mod ilockmvp {
             };
         
             // make sure reward not too large
-            if self.poolbalances[poolnumber as usize] < amount {
+            if self.pool.balances[poolnumber as usize] < amount {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // deduct payout amount
-            match self.poolbalances[poolnumber as usize].checked_sub(amount) {
-                Some(difference) => self.poolbalances[poolnumber as usize] = difference,
+            match self.pool.balances[poolnumber as usize].checked_sub(amount) {
+                Some(difference) => self.pool.balances[poolnumber as usize] = difference,
                 None => return Err(OtherError::Underflow.into()),
             };
 
@@ -790,8 +999,8 @@ pub mod ilockmvp {
 
             (format!("pool: {:?}, balance: {:?}", 
                     POOLS[pool as usize].name.to_string(),
-                    self.poolbalances[pool as usize]),
-             self.poolbalances[pool as usize])
+                    self.pool.balances[pool as usize]),
+             self.pool.balances[pool as usize])
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -809,19 +1018,19 @@ pub mod ilockmvp {
         ) -> PSP22Result<Balance> {
 
             // make sure reward not too large
-            if self.poolbalances[REWARDS as usize] < reward {
+            if self.pool.balances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge.into())
             }
 
             // update total amount rewarded to interlocker
-            match self.rewardedtotal.checked_add(reward) {
-                Some(sum) => self.rewardedtotal = sum,
+            match self.reward.total.checked_add(reward) {
+                Some(sum) => self.reward.total = sum,
                 None => return Err(OtherError::Overflow.into()),
             };
 
             // update rewards pool balance
-            match self.poolbalances[REWARDS as usize].checked_sub(reward) {
-                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+            match self.pool.balances[REWARDS as usize].checked_sub(reward) {
+                Some(difference) => self.pool.balances[REWARDS as usize] = difference,
                 None => return Err(OtherError::Underflow.into()),
             };
 
@@ -829,7 +1038,7 @@ pub mod ilockmvp {
             let _ = self.transfer(interlocker, reward, Default::default())?;
 
             // get previous total rewarded to interlocker
-            let rewardedinterlockertotal: Balance = match self.rewardedinterlocker.get(interlocker) {
+            let rewardedinterlockertotal: Balance = match self.reward.interlocker.get(interlocker) {
                 Some(total) => total,
                 None => 0,
             };
@@ -839,7 +1048,7 @@ pub mod ilockmvp {
                 Some(sum) => sum,
                 None => return Err(OtherError::Overflow.into()),
             };
-            self.rewardedinterlocker.insert(interlocker, &newrewardedtotal);
+            self.reward.interlocker.insert(interlocker, &newrewardedtotal);
 
             // emit Reward event
             self.env().emit_event(Reward {
@@ -858,7 +1067,7 @@ pub mod ilockmvp {
             interlocker: AccountId
         ) -> Balance {
 
-            match self.rewardedinterlocker.get(interlocker) {
+            match self.reward.interlocker.get(interlocker) {
                 Some(total) => total,
                 None => 0,
             }
@@ -870,7 +1079,7 @@ pub mod ilockmvp {
             &self
         ) -> Balance {
 
-            self.rewardedtotal
+            self.reward.total
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -887,15 +1096,15 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // only withdraw what is available in pool
-            if amount > self.taxpool {
+            if amount > self.pool.tax {
                 return Err(OtherError::PaymentTooLarge.into());
             }
 
             let _ = self.transfer(wallet, amount, Default::default())?;
             
             // deduct withdraw amount
-            match self.taxpool.checked_sub(amount) {
-                Some(difference) => self.taxpool = difference,
+            match self.pool.tax.checked_sub(amount) {
+                Some(difference) => self.pool.tax = difference,
                 None => return Err(OtherError::Underflow.into()),
             };
 
@@ -912,7 +1121,7 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // only withdraw what is available in pool
-            if amount > self.taxpool {
+            if amount > self.pool.tax {
 
                 return Err(OtherError::PaymentTooLarge.into());
             }
@@ -923,7 +1132,7 @@ pub mod ilockmvp {
                 &amount,
             );
 
-            self.taxpool -= amount;
+            self.pool.tax -= amount;
 
             Ok(())
         }
@@ -934,7 +1143,7 @@ pub mod ilockmvp {
             &self,
         ) -> Balance {
 
-            self.taxpool
+            self.pool.tax
         }
 
         /// . function to get the number of months passed for contract
@@ -943,7 +1152,7 @@ pub mod ilockmvp {
             &self,
         ) -> u16 {
 
-            self.monthspassed
+            self.vest.monthspassed
         }
 
         /// . function to get the supply cap minted on TGE
@@ -966,7 +1175,7 @@ pub mod ilockmvp {
             &mut self,
         ) -> bool {
 
-            self.monthspassed += 4;
+            self.vest.monthspassed += 4;
 
             true
         }
@@ -1019,7 +1228,7 @@ pub mod ilockmvp {
                 collected: 0,
                 owner: owner,
             };
-            self.ports.insert(number, &port);
+            self.app.ports.insert(number, &port);
 
             Ok(())
         }
@@ -1048,7 +1257,7 @@ pub mod ilockmvp {
             };
 
             // get port specified by calling contract
-            let port: Port = match self.ports.get(portnumber) {
+            let port: Port = match self.app.ports.get(portnumber) {
                 Some(port) => port,
                 None => return Err(OtherError::NoPort),
             };
@@ -1071,7 +1280,7 @@ pub mod ilockmvp {
 
                 // socket is registered with token contract thus the calling
                 // contract that created the socket may start calling socket to receive rewards
-                self.sockets.insert(application, &socket);
+                self.app.sockets.insert(application, &socket);
             
                 // setup socket according to port type
                 match portnumber {
@@ -1123,13 +1332,13 @@ pub mod ilockmvp {
             }
 
             // get socket, to get port assiciated with socket
-            let socket: Socket = match self.sockets.get(self.env().caller()) {
+            let socket: Socket = match self.app.sockets.get(self.env().caller()) {
                 Some(socket) => socket,
                 None => return Err(OtherError::NoSocket),
             };
 
             // get port info
-            let mut port: Port = match self.ports.get(socket.portnumber) {
+            let mut port: Port = match self.app.ports.get(socket.portnumber) {
                 Some(port) => port,
                 None => return Err(OtherError::NoPort),
             };
@@ -1155,12 +1364,12 @@ pub mod ilockmvp {
                     self.psp22.balances.insert(&address, &minterbalance);
                 
                     // update pools
-                    match self.poolbalances[REWARDS as usize].checked_add(amount) {
-                        Some(sum) => self.poolbalances[REWARDS as usize] = sum,
+                    match self.pool.balances[REWARDS as usize].checked_add(amount) {
+                        Some(sum) => self.pool.balances[REWARDS as usize] = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    match self.circulatingsupply.checked_sub(amount) {
-                        Some(difference) => self.circulatingsupply = difference,
+                    match self.pool.circulating.checked_sub(amount) {
+                        Some(difference) => self.pool.circulating = difference,
                         None => return Err(OtherError::Underflow),
                     };
 
@@ -1169,7 +1378,7 @@ pub mod ilockmvp {
                         Some(sum) => port.paid = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    self.ports.insert(0, &port);
+                    self.app.ports.insert(0, &port);
                 },
 
                 // PORT 1 == Non-Interlock-owned UANFTs
@@ -1245,8 +1454,8 @@ pub mod ilockmvp {
             };
 
             // update pools
-            match self.taxpool.checked_add(port.tax) {
-                Some(sum) => self.taxpool = sum,
+            match self.pool.tax.checked_add(port.tax) {
+                Some(sum) => self.pool.tax = sum,
                 None => return Err(OtherError::Overflow),
             };
             match port.collected.checked_add(port.tax) {
@@ -1267,12 +1476,12 @@ pub mod ilockmvp {
             };
 
             // update balance pool and totals
-            match self.poolbalances[REWARDS as usize].checked_sub(adjustedamount) {
-                Some(difference) => self.poolbalances[REWARDS as usize] = difference,
+            match self.pool.balances[REWARDS as usize].checked_sub(adjustedamount) {
+                Some(difference) => self.pool.balances[REWARDS as usize] = difference,
                 None => return Err(OtherError::Underflow),
             };
-            match self.rewardedtotal.checked_add(amount) {
-                Some(sum) => self.rewardedtotal = sum,
+            match self.reward.total.checked_add(amount) {
+                Some(sum) => self.reward.total = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1281,7 +1490,7 @@ pub mod ilockmvp {
                 Some(sum) => port.paid = sum,
                 None => return Err(OtherError::Overflow),
             };
-            self.ports.insert(portnumber, &port);
+            self.app.ports.insert(portnumber, &port);
 
             // emit Reward event
             self.env().emit_event(Reward {
@@ -1299,7 +1508,7 @@ pub mod ilockmvp {
             application: AccountId,
         ) -> Socket {
             
-            match self.sockets.get(application) {
+            match self.app.sockets.get(application) {
                 Some(socket) => socket,
                 None => Default::default(),
             }
@@ -1312,7 +1521,7 @@ pub mod ilockmvp {
             portnumber: u16,
         ) -> Port {
             
-            match self.ports.get(portnumber) {
+            match self.app.ports.get(portnumber) {
                 Some(port) => port,
                 None => Default::default(),
             }
@@ -1344,8 +1553,8 @@ pub mod ilockmvp {
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
             // the rest
-            assert_eq!(ILOCKmvpPSP22.monthspassed, 0);
-            assert_eq!(ILOCKmvpPSP22.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 0);
+            assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
         }
 
         /// . test if name getter does its job
@@ -1457,7 +1666,7 @@ pub mod ilockmvp {
             ILOCKmvpPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
 
             // verify registration stuck
-            let this_stakeholder = ILOCKmvpPSP22.stakeholderdata.get(accounts.bob).unwrap();
+            let this_stakeholder = ILOCKmvpPSP22.vest.stakeholder.get(accounts.bob).unwrap();
             assert_eq!(this_stakeholder.paid, 0);
             assert_eq!(this_stakeholder.share, share);
             assert_eq!(this_stakeholder.pool, pool);
@@ -1482,7 +1691,7 @@ pub mod ilockmvp {
         fn months_passed_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            ILOCKmvpPSP22.monthspassed = 99;
+            ILOCKmvpPSP22.vest.monthspassed = 99;
             assert_eq!(ILOCKmvpPSP22.months_passed(), 99);
         }
 
