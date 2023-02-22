@@ -34,16 +34,16 @@ pub mod psp34_nft {
     // we use these to interface as uanft application
     // with the Interlock Network PSP22 contract
     use ilockmvp::{
-        ILOCKmvpRef,
         ilockmvp::OtherError,
+        ILOCKmvpRef,
     };
 
-    // this is a type wrapper to implement Default method
-    // on AccountId type. Ink 4 stable eliminated AccountId Default
-    // (which was zero address, that has known private key)
-    // ...we only really need this because Openbrush contract
-    //    relies on deriving Default for contract storage, and
-    //    our AccesData struct contains AccountId
+    /// this is a type wrapper to implement Default method
+    /// on AccountId type. Ink 4 stable eliminated AccountId Default
+    /// (which was zero address, that has known private key)
+    /// ...we only really need this because Openbrush contract
+    ///    relies on deriving Default for contract storage, and
+    ///    our AccesData struct contains AccountId
     #[derive(scale::Encode, scale::Decode, Clone, Debug)]
     #[cfg_attr(
     feature = "std",
@@ -65,58 +65,78 @@ pub mod psp34_nft {
         }
     }
 
-    // this is upgradable storage for the access features for this
-    // universal access nft contract
+    /// this is upgradable storage for the access features for this
+    /// universal access nft contract
     pub const ACCESS_KEY: u32 = openbrush::storage_unique_key!(AccessData);
     #[derive(Default, Debug)]
     #[openbrush::upgradeable_storage(ACCESS_KEY)]
     pub struct AccessData {
 
-        // uanft token cap
+        /// uanft token cap
         pub cap: u64,
 
-        // nft sale price in ILOCK (or other) PSP22 token
+        /// nft sale price in ILOCK (or other) PSP22 token
         pub nft_psp22price: Balance,
 
-        //  collections:         user accress -> vector of uanft IDs in collection
+        /// collections contains information about which uanft IDs a particular
+        /// address holds. this in part is important because it provides information
+        /// about how many different access credential instances a particular wallet
+        /// owner has for a given access usecase
+        ///
+        /// collections:         user accress -> vector of uanft IDs in collection
         pub collections: Mapping<AccountId, Vec<Id>>,
 
-        //  credentials:         username hash -> (password hash, uanft ID)
+        /// credentials contains a SHA256 (or other) hashed secret and uanft ID for said
+        /// secret, one pair per user identifing (eg username) SHA256 hash.
+        /// this is important because it provides a means of verifying possession
+        /// of secret, and for which uanft this owner has access to for those
+        /// given credentials
+        ///
+        /// credentials:         username hash -> (password hash, uanft ID)
         pub credentials: Mapping<Hash, (Hash, Id)>,
 
-        //  userhashes:         uanft ID - > username hash
+        /// userhashes contains information about which identifying credential hash
+        /// a given uanft commands. this is important because on transfer event
+        /// we need to revoke access to particular user identifying hash, but transfer
+        /// events by PSP34 standard do not include the identifying information needed 
+        /// revoke access for a particulare credential pair
+        ///
+        /// userhashes:         uanft ID - > username hash
         pub userhashes: Mapping<Id, Hash>,
 
-        // to expand storage related to this uanft's access functionality
+        /// to expand storage related to this uanft's access functionality
         pub _reserved: Option<()>
     }
 
-    // this is upgradable storage for the features that allow this universal
-    // access nft contract to connect as an application to the ILOCK (or other)
-    // PSP22 contract the application socket abstraction
+    /// this is upgradable storage for the features that allow this universal
+    /// access nft contract to connect as an application to the ILOCK (or other)
+    /// PSP22 contract the application socket abstraction
     pub const APP_KEY: u32 = openbrush::storage_unique_key!(AppData);
     #[derive(Default, Debug)]
     #[openbrush::upgradeable_storage(APP_KEY)]
     pub struct AppData {
 
-        // PSP22 token contract that this uanft application connects to via socket
+        /// PSP22 token contract that this uanft application connects to via socket.
+        /// this is used for self-minting purposes, which means non-owner can
+        /// mint in excange for PSP22 token (ILOCK in this case) without needing
+        /// to rely on a transaction relay server off-chain
         pub token_instance: ILOCKmvpRef,
 
-        // address that manages this uanft contract and receives ILOCK
-        // (or other) PSP22 token for self-mint transactions
+        /// address that manages this uanft contract and receives ILOCK
+        /// (or other) PSP22 token for self-mint transactions
         pub operator: AccountID,
 
-        // to expand storage related to this uanft application functionality
+        /// to expand storage related to this uanft application functionality
         pub _reserved: Option<()>
     }
-    // port number for this type of uanft application socket connections to ILOCK (or other)
-    // PSP22 token contract...
-    // ...PORT 0 designates uanft contracts owned by Interlock Network.
-    //    This port is locked by default (only Interlock Network may connect this uanft
-    //    contract via socket to ILOCK PSP22 contrac.
+    /// port number for this type of uanft application socket connections to ILOCK (or other)
+    /// PSP22 token contract...
+    /// ...PORT 0 designates uanft contracts owned by Interlock Network.
+    ///    This port is locked by default (only Interlock Network may connect this uanft
+    ///    contract via socket to ILOCK PSP22 contrac.
     pub const PORT: u16 = 0;
 
-    // main contract storage
+    /// main contract storage
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
