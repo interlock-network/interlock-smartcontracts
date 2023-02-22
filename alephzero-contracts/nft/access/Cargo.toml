@@ -8,7 +8,6 @@ edition = "2021"
 # This unstable ink commit is required by Openbrush
 ink = { version = "~4.0.0", default-features = false}
 
-
 ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }

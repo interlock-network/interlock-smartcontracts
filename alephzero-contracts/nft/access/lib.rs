@@ -43,17 +43,30 @@ pub mod psp34_nft {
         ink::storage::traits::StorageLayout
         )
     )]
-    pub struct Operator {
+    pub struct AccountID {
         address: AccountId,
     }
-    impl Default for Operator {
-        fn default() -> Operator {
-            Operator {
+    impl Default for AccountID {
+        fn default() -> AccountID {
+            AccountID {
                 address: AccountId::from([1_u8;32]),
             }
         }
     }
 
+
+    pub const MANAGER_KEY: u32 = openbrush::storage_unique_key!(ManagerData);
+
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(MANAGER_KEY)]
+    pub struct ManagerData {
+        pub last_token_id: u64,
+    pub attribute_count: u32,
+    pub attribute_names: Mapping<u32, Vec<u8>>,
+    pub locked_tokens: Mapping<Id, bool>,
+    pub locked_token_count: u64,
+    pub _reserved: Option<()>
+}
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
@@ -82,7 +95,7 @@ pub mod psp34_nft {
         
         // application state forming socket to ILOCK token contract
         token_instance: ILOCKmvpRef,
-        operator: Operator,
+        operator: AccountID,
     }
 
     #[openbrush::wrapper]
