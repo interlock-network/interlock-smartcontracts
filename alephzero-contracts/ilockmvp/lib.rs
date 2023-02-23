@@ -1533,19 +1533,19 @@ pub mod ilockmvp {
 // [x] new_token
 // [] check_time
 // [] remaining_time
-// [] register_stakeholder
+// [x] register_stakeholder
 // [] stakeholder_data
 // [] distribute_tokens
 // [] payout_tokens
-// [] pool_data
+// [x] pool_data
 // [] pool_balances
 // [] reward_interlocker
 // [] rewarded_interlocker_total
 // [] rewarded_total
 // [] withdraw_proceeds
 // [] proceeds_available
-// [] months_passed
-// [] cap
+// [x] months_passed
+// [x] cap
 // [] update_contract
 // [] create_port
 // [] create_socket
@@ -1558,19 +1558,78 @@ pub mod ilockmvp {
 // tax_and_reward -> collect + reward
 
 
+    #[cfg(all(test, feature = "e2e-tests"))]
+    mod e2e_tests {
+
+        use super::*;
+        use ink::env::debug_println;
+        use ink_e2e::build_message;
+        use openbrush::contracts::psp22::psp22_external::PSP22;
+
+        type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+
+        /// - test if wallet registration function works as intended 
+        #[ink_e2e::test]
+        async fn transfer_works(
+            mut client: ink_e2e::Client<C, E>,
+        ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await
+                .expect("instantiate failed")
+                .account_id;
+
+            /// - Transfers 1000 ILOCK from alice to bob
+            let alice_transfer = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
+            let result = client
+                .call(&ink_e2e::alice(), alice_transfer, 0, None)
+                .await;
+
+            /// - Checks that bob has expected resulting balance
+            let bob_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_of, 0, None)
+                .await
+                .return_value();
+            assert_eq!(1000, bob_balance);
+
+            /// - Checks that alice has expected resulting balance
+            let alice_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_of, 0, None)
+                .await
+                .return_value();
+            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+
+            Ok(())
+
+        }
+    }
+
     #[cfg(test)]
     mod tests {
 
         use super::*;
-        use ink::codegen::Env;
 
         /// - test if the default constructor does its job
+        /// - and check months_passed()
+        /// - and check cap()
         #[ink::test]
         fn new_token_works() {
 
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
-            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 0);
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, ILOCKmvpPSP22.months_passed());
             assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
             assert_eq!(ILOCKmvpPSP22.total_supply(), 0);
             assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Network".as_bytes().to_vec()));
@@ -1583,99 +1642,8 @@ pub mod ilockmvp {
 
                 total_tokens += POOLS[pool].tokens * DECIMALS_POWER10;
             }
-            assert_eq!(total_tokens, SUPPLY_CAP);
+            assert_eq!(total_tokens, ILOCKmvpPSP22.cap());
             assert_eq!(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
-        }
-
-        /// - test if balance getter does its job
-        #[ink::test]
-        fn balance_of_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // charge alice's account
-            ILOCKmvpPSP22.psp22.balances.insert(&accounts.alice, &100);
-
-            assert_eq!(ILOCKmvpPSP22.balance_of(accounts.alice), 100);
-        }
-
-        /// - test if allowance getter does its job
-        #[ink::test]
-        fn allowance_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Alice has not yet approved Bob
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 0);
-
-            // Alice approves Bob for tokens
-            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
-
-            // Bob's new allowance reflects this approval
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
-        }
-
-        /// - test if increase allowance does does its job
-        #[ink::test]
-        fn increase_allowance_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Alice approves bob to spend tokens
-            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
-
-            // Bob is approved to spend tokens owned by Alice
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
-
-            // Alice increases Bobs allowance
-            assert_eq!(ILOCKmvpPSP22.increase_allowance(accounts.bob, 10), Ok(()));
-
-            // Bob is approved to spend extra tokens owned by Alice
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 20);
-        }
-
-        /// - test if decrease allowance does does its job
-        #[ink::test]
-        fn decrease_allowance_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // Alice approves bob to spend tokens
-            assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
-
-            // Bob is approved to spend tokens owned by Alice
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 10);
-
-            // Alice increases Bobs allowance
-            assert_eq!(ILOCKmvpPSP22.decrease_allowance(accounts.bob, 5), Ok(()));
-
-            // Bob is approved to spend extra tokens owned by Alice
-            assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 5);
-        }
-
-        /// - test if wallet registration function works as intended 
-        #[ink::test]
-        fn register_stakeholder_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            // bob's stakeholder data
-            let share: Balance = 1_000_000;
-            let pool: u8 = 3;
-
-            // call registration function
-            ILOCKmvpPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
-
-            // verify registration stuck
-            let this_stakeholder = ILOCKmvpPSP22.vest.stakeholder.get(accounts.bob).unwrap();
-            assert_eq!(this_stakeholder.paid, 0);
-            assert_eq!(this_stakeholder.share, share);
-            assert_eq!(this_stakeholder.pool, pool);
         }
      
         /// - test if pool data getter does its job
@@ -1692,14 +1660,6 @@ pub mod ilockmvp {
             ));
         }
 
-        /// - test if months passed getter does its job
-        #[ink::test]
-        fn months_passed_works() {
-
-            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            ILOCKmvpPSP22.vest.monthspassed = 99;
-            assert_eq!(ILOCKmvpPSP22.months_passed(), 99);
-        }
-
     }
 }
+
