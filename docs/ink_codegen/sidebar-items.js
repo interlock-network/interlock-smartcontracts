@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_code"],"trait":["CodeGenerator"]};

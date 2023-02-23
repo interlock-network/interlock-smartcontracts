@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Ordering"],"fn":["max","max_by","max_by_key","min","min_by","min_by_key"],"macro":["Eq","Ord","PartialEq","PartialOrd"],"struct":["Reverse"],"trait":["Eq","Ord","PartialEq","PartialOrd"]};

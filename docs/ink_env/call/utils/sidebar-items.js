@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Argument","ArgumentList","ArgumentListEnd","ReturnType","Set","Unset"],"trait":["Unwrap"],"type":["ArgsList","EmptyArgumentList"]};

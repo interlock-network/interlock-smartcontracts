@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Mapping","MultiMapping","RawMapping","RefGuard","ValueGuard"],"trait":["TypeGuard"]};

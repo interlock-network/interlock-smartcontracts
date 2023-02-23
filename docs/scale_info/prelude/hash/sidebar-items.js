@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["Hash"],"struct":["BuildHasherDefault","SipHasher"],"trait":["BuildHasher","Hash","Hasher"]};

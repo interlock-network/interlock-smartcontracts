@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["occupy_storage_derive","storable_hint_derive","storage_key_derive","upgradeable_storage"]};

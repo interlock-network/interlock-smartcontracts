@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"attr":["chain_extension","contract","storage_item","test","trait_definition"],"enum":["LangError"],"macro":["blake2x256","selector_bytes","selector_id"],"mod":["reflect","storage"],"struct":["EnvAccess","ValueReturned"],"trait":["ChainExtensionInstance","Output","ToAccountId"]};

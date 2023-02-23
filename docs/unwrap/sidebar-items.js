@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["unwrap","unwrap_err"],"trait":["VerboseUnwrap","VerboseUnwrapErr"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Compat","Identifier","Op"],"mod":["lexer","parser","version"],"struct":["Comparator","Range","RangeSet"]};
