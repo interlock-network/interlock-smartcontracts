@@ -1541,11 +1541,48 @@ pub mod ilockmvp {
 // . To view debug for specific method run test via:
 //   cargo nightly+ test <test_function_here> -- --nocapture
 
+
+// TODO
+//
+// [] total_supply
+// [] transfer
+// [] transfer_from
+// [] burn
+// [] new_token
+// [] check_time
+// [] remaining_time
+// [] register_stakeholder
+// [] stakeholder_data
+// [] distribute_tokens
+// [] payout_tokens
+// [] pool_data
+// [] pool_balances
+// [] reward_interlocker
+// [] rewarded_interlocker_total
+// [] rewarded_total
+// [] withdraw_proceeds
+// [] proceeds_available
+// [] months_passed
+// [] cap
+// [] update_contract
+// [] create_port
+// [] create_socket
+// [] call_socket
+// [] collect
+// [] socket
+// [] port
+//
+//
+// tax_and_reward -> collect + reward
+// tax_available -> proceeds_available
+// withdraw tax -> proceeds
+// remaining_time fix
+
+
     #[cfg(test)]
     mod tests {
 
         use super::*;
-        use ink_lang as ink;
         use ink_lang::codegen::Env;
 
         /// - test if the default constructor does its job
