@@ -1441,7 +1441,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - tax and reward socket
+        /// - tax and reward transfer between socket calling address and socket operator
         pub fn tax_port_transfer(
             &mut self,
             socket: Socket,
@@ -1530,7 +1530,7 @@ pub mod ilockmvp {
 // [] transfer
 // [] transfer_from
 // [] burn
-// [] new_token
+// [x] new_token
 // [] check_time
 // [] remaining_time
 // [] register_stakeholder
@@ -1550,7 +1550,7 @@ pub mod ilockmvp {
 // [] create_port
 // [] create_socket
 // [] call_socket
-// [] collect
+// [] tax_port_transfer
 // [] socket
 // [] port
 //
@@ -1562,41 +1562,29 @@ pub mod ilockmvp {
     mod tests {
 
         use super::*;
-        use ink_lang::codegen::Env;
+        use ink::codegen::Env;
 
         /// - test if the default constructor does its job
         #[ink::test]
-        fn constructor_works() {
+        fn new_token_works() {
 
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
-            // the rest
             assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 0);
             assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
-        }
-
-        /// - test if name getter does its job
-        #[ink::test]
-        fn name_works() {
-
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Networ.".as_bytes().to_vec()));
-        }
-
-        /// - test if symbol getter does its job
-        #[ink::test]
-        fn symbol_works() {
-
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOC.".as_bytes().to_vec()));
-        }
-        
-        /// - test if decimals getter does its job
-        #[ink::test]
-        fn decimals_works() {
-
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            assert_eq!(ILOCKmvpPSP22.total_supply(), 0);
+            assert_eq!(ILOCKmvpPSP22.metadata.name, Some("Interlock Network".as_bytes().to_vec()));
+            assert_eq!(ILOCKmvpPSP22.metadata.symbol, Some("ILOCK".as_bytes().to_vec()));
             assert_eq!(ILOCKmvpPSP22.metadata.decimals, 18);
+
+            // this checks that token numbers have been entered accurately into POOLS PoolData
+            let mut total_tokens: u128 = 0;
+            for pool in 0..POOL_COUNT {
+
+                total_tokens += POOLS[pool].tokens * DECIMALS_POWER10;
+            }
+            assert_eq!(total_tokens, SUPPLY_CAP);
+            assert_eq!(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
         }
 
         /// - test if balance getter does its job
@@ -1604,7 +1592,7 @@ pub mod ilockmvp {
         fn balance_of_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             // charge alice's account
             ILOCKmvpPSP22.psp22.balances.insert(&accounts.alice, &100);
@@ -1617,7 +1605,7 @@ pub mod ilockmvp {
         fn allowance_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             // Alice has not yet approved Bob
             assert_eq!(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), 0);
@@ -1634,7 +1622,7 @@ pub mod ilockmvp {
         fn increase_allowance_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
             assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
@@ -1654,7 +1642,7 @@ pub mod ilockmvp {
         fn decrease_allowance_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             // Alice approves bob to spend tokens
             assert_eq!(ILOCKmvpPSP22.approve(accounts.bob, 10), Ok(()));
@@ -1674,7 +1662,7 @@ pub mod ilockmvp {
         fn register_stakeholder_works() {
 
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             // bob's stakeholder data
             let share: Balance = 1_000_000;
@@ -1712,18 +1700,6 @@ pub mod ilockmvp {
             ILOCKmvpPSP22.vest.monthspassed = 99;
             assert_eq!(ILOCKmvpPSP22.months_passed(), 99);
         }
-
-//
-// Cannot perform following unit tests: off-chain environment does not support contract invocation.
-//
-// This is an unavoidable openbrush problem, for now.
-//
-//  fn transfer()
-//  fn approve()
-//  fn transfer_from()
-//  fn distribute_tokens()
-//  fn burn()
-//
 
     }
 }
