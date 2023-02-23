@@ -344,7 +344,7 @@ pub mod ilockmvp {
     }
     /// - Information pertaining to socket definition in application/socket/port contract
     /// connectivity formalism.
-    #[derive(scale::Encode, scale::Decode, Clone)]
+    #[derive(scale::Encode, scale::Decode, Clone, Copy)]
     #[cfg_attr(
     feature = "std",
     derive(
@@ -499,6 +499,8 @@ pub mod ilockmvp {
         Overflow,
         /// Returned if checked sub underflows
         Underflow,
+        /// Returned if checked divide errors out
+        DivError,
         /// custome contract error
         Custom(String),
     }
@@ -1380,7 +1382,7 @@ pub mod ilockmvp {
                         Some(sum) => port.paid = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    self.app.ports.insert(0, &port);
+                    self.app.ports.insert(socket.portnumber, &port);
                 },
 
                 // PORT 1 == Non-Interlock-owned UANFTs
@@ -1397,13 +1399,23 @@ pub mod ilockmvp {
                     };
                     self.psp22.balances.insert(&address, &minterbalance);
 
+                    let adjustedamount: Balance = self.tax_port_transfer(socket, port, amount)?;
+
                     // increment cost of uanft to operator's account
                     let mut operatorbalance: Balance = self.psp22.balance_of(socket.operator);
-                    match operatorbalance.checked_add(amount) {
+                    match operatorbalance.checked_add(adjustedamount) {
                         Some(sum) => operatorbalance = sum,
                         None => return Err(OtherError::Overflow),
                     };
                     self.psp22.balances.insert(&socket.operator, &operatorbalance);
+                    
+                    // emit Transfer event, uanft transfer
+                    self.env().emit_event(Transfer {
+                        from: Some(address),
+                        to: Some(socket.operator),
+                        amount: adjustedamount,
+                    });
+
                 },
 
                 // PORT 2 == reserved for Interlock gray-area staking applications
@@ -1430,77 +1442,47 @@ pub mod ilockmvp {
         }
 
         /// - tax and reward socket
-        pub fn reward_port(
+        pub fn tax_port_transfer(
             &mut self,
-            address: AccountId,
-            amount: Balance,
-            portnumber: u16,
+            socket: Socket,
             mut port: Port,
-        ) -> OtherResult<()> {
+            amount: Balance,
+        ) -> OtherResult<Balance> {
 
-            // make sure this will not exceed port cap
-            if port.cap < (port.paid + amount) {
-                return Err(OtherError::PortCapSurpassed.into());
-            }
-
-            // TODO/QUESTION:
-            // tax should probably be a fraction of reward,
-            // instead of a flat rate per reward
-            //   . this would change the logic a little bit
-            // ?
-
-            // transfer transaction tax from socket owner to token contract owner
-            let _ = match self.transfer_from(port.owner, self.ownable.owner, port.tax, Default::default()) {
-                Err(error) => return Err(error.into()),
-                Ok(()) => (),  
+            // compute tax - tax number is in centipercent, 0.01% ==> 100% = 1 & 0.01% = 10_000
+            //
+            // a tax of 0.01% is amount/10_000
+            let tax: Balance = match amount.checked_div(port.tax as Balance) {
+                Some(quotient) => quotient,
+                None => return Err(OtherError::DivError),
             };
 
-            // update pools
-            match self.pool.proceeds.checked_add(port.tax) {
+            // update proceeds pool and total circulation
+            match self.pool.proceeds.checked_add(tax) {
                 Some(sum) => self.pool.proceeds = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match port.collected.checked_add(port.tax) {
+            match port.collected.checked_add(tax) {
                 Some(sum) => port.collected = sum,
                 None => return Err(OtherError::Overflow),
             };
-
-            // transfer reward to reward recipient
-            let _ = match self.transfer_from(self.ownable.owner, address, amount, Default::default()) {
-                Err(error) => return Err(error.into()),
-                Ok(()) => (),
-            };
-
-            // compute amount adjusted to offset transfer function
-            let adjustedamount: Balance = match amount.checked_add(port.tax) {
-                Some(sum) => sum,
-                None => return Err(OtherError::Overflow),
-            };
-
-            // update balance pool and totals
-            match self.pool.balances[REWARDS as usize].checked_sub(adjustedamount) {
-                Some(difference) => self.pool.balances[REWARDS as usize] = difference,
+            match self.pool.circulating.checked_sub(tax) {
+                Some(difference) => self.pool.circulating = difference,
                 None => return Err(OtherError::Underflow),
-            };
-            match self.reward.total.checked_add(amount) {
-                Some(sum) => self.reward.total = sum,
-                None => return Err(OtherError::Overflow),
             };
 
             // update port
-            match port.paid.checked_add(amount) {
-                Some(sum) => port.paid = sum,
-                None => return Err(OtherError::Overflow),
-            };
-            self.app.ports.insert(portnumber, &port);
-
-            // emit Reward event
-            self.env().emit_event(Reward {
-                to: Some(address),
-                amount: amount,
+            self.app.ports.insert(socket.portnumber, &port);
+                    
+            // emit Transfer event, operator to ILOCK proceeds pool
+            self.env().emit_event(Transfer {
+                from: Some(socket.operator),
+                to: Some(self.ownable.owner),
+                amount: tax,
             });
 
-            Ok(())
+            // return adjusted amount
+            Ok(amount - tax)
         }
 
         /// - get socket info
