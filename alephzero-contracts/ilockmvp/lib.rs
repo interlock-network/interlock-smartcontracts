@@ -770,7 +770,7 @@ pub mod ilockmvp {
         
         /// - time in seconds until next payout in minutes
         #[ink(message)]
-        pub fn remaining_time_until_next_payout(
+        pub fn remaining_time(
             &self
         ) -> Timestamp {
 
@@ -1091,7 +1091,7 @@ pub mod ilockmvp {
         /// - get current balance of whitelist pool
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        pub fn withdraw_tax(
+        pub fn withdraw_proceeds(
             &mut self,
             wallet: AccountId,
             amount: Balance
@@ -1141,7 +1141,7 @@ pub mod ilockmvp {
 
         /// - display taxpool balance
         #[ink(message)]
-        pub fn tax_available(
+        pub fn proceeds_available(
             &self,
         ) -> Balance {
 
@@ -1574,9 +1574,6 @@ pub mod ilockmvp {
 //
 //
 // tax_and_reward -> collect + reward
-// tax_available -> proceeds_available
-// withdraw tax -> proceeds
-// remaining_time fix
 
 
     #[cfg(test)]
