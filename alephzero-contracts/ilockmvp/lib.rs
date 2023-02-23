@@ -151,7 +151,7 @@ pub mod ilockmvp {
 
         /// - How much do we have available in collected taxes/fees from port owners
         /// and application contract operators?
-        tax: Balance,
+        proceeds: Balance,
 
         /// - Expand storage related to the pool accounting functionality.
         pub _reserved: Option<()>,
@@ -1098,15 +1098,15 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // only withdraw what is available in pool
-            if amount > self.pool.tax {
+            if amount > self.pool.proceeds {
                 return Err(OtherError::PaymentTooLarge.into());
             }
 
             let _ = self.transfer(wallet, amount, Default::default())?;
             
             // deduct withdraw amount
-            match self.pool.tax.checked_sub(amount) {
-                Some(difference) => self.pool.tax = difference,
+            match self.pool.proceeds.checked_sub(amount) {
+                Some(difference) => self.pool.proceeds = difference,
                 None => return Err(OtherError::Underflow.into()),
             };
 
@@ -1123,7 +1123,7 @@ pub mod ilockmvp {
         ) -> PSP22Result<()> {
 
             // only withdraw what is available in pool
-            if amount > self.pool.tax {
+            if amount > self.pool.proceeds {
 
                 return Err(OtherError::PaymentTooLarge.into());
             }
@@ -1134,7 +1134,7 @@ pub mod ilockmvp {
                 &amount,
             );
 
-            self.pool.tax -= amount;
+            self.pool.proceeds -= amount;
 
             Ok(())
         }
@@ -1145,7 +1145,7 @@ pub mod ilockmvp {
             &self,
         ) -> Balance {
 
-            self.pool.tax
+            self.pool.proceeds
         }
 
         /// - function to get the number of months passed for contract
@@ -1430,12 +1430,12 @@ pub mod ilockmvp {
         }
 
         /// - tax and reward socket
-        pub fn tax_and_reward(
+        pub fn reward_port(
             &mut self,
             address: AccountId,
             amount: Balance,
+            portnumber: u16,
             mut port: Port,
-            portnumber: u16
         ) -> OtherResult<()> {
 
             // make sure this will not exceed port cap
@@ -1456,8 +1456,8 @@ pub mod ilockmvp {
             };
 
             // update pools
-            match self.pool.tax.checked_add(port.tax) {
-                Some(sum) => self.pool.tax = sum,
+            match self.pool.proceeds.checked_add(port.tax) {
+                Some(sum) => self.pool.proceeds = sum,
                 None => return Err(OtherError::Overflow),
             };
             match port.collected.checked_add(port.tax) {
