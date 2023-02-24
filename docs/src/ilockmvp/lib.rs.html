@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../../static.files/ayu-18b4181a2f3fb862.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ilockmvp/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-1def573a4779b29b.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-d59023bfa12059d2.css"><link rel="stylesheet" disabled href="../../static.files/dark-1ca41bb1e10af075.css"><link rel="stylesheet" disabled href="../../static.files/ayu-18b4181a2f3fb862.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ilockmvp/index.html">
+                        <img src="https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1711,6 +1712,12 @@
 <a href="#1711" id="1711">1711</a>
 <a href="#1712" id="1712">1712</a>
 <a href="#1713" id="1713">1713</a>
+<a href="#1714" id="1714">1714</a>
+<a href="#1715" id="1715">1715</a>
+<a href="#1716" id="1716">1716</a>
+<a href="#1717" id="1717">1717</a>
+<a href="#1718" id="1718">1718</a>
+<a href="#1719" id="1719">1719</a>
 </pre><pre class="rust"><code><span class="comment">//
 // INTERLOCK NETWORK MVP SMART CONTRACT
 //  - PSP22 TOKEN
@@ -1732,9 +1739,16 @@
 //      cargo contract build
 //
 
-</span><span class="attr">#![allow(non_snake_case)]
+</span><span class="attr">#![doc(
+    html_logo_url = <span class="string">&quot;https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png&quot;</span>,
+    html_favicon_url = <span class="string">&quot;https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png&quot;</span>,
+)]
+
+#![allow(non_snake_case)]
 #![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![feature(min_specialization)]
+
+
 
 </span><span class="kw">pub use </span><span class="self">self</span>::ilockmvp::{
     ILOCKmvp,
@@ -1864,7 +1878,7 @@
 
         <span class="doccomment">/// - How much do we have available in collected taxes/fees from port owners
         /// and application contract operators?
-        </span>tax: Balance,
+        </span>proceeds: Balance,
 
         <span class="doccomment">/// - Expand storage related to the pool accounting functionality.
         </span><span class="kw">pub </span>_reserved: <span class="prelude-ty">Option</span>&lt;()&gt;,
@@ -2057,7 +2071,7 @@
     }
     <span class="doccomment">/// - Information pertaining to socket definition in application/socket/port contract
     /// connectivity formalism.
-    </span><span class="attr">#[derive(scale::Encode, scale::Decode, Clone)]
+    </span><span class="attr">#[derive(scale::Encode, scale::Decode, Clone, Copy)]
     #[cfg_attr(
     feature = <span class="string">&quot;std&quot;</span>,
     derive(
@@ -2212,6 +2226,8 @@
         </span>Overflow,
         <span class="doccomment">/// Returned if checked sub underflows
         </span>Underflow,
+        <span class="doccomment">/// Returned if checked divide errors out
+        </span>DivError,
         <span class="doccomment">/// custome contract error
         </span>Custom(String),
     }
@@ -2483,7 +2499,7 @@
         
         <span class="doccomment">/// - time in seconds until next payout in minutes
         </span><span class="attr">#[ink(message)]
-        </span><span class="kw">pub fn </span>remaining_time_until_next_payout(
+        </span><span class="kw">pub fn </span>remaining_time(
             <span class="kw-2">&amp;</span><span class="self">self
         </span>) -&gt; Timestamp {
 
@@ -2804,22 +2820,22 @@
         </span><span class="doccomment">/// - get current balance of whitelist pool
         </span><span class="attr">#[openbrush::modifiers(only_owner)]
         #[ink(message)]
-        </span><span class="kw">pub fn </span>withdraw_tax(
+        </span><span class="kw">pub fn </span>withdraw_proceeds(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             wallet: AccountId,
             amount: Balance
         ) -&gt; PSP22Result&lt;()&gt; {
 
             <span class="comment">// only withdraw what is available in pool
-            </span><span class="kw">if </span>amount &gt; <span class="self">self</span>.pool.tax {
+            </span><span class="kw">if </span>amount &gt; <span class="self">self</span>.pool.proceeds {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::PaymentTooLarge.into());
             }
 
             <span class="kw">let _ </span>= <span class="self">self</span>.transfer(wallet, amount, Default::default())<span class="question-mark">?</span>;
             
             <span class="comment">// deduct withdraw amount
-            </span><span class="kw">match </span><span class="self">self</span>.pool.tax.checked_sub(amount) {
-                <span class="prelude-val">Some</span>(difference) =&gt; <span class="self">self</span>.pool.tax = difference,
+            </span><span class="kw">match </span><span class="self">self</span>.pool.proceeds.checked_sub(amount) {
+                <span class="prelude-val">Some</span>(difference) =&gt; <span class="self">self</span>.pool.proceeds = difference,
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Underflow.into()),
             };
 
@@ -2836,7 +2852,7 @@
         ) -&gt; PSP22Result&lt;()&gt; {
 
             <span class="comment">// only withdraw what is available in pool
-            </span><span class="kw">if </span>amount &gt; <span class="self">self</span>.pool.tax {
+            </span><span class="kw">if </span>amount &gt; <span class="self">self</span>.pool.proceeds {
 
                 <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::PaymentTooLarge.into());
             }
@@ -2847,18 +2863,18 @@
                 <span class="kw-2">&amp;</span>amount,
             );
 
-            <span class="self">self</span>.pool.tax -= amount;
+            <span class="self">self</span>.pool.proceeds -= amount;
 
             <span class="prelude-val">Ok</span>(())
         }
 
         <span class="doccomment">/// - display taxpool balance
         </span><span class="attr">#[ink(message)]
-        </span><span class="kw">pub fn </span>tax_available(
+        </span><span class="kw">pub fn </span>proceeds_available(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
         ) -&gt; Balance {
 
-            <span class="self">self</span>.pool.tax
+            <span class="self">self</span>.pool.proceeds
         }
 
         <span class="doccomment">/// - function to get the number of months passed for contract
@@ -3093,7 +3109,7 @@
                         <span class="prelude-val">Some</span>(sum) =&gt; port.paid = sum,
                         <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
                     };
-                    <span class="self">self</span>.app.ports.insert(<span class="number">0</span>, <span class="kw-2">&amp;</span>port);
+                    <span class="self">self</span>.app.ports.insert(socket.portnumber, <span class="kw-2">&amp;</span>port);
                 },
 
                 <span class="comment">// PORT 1 == Non-Interlock-owned UANFTs
@@ -3110,13 +3126,23 @@
                     };
                     <span class="self">self</span>.psp22.balances.insert(<span class="kw-2">&amp;</span>address, <span class="kw-2">&amp;</span>minterbalance);
 
+                    <span class="kw">let </span>adjustedamount: Balance = <span class="self">self</span>.tax_port_transfer(socket, port, amount)<span class="question-mark">?</span>;
+
                     <span class="comment">// increment cost of uanft to operator&#39;s account
                     </span><span class="kw">let </span><span class="kw-2">mut </span>operatorbalance: Balance = <span class="self">self</span>.psp22.balance_of(socket.operator);
-                    <span class="kw">match </span>operatorbalance.checked_add(amount) {
+                    <span class="kw">match </span>operatorbalance.checked_add(adjustedamount) {
                         <span class="prelude-val">Some</span>(sum) =&gt; operatorbalance = sum,
                         <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
                     };
                     <span class="self">self</span>.psp22.balances.insert(<span class="kw-2">&amp;</span>socket.operator, <span class="kw-2">&amp;</span>operatorbalance);
+                    
+                    <span class="comment">// emit Transfer event, uanft transfer
+                    </span><span class="self">self</span>.env().emit_event(Transfer {
+                        from: <span class="prelude-val">Some</span>(address),
+                        to: <span class="prelude-val">Some</span>(socket.operator),
+                        amount: adjustedamount,
+                    });
+
                 },
 
                 <span class="comment">// PORT 2 == reserved for Interlock gray-area staking applications
@@ -3142,78 +3168,48 @@
             <span class="prelude-val">Ok</span>(())
         }
 
-        <span class="doccomment">/// - tax and reward socket
-        </span><span class="kw">pub fn </span>tax_and_reward(
+        <span class="doccomment">/// - tax and reward transfer between socket calling address and socket operator
+        </span><span class="kw">pub fn </span>tax_port_transfer(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            address: AccountId,
-            amount: Balance,
+            socket: Socket,
             <span class="kw-2">mut </span>port: Port,
-            portnumber: u16
-        ) -&gt; OtherResult&lt;()&gt; {
+            amount: Balance,
+        ) -&gt; OtherResult&lt;Balance&gt; {
 
-            <span class="comment">// make sure this will not exceed port cap
-            </span><span class="kw">if </span>port.cap &lt; (port.paid + amount) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::PortCapSurpassed.into());
-            }
-
-            <span class="comment">// TODO/QUESTION:
-            // tax should probably be a fraction of reward,
-            // instead of a flat rate per reward
-            //   . this would change the logic a little bit
-            // ?
-
-            // transfer transaction tax from socket owner to token contract owner
-            </span><span class="kw">let _ </span>= <span class="kw">match </span><span class="self">self</span>.transfer_from(port.owner, <span class="self">self</span>.ownable.owner, port.tax, Default::default()) {
-                <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(error.into()),
-                <span class="prelude-val">Ok</span>(()) =&gt; (),  
+            <span class="comment">// compute tax - tax number is in centipercent, 0.01% ==&gt; 100% = 1 &amp; 0.01% = 10_000
+            //
+            // a tax of 0.01% is amount/10_000
+            </span><span class="kw">let </span>tax: Balance = <span class="kw">match </span>amount.checked_div(port.tax <span class="kw">as </span>Balance) {
+                <span class="prelude-val">Some</span>(quotient) =&gt; quotient,
+                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::DivError),
             };
 
-            <span class="comment">// update pools
-            </span><span class="kw">match </span><span class="self">self</span>.pool.tax.checked_add(port.tax) {
-                <span class="prelude-val">Some</span>(sum) =&gt; <span class="self">self</span>.pool.tax = sum,
+            <span class="comment">// update proceeds pool and total circulation
+            </span><span class="kw">match </span><span class="self">self</span>.pool.proceeds.checked_add(tax) {
+                <span class="prelude-val">Some</span>(sum) =&gt; <span class="self">self</span>.pool.proceeds = sum,
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
             };
-            <span class="kw">match </span>port.collected.checked_add(port.tax) {
+            <span class="kw">match </span>port.collected.checked_add(tax) {
                 <span class="prelude-val">Some</span>(sum) =&gt; port.collected = sum,
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
             };
-
-            <span class="comment">// transfer reward to reward recipient
-            </span><span class="kw">let _ </span>= <span class="kw">match </span><span class="self">self</span>.transfer_from(<span class="self">self</span>.ownable.owner, address, amount, Default::default()) {
-                <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(error.into()),
-                <span class="prelude-val">Ok</span>(()) =&gt; (),
-            };
-
-            <span class="comment">// compute amount adjusted to offset transfer function
-            </span><span class="kw">let </span>adjustedamount: Balance = <span class="kw">match </span>amount.checked_add(port.tax) {
-                <span class="prelude-val">Some</span>(sum) =&gt; sum,
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
-            };
-
-            <span class="comment">// update balance pool and totals
-            </span><span class="kw">match </span><span class="self">self</span>.pool.balances[REWARDS <span class="kw">as </span>usize].checked_sub(adjustedamount) {
-                <span class="prelude-val">Some</span>(difference) =&gt; <span class="self">self</span>.pool.balances[REWARDS <span class="kw">as </span>usize] = difference,
+            <span class="kw">match </span><span class="self">self</span>.pool.circulating.checked_sub(tax) {
+                <span class="prelude-val">Some</span>(difference) =&gt; <span class="self">self</span>.pool.circulating = difference,
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Underflow),
-            };
-            <span class="kw">match </span><span class="self">self</span>.reward.total.checked_add(amount) {
-                <span class="prelude-val">Some</span>(sum) =&gt; <span class="self">self</span>.reward.total = sum,
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
             };
 
             <span class="comment">// update port
-            </span><span class="kw">match </span>port.paid.checked_add(amount) {
-                <span class="prelude-val">Some</span>(sum) =&gt; port.paid = sum,
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(OtherError::Overflow),
-            };
-            <span class="self">self</span>.app.ports.insert(portnumber, <span class="kw-2">&amp;</span>port);
-
-            <span class="comment">// emit Reward event
-            </span><span class="self">self</span>.env().emit_event(Reward {
-                to: <span class="prelude-val">Some</span>(address),
-                amount: amount,
+            </span><span class="self">self</span>.app.ports.insert(socket.portnumber, <span class="kw-2">&amp;</span>port);
+                    
+            <span class="comment">// emit Transfer event, operator to ILOCK proceeds pool
+            </span><span class="self">self</span>.env().emit_event(Transfer {
+                from: <span class="prelude-val">Some</span>(socket.operator),
+                to: <span class="prelude-val">Some</span>(<span class="self">self</span>.ownable.owner),
+                amount: tax,
             });
 
-            <span class="prelude-val">Ok</span>(())
+            <span class="comment">// return adjusted amount
+            </span><span class="prelude-val">Ok</span>(amount - tax)
         }
 
         <span class="doccomment">/// - get socket info
@@ -3254,137 +3250,174 @@
 // . To view debug for specific method run test via:
 //   cargo nightly+ test &lt;test_function_here&gt; -- --nocapture
 
-    </span><span class="attr">#[cfg(test)]
-    </span><span class="kw">mod </span>tests {
+
+// TODO
+//
+// [] total_supply
+// [] transfer
+// [] transfer_from
+// [] burn
+// [x] new_token
+// [] check_time
+// [] remaining_time
+// [x] register_stakeholder
+// [] stakeholder_data
+// [] distribute_tokens
+// [] payout_tokens
+// [x] pool_data
+// [] pool_balances
+// [] reward_interlocker
+// [] rewarded_interlocker_total
+// [] rewarded_total
+// [] withdraw_proceeds
+// [] proceeds_available
+// [x] months_passed
+// [x] cap
+// [] update_contract
+// [] create_port
+// [] create_socket
+// [] call_socket
+// [] tax_port_transfer
+// [] socket
+// [] port
+//
+//
+// tax_and_reward -&gt; collect + reward
+
+
+    </span><span class="attr">#[cfg(all(test, feature = <span class="string">&quot;e2e-tests&quot;</span>))]
+    </span><span class="kw">mod </span>e2e_tests {
 
         <span class="kw">use super</span>::<span class="kw-2">*</span>;
-        <span class="kw">use </span>ink_lang <span class="kw">as </span>ink;
-        <span class="kw">use </span>ink_lang::codegen::Env;
+        <span class="kw">use </span>ink::env::debug_println;
+        <span class="kw">use </span>ink_e2e::build_message;
+        <span class="kw">use </span>openbrush::contracts::psp22::psp22_external::PSP22;
 
-        <span class="doccomment">/// - test if the default constructor does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>constructor_works() {
+        <span class="kw">type </span>E2EResult&lt;T&gt; = std::result::Result&lt;T, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt;;
 
-            <span class="kw">let </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
+        <span class="doccomment">/// - test if token distribution works as intended per vesting schedule
+        </span><span class="attr">#[ink_e2e::test]
+        </span><span class="kw">async fn </span>vesting_schedule_works(
+            <span class="kw-2">mut </span>client: ink_e2e::Client&lt;C, E&gt;,
+        ) -&gt; E2EResult&lt;()&gt; {
 
-            <span class="comment">// the rest
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.vest.monthspassed, <span class="number">0</span>);
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
-        }
+            <span class="kw">let </span>alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            <span class="kw">let </span>bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
 
-        <span class="doccomment">/// - test if name getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>name_works() {
+            <span class="kw">let </span>constructor = ILOCKmvpRef::new_token();
+            <span class="kw">let </span>contract_acct_id = client
+                .instantiate(<span class="string">&quot;ilockmvp&quot;</span>, <span class="kw-2">&amp;</span>ink_e2e::alice(), constructor, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;instantiate failed&quot;</span>)
+                .account_id;
 
-            <span class="kw">let </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.name, <span class="prelude-val">Some</span>(<span class="string">&quot;Interlock Networ.&quot;</span>.as_bytes().to_vec()));
-        }
+            <span class="comment">// Transfers 1000 ILOCK from alice to bob
+            </span><span class="kw">let </span>alice_transfer = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.transfer(bob_account.clone(), <span class="number">1000</span>, Vec::new()));
+            <span class="kw">let </span>_transfer_result = client
+                .call(<span class="kw-2">&amp;</span>ink_e2e::alice(), alice_transfer, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await</span>;
 
-        <span class="doccomment">/// - test if symbol getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>symbol_works() {
+            <span class="comment">// Checks that bob has expected resulting balance
+            </span><span class="kw">let </span>bob_balance_of = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            <span class="kw">let </span>bob_balance = client
+                .call_dry_run(<span class="kw-2">&amp;</span>ink_e2e::bob(), <span class="kw-2">&amp;</span>bob_balance_of, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.return_value();
+            <span class="macro">assert_eq!</span>(<span class="number">1000</span>, bob_balance);
 
-            <span class="kw">let </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.symbol, <span class="prelude-val">Some</span>(<span class="string">&quot;ILOC.&quot;</span>.as_bytes().to_vec()));
-        }
-        
-        <span class="doccomment">/// - test if decimals getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>decimals_works() {
+            <span class="comment">// Checks that alice has expected resulting balance
+            </span><span class="kw">let </span>alice_balance_of = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            <span class="kw">let </span>alice_balance = client
+                .call_dry_run(<span class="kw-2">&amp;</span>ink_e2e::alice(), <span class="kw-2">&amp;</span>alice_balance_of, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.return_value();
+            <span class="macro">assert_eq!</span>(SUPPLY_CAP - <span class="number">1000</span>, alice_balance);
 
-            <span class="kw">let </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.decimals, <span class="number">18</span>);
-        }
+            <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, <span class="number">100</span>);
 
-        <span class="doccomment">/// - test if balance getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>balance_of_works() {
 
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="kw">let </span>accounts = ink_env::test::default_accounts::&lt;ink_env::DefaultEnvironment&gt;();
+            <span class="prelude-val">Ok</span>(())
 
-            <span class="comment">// charge alice&#39;s account
-            </span>ILOCKmvpPSP22.psp22.balances.insert(<span class="kw-2">&amp;</span>accounts.alice, <span class="kw-2">&amp;</span><span class="number">100</span>);
-
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.balance_of(accounts.alice), <span class="number">100</span>);
-        }
-
-        <span class="doccomment">/// - test if allowance getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>allowance_works() {
-
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="kw">let </span>accounts = ink_env::test::default_accounts::&lt;ink_env::DefaultEnvironment&gt;();
-
-            <span class="comment">// Alice has not yet approved Bob
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">0</span>);
-
-            <span class="comment">// Alice approves Bob for tokens
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.approve(accounts.bob, <span class="number">10</span>), <span class="prelude-val">Ok</span>(()));
-
-            <span class="comment">// Bob&#39;s new allowance reflects this approval
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">10</span>);
-        }
-
-        <span class="doccomment">/// - test if increase allowance does does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>increase_allowance_works() {
-
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="kw">let </span>accounts = ink_env::test::default_accounts::&lt;ink_env::DefaultEnvironment&gt;();
-
-            <span class="comment">// Alice approves bob to spend tokens
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.approve(accounts.bob, <span class="number">10</span>), <span class="prelude-val">Ok</span>(()));
-
-            <span class="comment">// Bob is approved to spend tokens owned by Alice
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">10</span>);
-
-            <span class="comment">// Alice increases Bobs allowance
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.increase_allowance(accounts.bob, <span class="number">10</span>), <span class="prelude-val">Ok</span>(()));
-
-            <span class="comment">// Bob is approved to spend extra tokens owned by Alice
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">20</span>);
-        }
-
-        <span class="doccomment">/// - test if decrease allowance does does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>decrease_allowance_works() {
-
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="kw">let </span>accounts = ink_env::test::default_accounts::&lt;ink_env::DefaultEnvironment&gt;();
-
-            <span class="comment">// Alice approves bob to spend tokens
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.approve(accounts.bob, <span class="number">10</span>), <span class="prelude-val">Ok</span>(()));
-
-            <span class="comment">// Bob is approved to spend tokens owned by Alice
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">10</span>);
-
-            <span class="comment">// Alice increases Bobs allowance
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.decrease_allowance(accounts.bob, <span class="number">5</span>), <span class="prelude-val">Ok</span>(()));
-
-            <span class="comment">// Bob is approved to spend extra tokens owned by Alice
-            </span><span class="macro">assert_eq!</span>(ILOCKmvpPSP22.allowance(accounts.alice, accounts.bob), <span class="number">5</span>);
         }
 
         <span class="doccomment">/// - test if wallet registration function works as intended 
+        </span><span class="attr">#[ink_e2e::test]
+        </span><span class="kw">async fn </span>transfer_works(
+            <span class="kw-2">mut </span>client: ink_e2e::Client&lt;C, E&gt;,
+        ) -&gt; E2EResult&lt;()&gt; {
+
+            <span class="kw">let </span>alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            <span class="kw">let </span>bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            <span class="kw">let </span>constructor = ILOCKmvpRef::new_token();
+            <span class="kw">let </span>contract_acct_id = client
+                .instantiate(<span class="string">&quot;ilockmvp&quot;</span>, <span class="kw-2">&amp;</span>ink_e2e::alice(), constructor, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;instantiate failed&quot;</span>)
+                .account_id;
+
+            <span class="comment">// Transfers 1000 ILOCK from alice to bob
+            </span><span class="kw">let </span>alice_transfer = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.transfer(bob_account.clone(), <span class="number">1000</span>, Vec::new()));
+            <span class="kw">let </span>_transfer_result = client
+                .call(<span class="kw-2">&amp;</span>ink_e2e::alice(), alice_transfer, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await</span>;
+
+            <span class="comment">// Checks that bob has expected resulting balance
+            </span><span class="kw">let </span>bob_balance_of = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            <span class="kw">let </span>bob_balance = client
+                .call_dry_run(<span class="kw-2">&amp;</span>ink_e2e::bob(), <span class="kw-2">&amp;</span>bob_balance_of, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.return_value();
+            <span class="macro">assert_eq!</span>(<span class="number">1000</span>, bob_balance);
+
+            <span class="comment">// Checks that alice has expected resulting balance
+            </span><span class="kw">let </span>alice_balance_of = build_message::&lt;ILOCKmvpRef&gt;(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            <span class="kw">let </span>alice_balance = client
+                .call_dry_run(<span class="kw-2">&amp;</span>ink_e2e::alice(), <span class="kw-2">&amp;</span>alice_balance_of, <span class="number">0</span>, <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.return_value();
+            <span class="macro">assert_eq!</span>(SUPPLY_CAP - <span class="number">1000</span>, alice_balance);
+
+
+            <span class="prelude-val">Ok</span>(())
+
+        }
+    }
+
+    <span class="attr">#[cfg(test)]
+    </span><span class="kw">mod </span>tests {
+
+        <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+        <span class="doccomment">/// - test if the default constructor does its job
+        /// - and check months_passed()
+        /// - and check cap()
         </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>register_stakeholder_works() {
+        </span><span class="kw">fn </span>new_token_works() {
 
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            <span class="kw">let </span>accounts = ink_env::test::default_accounts::&lt;ink_env::DefaultEnvironment&gt;();
+            <span class="kw">let </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
-            <span class="comment">// bob&#39;s stakeholder data
-            </span><span class="kw">let </span>share: Balance = <span class="number">1_000_000</span>;
-            <span class="kw">let </span>pool: u8 = <span class="number">3</span>;
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.vest.monthspassed, ILOCKmvpPSP22.months_passed());
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.total_supply(), <span class="number">0</span>);
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.name, <span class="prelude-val">Some</span>(<span class="string">&quot;Interlock Network&quot;</span>.as_bytes().to_vec()));
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.symbol, <span class="prelude-val">Some</span>(<span class="string">&quot;ILOCK&quot;</span>.as_bytes().to_vec()));
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.metadata.decimals, <span class="number">18</span>);
 
-            <span class="comment">// call registration function
-            </span>ILOCKmvpPSP22.register_stakeholder(accounts.bob, share, pool).unwrap();
+            <span class="comment">// this checks that token numbers have been entered accurately into POOLS PoolData
+            </span><span class="kw">let </span><span class="kw-2">mut </span>total_tokens: u128 = <span class="number">0</span>;
+            <span class="kw">for </span>pool <span class="kw">in </span><span class="number">0</span>..POOL_COUNT {
 
-            <span class="comment">// verify registration stuck
-            </span><span class="kw">let </span>this_stakeholder = ILOCKmvpPSP22.vest.stakeholder.get(accounts.bob).unwrap();
-            <span class="macro">assert_eq!</span>(this_stakeholder.paid, <span class="number">0</span>);
-            <span class="macro">assert_eq!</span>(this_stakeholder.share, share);
-            <span class="macro">assert_eq!</span>(this_stakeholder.pool, pool);
+                total_tokens += POOLS[pool].tokens * DECIMALS_POWER10;
+            }
+            <span class="macro">assert_eq!</span>(total_tokens, ILOCKmvpPSP22.cap());
+            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
         }
      
         <span class="doccomment">/// - test if pool data getter does its job
@@ -3401,28 +3434,8 @@
             ));
         }
 
-        <span class="doccomment">/// - test if months passed getter does its job
-        </span><span class="attr">#[ink::test]
-        </span><span class="kw">fn </span>months_passed_works() {
-
-            <span class="kw">let </span><span class="kw-2">mut </span>ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            ILOCKmvpPSP22.vest.monthspassed = <span class="number">99</span>;
-            <span class="macro">assert_eq!</span>(ILOCKmvpPSP22.months_passed(), <span class="number">99</span>);
-        }
-
-<span class="comment">//
-// Cannot perform following unit tests: off-chain environment does not support contract invocation.
-//
-// This is an unavoidable openbrush problem, for now.
-//
-//  fn transfer()
-//  fn approve()
-//  fn transfer_from()
-//  fn distribute_tokens()
-//  fn burn()
-//
-
-    </span>}
+    }
 }
+
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ilockmvp" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (4507fdaaa 2023-02-18)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
