@@ -19,9 +19,16 @@
 //      cargo contract build
 //
 
+#![doc(
+    html_logo_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png",
+    html_favicon_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png",
+)]
+
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
+
+
 
 pub use self::ilockmvp::{
     ILOCKmvp,
@@ -1568,6 +1575,53 @@ pub mod ilockmvp {
 
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+        /// - test if token distribution works as intended per vesting schedule
+        #[ink_e2e::test]
+        async fn vesting_schedule_works(
+            mut client: ink_e2e::Client<C, E>,
+        ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await
+                .expect("instantiate failed")
+                .account_id;
+
+            // Transfers 1000 ILOCK from alice to bob
+            let alice_transfer = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
+            let _transfer_result = client
+                .call(&ink_e2e::alice(), alice_transfer, 0, None)
+                .await;
+
+            // Checks that bob has expected resulting balance
+            let bob_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_of, 0, None)
+                .await
+                .return_value();
+            assert_eq!(1000, bob_balance);
+
+            // Checks that alice has expected resulting balance
+            let alice_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_of, 0, None)
+                .await
+                .return_value();
+            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+            println!("{}", 100);
+
+
+            Ok(())
+
+        }
 
         /// - test if wallet registration function works as intended 
         #[ink_e2e::test]
@@ -1585,14 +1639,14 @@ pub mod ilockmvp {
                 .expect("instantiate failed")
                 .account_id;
 
-            /// - Transfers 1000 ILOCK from alice to bob
+            // Transfers 1000 ILOCK from alice to bob
             let alice_transfer = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            let result = client
+            let _transfer_result = client
                 .call(&ink_e2e::alice(), alice_transfer, 0, None)
                 .await;
 
-            /// - Checks that bob has expected resulting balance
+            // Checks that bob has expected resulting balance
             let bob_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
@@ -1601,7 +1655,7 @@ pub mod ilockmvp {
                 .return_value();
             assert_eq!(1000, bob_balance);
 
-            /// - Checks that alice has expected resulting balance
+            // Checks that alice has expected resulting balance
             let alice_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
