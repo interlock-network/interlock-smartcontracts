@@ -1523,7 +1523,7 @@ pub mod ilockmvp {
                 None => Default::default(),
             }
         }        
-    }
+    
 
 ////////////////////////////////////////////////////////////////////////////
 //// tests /////////////////////////////////////////////////////////////////
@@ -1569,6 +1569,35 @@ pub mod ilockmvp {
 //
 //
 // tax_and_reward -> collect + reward
+
+        /// - Test Events.
+        #[ink(message)]
+        pub fn test_events(
+            &self,
+            alice: AccountId,
+            bob: AccountId,
+        ) -> () {
+
+            // emit Transfer event
+            Self::env().emit_event(Transfer {
+                from: Some(alice),
+                to: Some(bob),
+                amount: 1000,
+            });
+            // emit Approval event
+            Self::env().emit_event(Approval {
+                owner: Some(alice),
+                spender: Some(bob),
+                amount: 1000,
+            });
+            // emit Reward event
+            Self::env().emit_event(Reward {
+                to: Some(alice),
+                amount: 1000,
+            });
+        }
+    }
+
 
     #[cfg(all(test, feature = "e2e-tests"))]
     mod e2e_tests {
@@ -1672,7 +1701,7 @@ pub mod ilockmvp {
                 .expect("instantiate failed")
                 .account_id;
 
-            // Transfers 1000 ILOCK from alice to bob and check for Transfer event
+            // Transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
             match client
@@ -1822,34 +1851,50 @@ pub mod ilockmvp {
             let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
-            ILOCKmvpPSP22.transfer(accounts.bob, 1000, Default::default());
-
+            ILOCKmvpPSP22.test_events(accounts.alice.clone(), accounts.bob.clone());
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
-            let test = &emitted_events[0];
 
-
-            // emit Reward event
-           /* self.env().emit_event(Reward {
-                to: Some(interlocker),
-                amount: reward,
-            });*/
-            //assert_transfer_event(
-            //    &emitted_events[0],
-              //  Some(accounts.alice.clone()),
-                //Some(accounts.bob.clone()),
-         //       1000,
-           // );
-
+            assert_event(
+                "Transfer",
+                &emitted_events[1],
+                Some(accounts.alice.clone()),
+                Some(accounts.bob.clone()),
+                1000,
+            );
+            assert_event(
+                "Approval",
+                &emitted_events[2],
+                Some(accounts.alice.clone()),
+                Some(accounts.bob.clone()),
+                1000,
+            );
+            assert_event(
+                "Reward",
+                &emitted_events[3],
+                Some(accounts.alice.clone()),
+                Some(accounts.alice.clone()), // <- not used
+                1000,
+            );
         }
 
+
+        ///
+        /// Serves in test for the three emitted events.
+        /// Taken from Ink! examples repo.
+        ///
         /// For calculating the event topic hash.
         struct PrefixedValue<'a, 'b, T> {
             pub prefix: &'a [u8],
             pub value: &'b T,
         }
 
+        ///
+        /// Serves in test for the three emitted events.
+        /// Taken from Ink! examples repo.
+        ///
+        /// Use this implementation to encode and decode events.
         impl<X> scale::Encode for PrefixedValue<'_, '_, X>
         where
             X: scale::Encode,
@@ -1867,39 +1912,107 @@ pub mod ilockmvp {
         }
         type Event = <ILOCKmvp as ::ink::reflect::ContractEventBase>::Type;
 
-        fn assert_transfer_event(
+        ///
+        /// Serves in test for the three emitted events.
+        /// Taken from Ink! examples repo, modified to check three Event types.
+        ///
+        /// This function compares emitted events against expectations.
+        fn assert_event(
+            kind: &str,
             event: &ink::env::test::EmittedEvent,
-            expected_from: Option<AccountId>,
-            expected_to: Option<AccountId>,
-            expected_amount: Balance,
+            expected_A: Option<AccountId>,
+            expected_B: Option<AccountId>,
+            expected_C: Balance,
         ) {
             let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
                 .expect("encountered invalid contract event data buffer");
-            if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
-                assert_eq!(from, expected_from, "encountered invalid Transfer.from");
-                assert_eq!(to, expected_to, "encountered invalid Transfer.to");
-                assert_eq!(amount, expected_amount, "encountered invalid Trasfer.value");
-            } else {
-                panic!("encountered unexpected event kind: expected a Transfer event")
-            }
-            let expected_topics = vec![
-                encoded_into_hash(&PrefixedValue {
-                    value: b"ILOCKmvp::Transfer",
-                    prefix: b"",
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKmvp::Transfer::from",
-                    value: &expected_from,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKmvp::Transfer::to",
-                    value: &expected_to,
-                }),
-                encoded_into_hash(&PrefixedValue {
-                    prefix: b"ILOCKmvp::Transfer::amount",
-                    value: &expected_amount,
-                }),
-            ];
+
+            let mut expected_topics = Vec::new();
+            match kind {
+
+                "Transfer" => {
+                    if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
+                        assert_eq!(from, expected_A, "encountered invalid Transfer.from");
+                        assert_eq!(to, expected_B, "encountered invalid Transfer.to");
+                        assert_eq!(amount, expected_C, "encountered invalid Transfer.amount");
+
+                        let expected_topics = vec![
+                            encoded_into_hash(&PrefixedValue {
+                                value: b"ILOCKmvp::Transfer",
+                                prefix: b"",
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Transfer::from",
+                                value: &expected_A,
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Transfer::to",
+                                value: &expected_B,
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Transfer::amount",
+                                value: &expected_C,
+                            }),
+                        ];
+                    } else {
+                        panic!("expected valid Transfer event");
+                    }
+                },
+
+                "Approval" => {
+                    if let Event::Approval(Approval { owner, spender, amount }) = decoded_event {
+                        assert_eq!(owner, expected_A, "encountered invalid Approval.owner");
+                        assert_eq!(spender, expected_B, "encountered invalid Approval.spender");
+                        assert_eq!(amount, expected_C, "encountered invalid Approval.amount");
+
+                        let expected_topics = vec![
+                            encoded_into_hash(&PrefixedValue {
+                                value: b"ILOCKmvp::Approval",
+                                prefix: b"",
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Approval::owner",
+                                value: &expected_A,
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Approval::spender",
+                                value: &expected_B,
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Approval::amount",
+                                value: &expected_C,
+                            }),
+                        ];
+                    } else {
+                        panic!("expected valid Approval event");
+                    }
+                },
+
+                "Reward" => {
+                    if let Event::Reward(Reward { to, amount }) = decoded_event {
+                        assert_eq!(to, expected_A, "encountered invalid Reward.to");
+                        assert_eq!(amount, expected_C, "encountered invalid Reward.amount");
+
+                        let expected_topics = vec![
+                            encoded_into_hash(&PrefixedValue {
+                                value: b"ILOCKmvp::Approval",
+                                prefix: b"",
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Approval::to",
+                                value: &expected_A,
+                            }),
+                            encoded_into_hash(&PrefixedValue {
+                                prefix: b"ILOCKmvp::Approval::amount",
+                                value: &expected_C,
+                            }),
+                        ];
+                    } else {
+                        panic!("expected valid Reward event");
+                    }
+                },
+                &_ => (),
+            };
 
             let topics = event.topics.clone();
             for (n, (actual_topic, expected_topic)) in
@@ -1915,6 +2028,12 @@ pub mod ilockmvp {
                 );
             }
         }
+
+        ///
+        /// Serves in test for the three emitted events.
+        /// Taken from Ink! examples repo.
+        ///
+        /// This function takes hash of encoded topic data
         fn encoded_into_hash<T>(entity: &T) -> Hash
         where
             T: scale::Encode,
