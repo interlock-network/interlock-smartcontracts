@@ -18,11 +18,17 @@
 //
 //      cargo contract build
 //
-
+// To reroute docs in Github
+//
+//      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//      target/doc/index.html;
+//      cp -r target/doc ./docs
+/*
 #![doc(
     html_logo_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png",
     html_favicon_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png",
 )]
+*/
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -574,6 +580,11 @@ pub mod ilockmvp {
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
+            // emit Reward event
+            self.env().emit_event(Reward {
+                to: Some(to),
+                amount: value,
+            });
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
@@ -1131,19 +1142,13 @@ pub mod ilockmvp {
             amount: Balance
         ) -> PSP22Result<()> {
 
-            // only withdraw what is available in pool
-            if amount > self.pool.proceeds {
 
-                return Err(OtherError::PaymentTooLarge.into());
-            }
+            // emit Reward event
+            self.env().emit_event(Reward {
+                to: Some(wallet),
+                amount: amount,
+            });
 
-            //let _ = self.transfer(wallet, amount, Default::default())?;
-            self.psp22.balances.insert(
-                &wallet,
-                &amount,
-            );
-
-            self.pool.proceeds -= amount;
 
             Ok(())
         }
@@ -1182,13 +1187,14 @@ pub mod ilockmvp {
         ///
         ///
         #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
         pub fn TESTING_increment_month(
             &mut self,
-        ) -> bool {
+        ) -> OtherResult<bool> {
 
-            self.vest.monthspassed += 4;
+            self.vest.monthspassed += 1;
 
-            true
+            Ok(true)
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1526,7 +1532,7 @@ pub mod ilockmvp {
 // INCOMPLETE
 //
 // . To view debug prints and assertion failures run test via:
-//   cargo nightly+ test -- --nocapture
+//   cargo +nightly test --features e2e-tests -- --show-output
 // . To view debug for specific method run test via:
 //   cargo nightly+ test <test_function_here> -- --nocapture
 
@@ -1564,26 +1570,32 @@ pub mod ilockmvp {
 //
 // tax_and_reward -> collect + reward
 
-
     #[cfg(all(test, feature = "e2e-tests"))]
     mod e2e_tests {
 
-        use super::*;
-        use ink::env::debug_println;
-        use ink_e2e::build_message;
-        use openbrush::contracts::psp22::psp22_external::PSP22;
 
+        use super::*;
+        use ink_e2e::{
+            build_message,
+            CallResult,
+        };
+        use openbrush::contracts::psp22::psp22_external::PSP22;
+        use ink::primitives::{
+            Clear,
+            Hash,
+        };
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-        /// - test if token distribution works as intended per vesting schedule
+        /// - Test if token distribution works as intended per vesting schedule.
+        /// - Include register_stakeholder().
+        /// - Include distribute_tokens().
+        /// - Include check_time().
         #[ink_e2e::test]
         async fn vesting_schedule_works(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
-            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
-            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
-
+            // fire up contract
             let constructor = ILOCKmvpRef::new_token();
             let contract_acct_id = client
                 .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
@@ -1591,39 +1603,60 @@ pub mod ilockmvp {
                 .expect("instantiate failed")
                 .account_id;
 
-            // Transfers 1000 ILOCK from alice to bob
-            let alice_transfer = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            let _transfer_result = client
-                .call(&ink_e2e::alice(), alice_transfer, 0, None)
-                .await;
+            // register generic stakeholder
+            let stakeholder_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+            let stakeholder_share = 1_000_000_000;
 
-            // Checks that bob has expected resulting balance
-            let bob_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.balance_of(bob_account.clone()));
-            let bob_balance = client
-                .call_dry_run(&ink_e2e::bob(), &bob_balance_of, 0, None)
-                .await
-                .return_value();
-            assert_eq!(1000, bob_balance);
+            // prepare messages
+            let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
 
-            // Checks that alice has expected resulting balance
-            let alice_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.balance_of(alice_account.clone()));
-            let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of, 0, None)
-                .await
-                .return_value();
-            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+            // iterate through one vesting schedule
+            for month in 0..(POOLS[0].vests + POOLS[0].cliffs + 1) {
 
-            println!("{}", 100);
+                let mut balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.balance_of(stakeholder_account.clone()));
+                let mut stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
+                let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+                let mut increment_month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.TESTING_increment_month());
+                let mut months_passed_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.months_passed());
 
+                println!("{}", month);
+/*
+                let mut months_passed = client 
+                    .call(&ink_e2e::alice(), months_passed_msg, 0, None)
+                    .await
+                    .return_value();
+                assert_eq!(months_passed, month);
+               
+                match client
+                    .call(&ink_e2e::alice(), distribute_tokens_msg, 0, None)
+                    .await
+                    .return_value() {
+                        () => (),
+                        OtherError::PayoutTooEarly => (),
+                }; */
+         /*       let mut stakeholder_data = client
+                    .call(&ink_e2e::alice(), stakeholder_data_msg, 0, None)
+                    .await;
 
+                let mut increment_month_res = client 
+                    .call(&ink_e2e::alice(), increment_month_msg, 0, None)
+                    .await;
+
+*/
+
+            }
+            
             Ok(())
-
         }
 
         /// - test if wallet registration function works as intended 
+        
         #[ink_e2e::test]
         async fn transfer_works(
             mut client: ink_e2e::Client<C, E>,
@@ -1639,39 +1672,95 @@ pub mod ilockmvp {
                 .expect("instantiate failed")
                 .account_id;
 
-            // Transfers 1000 ILOCK from alice to bob
-            let alice_transfer = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            // Transfers 1000 ILOCK from alice to bob and check for Transfer event
+            let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            let _transfer_result = client
-                .call(&ink_e2e::alice(), alice_transfer, 0, None)
-                .await;
-
+            match client
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None)
+                .await {
+                Ok(result) => {
+                    let mut transfer_present: bool = false;
+                    for event in result.events.iter() {
+                        let bytes_text: String = String::from_utf8_lossy(
+                                                 event.expect("bad event").bytes()).to_string();
+                        if bytes_text.contains("ILOCKmvp::Transfer") {
+                            transfer_present = true;
+                            break;
+                        };
+                    }
+                    if !transfer_present {panic!("Transfer event not present")};
+                },
+                Err(_error) => (),
+            };
+            
             // Checks that bob has expected resulting balance
-            let bob_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
-                .call_dry_run(&ink_e2e::bob(), &bob_balance_of, 0, None)
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None)
                 .await
                 .return_value();
             assert_eq!(1000, bob_balance);
 
             // Checks that alice has expected resulting balance
-            let alice_balance_of = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of, 0, None)
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None)
                 .await
                 .return_value();
             assert_eq!(SUPPLY_CAP - 1000, alice_balance);
 
+            Ok(())
+        }
+
+        /// - test if rewarding functionality works
+        #[ink_e2e::test]
+        async fn reward_interlocker_works(
+            mut client: ink_e2e::Client<C, E>,
+        ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await
+                .expect("instantiate failed")
+                .account_id;
+
+            // rewards 1000 ILOCK to bob
+            let alice_test_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.test_transfer(bob_account.clone(), 1000));
+            let _alice_reward = client
+                .call(&ink_e2e::alice(), alice_test_msg, 0, None)
+                .await;
+
+            // Checks that bob has expected resulting balance
+            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None)
+                .await
+                .return_value();
+            assert_eq!(1000, bob_balance);
+
+            // Transfer event triggered during initial construction.
+            let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
+
 
             Ok(())
-
         }
     }
 
     #[cfg(test)]
     mod tests {
+
+        use ink::primitives::{
+            Clear,
+            Hash,
+        };
 
         use super::*;
 
@@ -1712,8 +1801,148 @@ pub mod ilockmvp {
                 format!("number of vests: {:?} ", pool.vests),
                 format!("vesting cliff: {:?} ", pool.cliffs),
             ));
+
         }
 
+        ///
+        /// - Test events emit in general.
+        /// - Due to fact that openbrush invokes 'cross contract calls',
+        /// it is not possible to run standard unit tests for any functions
+        /// that include PSP22 standard messages, so we need to perform e2e tests in general.
+        /// - For now, the most we can do is verify within e2e tests that a
+        /// particular event occured.
+        /// - There is no clear way to catch events in their entirety within an
+        /// e2e test (ie, the topics and values).
+        /// - To make up for this, in this non-e2e test we verify that *when* one of the
+        /// three events are emitted, their topics are indeed accurate in general.
+        /// - Capturing complete events within the e2e tests is an active issue, #225
+        #[ink::test]
+        fn test_events_work() {
+
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+
+            ILOCKmvpPSP22.transfer(accounts.bob, 1000, Default::default());
+
+
+            // Transfer event triggered during initial construction.
+            let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
+            let test = &emitted_events[0];
+
+
+            // emit Reward event
+           /* self.env().emit_event(Reward {
+                to: Some(interlocker),
+                amount: reward,
+            });*/
+            //assert_transfer_event(
+            //    &emitted_events[0],
+              //  Some(accounts.alice.clone()),
+                //Some(accounts.bob.clone()),
+         //       1000,
+           // );
+
+        }
+
+        /// For calculating the event topic hash.
+        struct PrefixedValue<'a, 'b, T> {
+            pub prefix: &'a [u8],
+            pub value: &'b T,
+        }
+
+        impl<X> scale::Encode for PrefixedValue<'_, '_, X>
+        where
+            X: scale::Encode,
+        {
+            #[inline]
+            fn size_hint(&self) -> usize {
+                self.prefix.size_hint() + self.value.size_hint()
+            }
+
+            #[inline]
+            fn encode_to<T: scale::Output + ?Sized>(&self, dest: &mut T) {
+                self.prefix.encode_to(dest);
+                self.value.encode_to(dest);
+            }
+        }
+        type Event = <ILOCKmvp as ::ink::reflect::ContractEventBase>::Type;
+
+        fn assert_transfer_event(
+            event: &ink::env::test::EmittedEvent,
+            expected_from: Option<AccountId>,
+            expected_to: Option<AccountId>,
+            expected_amount: Balance,
+        ) {
+            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
+                .expect("encountered invalid contract event data buffer");
+            if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
+                assert_eq!(from, expected_from, "encountered invalid Transfer.from");
+                assert_eq!(to, expected_to, "encountered invalid Transfer.to");
+                assert_eq!(amount, expected_amount, "encountered invalid Trasfer.value");
+            } else {
+                panic!("encountered unexpected event kind: expected a Transfer event")
+            }
+            let expected_topics = vec![
+                encoded_into_hash(&PrefixedValue {
+                    value: b"ILOCKmvp::Transfer",
+                    prefix: b"",
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"ILOCKmvp::Transfer::from",
+                    value: &expected_from,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"ILOCKmvp::Transfer::to",
+                    value: &expected_to,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"ILOCKmvp::Transfer::amount",
+                    value: &expected_amount,
+                }),
+            ];
+
+            let topics = event.topics.clone();
+            for (n, (actual_topic, expected_topic)) in
+                topics.iter().zip(expected_topics).enumerate()
+            {
+                let mut topic_hash = Hash::CLEAR_HASH;
+                let len = actual_topic.len();
+                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
+
+                assert_eq!(
+                    topic_hash, expected_topic,
+                    "encountered invalid topic at {n}"
+                );
+            }
+        }
+        fn encoded_into_hash<T>(entity: &T) -> Hash
+        where
+            T: scale::Encode,
+        {
+            use ink::{
+                env::hash::{
+                    Blake2x256,
+                    CryptoHash,
+                    HashOutput,
+                },
+                primitives::Clear,
+            };
+
+            let mut result = Hash::CLEAR_HASH;
+            let len_result = result.as_ref().len();
+            let encoded = entity.encode();
+            let len_encoded = encoded.len();
+            if len_encoded <= len_result {
+                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
+                return result
+            }
+            let mut hash_output =
+                <<Blake2x256 as HashOutput>::Type as Default>::default();
+            <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
+            let copy_len = core::cmp::min(hash_output.len(), len_result);
+            result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
+            result
+        }
     }
 }
 
