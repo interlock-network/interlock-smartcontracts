@@ -549,6 +549,7 @@ pub mod ilockmvp {
 
     impl PSP22 for ILOCKmvp {
         
+        ///
         /// - override default total_supply getter
         /// - total supply reflects token in circulation
         #[ink(message)]
@@ -558,8 +559,10 @@ pub mod ilockmvp {
             self.pool.circulating
         }
 
-        /// - override default transfer doer
-        /// - transfer from owner increases total supply
+        ///
+        /// - Override default transfer doer
+        /// - Transfer from owner increases total circulating supply.
+        /// - Transfer to owner decreases total circulating supply.
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -580,11 +583,6 @@ pub mod ilockmvp {
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
-            // emit Reward event
-            self.env().emit_event(Reward {
-                to: Some(to),
-                amount: value,
-            });
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
@@ -1596,7 +1594,7 @@ pub mod ilockmvp {
                 amount: 1000,
             });
         }
-    }
+    } // END OF ILOCKmvp IMPL BLOCK
 
 
     #[cfg(all(test, feature = "e2e-tests"))]
@@ -1615,6 +1613,7 @@ pub mod ilockmvp {
         };
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+        ///
         /// - Test if token distribution works as intended per vesting schedule.
         /// - Include register_stakeholder().
         /// - Include distribute_tokens().
@@ -1684,8 +1683,11 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - test if wallet registration function works as intended 
-        
+        ///
+        /// - Test if customized transfer function works correctly.
+        /// - When transfer from contract owner, circulating supply increases.
+        /// - When transfer to contract owner, circulating supply decreases
+        /// and rewards pool increases/
         #[ink_e2e::test]
         async fn transfer_works(
             mut client: ink_e2e::Client<C, E>,
@@ -1701,7 +1703,8 @@ pub mod ilockmvp {
                 .expect("instantiate failed")
                 .account_id;
 
-            // Transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
+            // alice is contract owner
+            // transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
             match client
@@ -1719,19 +1722,19 @@ pub mod ilockmvp {
                     }
                     if !transfer_present {panic!("Transfer event not present")};
                 },
-                Err(_error) => (),
+                Err(error) => panic!("transfer calling error: {:?}", error),
             };
             
-            // Checks that bob has expected resulting balance
+            // checks that bob has expected resulting balance
             let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
                 .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None)
                 .await
                 .return_value();
-            assert_eq!(1000, bob_balance);
+            assert_eq!(0 + 1000, bob_balance);
 
-            // Checks that alice has expected resulting balance
+            // checks that alice has expected resulting balance
             let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
@@ -1739,6 +1742,38 @@ pub mod ilockmvp {
                 .await
                 .return_value();
             assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+            // checks that circulating supply increased appropriately
+            let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.total_supply());
+            let mut total_supply = client
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
+                .await
+                .return_value();
+            assert_eq!(0 + 1000, total_supply);
+
+            // transfers 500 ILOCK from bob to alice and check for resulting Transfer event
+            let bob_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(alice_account.clone(), 500, Vec::new()));
+            let _result = client
+                .call(&ink_e2e::bob(), bob_transfer_msg, 0, None)
+                .await;
+               
+            // checks that circulating supply decreased appropriately
+            total_supply = client
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
+                .await
+                .return_value();
+            assert_eq!(1000 - 500, total_supply);
+
+            // check that rewards supply increased appropriately
+            let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(REWARDS));
+            let rewards_balance = client
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None)
+                .await
+                .return_value();
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance.1);
 
             Ok(())
         }
@@ -1777,7 +1812,6 @@ pub mod ilockmvp {
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
-
 
             Ok(())
         }
