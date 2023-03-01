@@ -18,11 +18,16 @@
 //
 //      cargo contract build
 //
+//  To build docs:
+//
+//      cargo +nightly doc --no-deps --document-private-items --open
+//
 // To reroute docs in Github
 //
 //      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
 //      target/doc/index.html;
 //      cp -r target/doc ./docs
+
 /*
 #![doc(
     html_logo_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png",
@@ -1526,47 +1531,6 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 //// tests /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-//
-// INCOMPLETE
-//
-// . To view debug prints and assertion failures run test via:
-//   cargo +nightly test --features e2e-tests -- --show-output
-// . To view debug for specific method run test via:
-//   cargo nightly+ test <test_function_here> -- --nocapture
-
-
-// TODO
-//
-// [] total_supply
-// [] transfer
-// [] transfer_from
-// [] burn
-// [x] new_token
-// [] check_time
-// [] remaining_time
-// [x] register_stakeholder
-// [] stakeholder_data
-// [] distribute_tokens
-// [] payout_tokens
-// [x] pool_data
-// [] pool_balances
-// [] reward_interlocker
-// [] rewarded_interlocker_total
-// [] rewarded_total
-// [] withdraw_proceeds
-// [] proceeds_available
-// [x] months_passed
-// [x] cap
-// [] update_contract
-// [] create_port
-// [] create_socket
-// [] call_socket
-// [] tax_port_transfer
-// [] socket
-// [] port
-//
-//
-// tax_and_reward -> collect + reward
 
         /// - Test Events.
         #[ink(message)]
@@ -1596,7 +1560,77 @@ pub mod ilockmvp {
         }
     } // END OF ILOCKmvp IMPL BLOCK
 
+//
+// INCOMPLETE
+//
+// . To view debug prints and assertion failures run test via:
+//
+//      cargo +nightly test --features e2e-tests -- --show-output
+//
+// . To view debug for specific method run test via:
+//
+//      cargo nightly+ test <test_function_here> -- --nocapture
+//
+// . To run end-to-end tests, first make sure you have the substrate
+//   dev node capabilities installed via:
+//
+//      cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+//
+//   Then run the node:
+//
+//      substrate-contracts-node
+//
 
+
+// TESTTODO
+// in order of appearance
+//
+// [x] hunit_total_supply (tested in new_token
+// [] he2e_transfer
+// [] se2e_transfer
+// [] he2e_transfer_from
+// [] se2e_transfer_from
+// [] he2e_burn
+// [] se2e_burn
+// [x] hunit_new_token (no sad, returns only Self)
+// [] hunit_check_time
+// [] sunit_check_time
+// [] hunit_remaining_time
+// [x] hunit_register_stakeholder
+// [] sunit_register_stakeholder . ..... add sad case where share is greater than pool total?
+// [] hunit_stakeholder_data
+// [] he2e_distribute_tokens  <-- this is to check that the vesting schedule works...
+// [] he2e_payout_tokens                 ...month passage is artificial here, without 
+// [] se2e_payout_tokens                    advancing blocks.
+// [x] hunit_pool_data
+// [] hunit_pool_balances
+// [] he2e_reward_interlocker
+// [] se2e_reward_interlocker
+// [] hunit_rewarded_interlocker_total
+// [] hunit_rewarded_total
+// [] he2e_withdraw_proceeds
+// [] sunit_withdraw_proceeds
+// [] hunit_proceeds_available
+// [x] hunit_months_passed   <-- checked during new_token()
+// [x] hunit_cap             <-- checked during new_token()
+// [] hunit_update_contract
+// [] sunit_update_contract
+// [] hunit_create_port
+//      [] hunit_port        <-- perform with create_port()
+// [] ** he2e_create_socket     \
+// [] ** se2e_create_socket     ]---- these must be performed from generic port
+// [] ** he2e_call_socket       ]     or from the uanft contract's self minting message
+// [] ** se2e_call_socket       /
+// [] hunit_socket    
+// [] hunit_tax_port_transfer
+// [] sunit_tax_port_transfer
+//
+
+
+////////////////////////////////////////////////////////////////////////////
+//// end to end ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+    
     #[cfg(all(test, feature = "e2e-tests"))]
     mod e2e_tests {
 
@@ -1817,6 +1851,10 @@ pub mod ilockmvp {
         }
     }
 
+////////////////////////////////////////////////////////////////////////////
+//// unit tests ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
     #[cfg(test)]
     mod tests {
 
@@ -1866,6 +1904,10 @@ pub mod ilockmvp {
             ));
 
         }
+
+////////////////////////////////////////////////////////////////////////////
+//// test events emit properly in general //////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         ///
         /// - Test events emit in general.
