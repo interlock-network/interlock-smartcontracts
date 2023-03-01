@@ -519,6 +519,12 @@ pub mod ilockmvp {
         Underflow,
         /// Returned if checked divide errors out
         DivError,
+        /// Returned if share is not greater than zero.
+        ShareTooSmall,
+        /// Returned if pool number provided is invalid
+        InvalidPool,
+        /// Returned if port number provided is invalid
+        InvalidPort,
         /// custome contract error
         Custom(String),
     }
@@ -824,7 +830,7 @@ pub mod ilockmvp {
 
             // make sure share is > 0
             if share == 0 {
-                return Err(PSP22Error::Custom("Share must be greater than zero.".as_bytes().to_vec()));
+                return Err(OtherError::ShareTooSmall.into());
             }
 
             // create stakeholder struct
@@ -970,7 +976,7 @@ pub mod ilockmvp {
                 "PARTNERS"      => 9,
                 "WHITELIST"     => 10,
                 "PUBLIC_SALE"   => 11,
-                _ => return Err(OtherError::Custom(format!("Invalid pool.")).into()),
+                _ => return Err(OtherError::InvalidPool.into())
             };
         
             // make sure reward not too large
@@ -1325,7 +1331,7 @@ pub mod ilockmvp {
 
                         self._emit_approval_event(self.ownable.owner, application, port.cap);
                     },
-                    _ => return Err(OtherError::Custom(format!("Socket registering with invalid port."))),
+                    _ => return Err(OtherError::InvalidPort),
 
                 };
 
@@ -1451,7 +1457,7 @@ pub mod ilockmvp {
                     // <    (ie, do stuff with port and socket data)    >
                 },
 
-                _ => return Err(OtherError::Custom(format!("Socket registered with invalid port."))),
+                _ => return Err(OtherError::InvalidPort),
             };
 
             Ok(())
@@ -1561,7 +1567,7 @@ pub mod ilockmvp {
     } // END OF ILOCKmvp IMPL BLOCK
 
 //
-// INCOMPLETE
+// TESTING INCOMPLETE
 //
 // . To view debug prints and assertion failures run test via:
 //
@@ -1586,12 +1592,12 @@ pub mod ilockmvp {
 // in order of appearance
 //
 // [x] hunit_total_supply (tested in new_token
-// [] he2e_transfer
-// [] se2e_transfer
-// [] he2e_transfer_from
-// [] se2e_transfer_from
-// [] he2e_burn
-// [] se2e_burn
+// [] he2e_transferi            \
+// [] se2e_transfer             |
+// [] he2e_transfer_from        |---- we test these because we change the default openbrush
+// [] se2e_transfer_from        |     implementations ... per agreement with Kudelski, we will
+// [] he2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
+// [] se2e_burn                 /     additional tests once audit is underway or/ in general future
 // [x] hunit_new_token (no sad, returns only Self)
 // [] hunit_check_time
 // [] sunit_check_time
@@ -1626,6 +1632,7 @@ pub mod ilockmvp {
 // [] sunit_tax_port_transfer
 //
 
+// * note ... unit and end to end tests must reside in separate modules
 
 ////////////////////////////////////////////////////////////////////////////
 //// end to end ////////////////////////////////////////////////////////////
@@ -1633,7 +1640,6 @@ pub mod ilockmvp {
     
     #[cfg(all(test, feature = "e2e-tests"))]
     mod e2e_tests {
-
 
         use super::*;
         use ink_e2e::{
