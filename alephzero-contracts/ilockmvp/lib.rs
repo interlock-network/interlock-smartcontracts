@@ -16,7 +16,7 @@
 //
 // Build
 //
-//      cargo contract build
+//      cargo +nightly contract build
 //
 //  To build docs:
 //

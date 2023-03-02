@@ -27,12 +27,27 @@ rustup component add rust-src --toolchain nightly
 rustup target add wasm32-unknown-unknown --toolchain nightly
 ```
 
-## How to build
+### How to build
 
 In this directory, run:
 ```
-cargo +stable contract build
+cargo +nightly contract build
 ```
 to build `ilockmvp`.
 
-To run a contract, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
+To deploy a contract to testnet, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
+
+### To build and run tests
+
+In this directory, first set up a blockchain dev node. Install if you haven't already:
+```
+cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+```
+Then you can first up a node in a separate terminal instance:
+```
+substrate-contracts-node
+```
+Finally, you can run the end-to-end and unit test suite:
+```
+cargo +nightly test --features e2e-tests -- --show-output
+```
