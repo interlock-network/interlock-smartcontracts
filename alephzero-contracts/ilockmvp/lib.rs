@@ -1693,17 +1693,17 @@ pub mod ilockmvp {
             };
             
             // checks that bob has expected resulting balance
-            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
-                .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None).await.return_value();
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, bob_balance);
 
             // checks that alice has expected resulting balance
-            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None).await.return_value();
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
             assert_eq!(SUPPLY_CAP - 1000, alice_balance);
 
             // checks that circulating supply increased appropriately
@@ -1728,8 +1728,8 @@ pub mod ilockmvp {
             let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.pool_balance(REWARDS));
             let rewards_balance = client
-                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value();
-            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance.1);
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance);
 
             Ok(())
         }
@@ -1804,10 +1804,10 @@ pub mod ilockmvp {
             };
 
             // checks that charlie has expected resulting balance
-            let charlie_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let charlie_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(charlie_account.clone()));
             let charlie_balance = client
-                .call_dry_run(&ink_e2e::charlie(), &charlie_balance_of_msg, 0, None).await.return_value();
+                .call_dry_run(&ink_e2e::charlie(), &charlie_balance_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, charlie_balance);
 
             // checks that circulating supply increased appropriately
@@ -1846,8 +1846,8 @@ pub mod ilockmvp {
             let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.pool_balance(REWARDS));
             let rewards_balance = client
-                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value();
-            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 1000, rewards_balance.1);
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 1000, rewards_balance);
 
             Ok(())
         }
@@ -1912,18 +1912,18 @@ pub mod ilockmvp {
             };
 
             // checks that alice has expected resulting balance
-            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None).await.return_value();
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
             assert_eq!(SUPPLY_CAP - 1000 - 1000, alice_balance);
 
             // checks that reward pool decreased appropriately
             let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.pool_balance(REWARDS));
             let rewards_balance = client
-                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value();
-            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, rewards_balance.1);
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, rewards_balance);
 
             // bob burns 500 tokens
             let bob_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -1939,10 +1939,10 @@ pub mod ilockmvp {
             assert_eq!(1000 - 500, total_supply);
 
             // checks that bob has expected resulting balance
-            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
-                .call_dry_run(&ink_e2e::charlie(), &bob_balance_of_msg, 0, None).await.return_value();
+                .call_dry_run(&ink_e2e::charlie(), &bob_balance_msg, 0, None).await.return_value();
             assert_eq!(1000 - 500, bob_balance);
 
             Ok(())
@@ -1992,7 +1992,7 @@ pub mod ilockmvp {
             // iterate through one vesting schedule
             for month in 0..(POOLS[0].vests + POOLS[0].cliffs + 1) {
 
-                let mut balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                let mut balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                     .call(|contract| contract.balance_of(stakeholder_account.clone()));
                 let mut stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                     .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
@@ -2034,6 +2034,92 @@ pub mod ilockmvp {
         async fn happye2e_payout_tokens(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            // messages the pay from various pools
+            let partners_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "PARTNERS".to_string()));
+            let whitelist_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "WHITELIST".to_string()));
+            let publicsale_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "PUBLIC_SALE".to_string()));
+
+            // alice pays 1000 ILOCK to bob from PARTNERS pool
+            let _partners_pay_result = client
+                .call(&ink_e2e::alice(), partners_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let mut alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+            // checks that alice has expected resulting balance
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let mut bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, bob_balance);
+
+            // checks that alice has expected resulting balance
+            let mut pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(PARTNERS));
+            let mut pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+
+            // alice pays 1000 ILOCK to bob from WHITELIST pool
+            let _whitelist_pay_result = client
+                .call(&ink_e2e::alice(), whitelist_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000, alice_balance);
+
+            // checks that alice has expected resulting balance
+            bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000 + 1000, bob_balance);
+
+            // checks that alice has expected resulting balance
+            pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(WHITELIST));
+            pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+
+            // alice pays 1000 ILOCK to bob from PUBLIC_SALE pool
+            let _publicsale_pay_result = client
+                .call(&ink_e2e::alice(), publicsale_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000 - 1000, alice_balance);
+
+            // checks that alice has expected resulting balance
+            bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000 + 1000 + 1000, bob_balance);
+
+            // checks that alice has expected resulting balance
+            pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(PUBLIC_SALE));
+            pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
             Ok(())
         }
