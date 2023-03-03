@@ -2209,6 +2209,20 @@ pub mod ilockmvp {
                 .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, total_supply);
 
+            // checks that total rewarded (overall) is correct
+            let total_rewarded_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.rewarded_total());
+            let total_rewarded = client
+                .call_dry_run(&ink_e2e::alice(), &total_rewarded_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, total_rewarded);
+
+            // checks that total rewarded (to interlocker) is correct
+            let total_rewarded_interlocker_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.rewarded_interlocker_total(bob_account.clone()));
+            let total_rewarded_interlocker = client
+                .call_dry_run(&ink_e2e::alice(), &total_rewarded_interlocker_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, total_rewarded_interlocker);
+
             Ok(())
         }
 
