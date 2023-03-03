@@ -677,7 +677,19 @@ pub mod ilockmvp {
 
             // burn the tokens
             let _ = self._burn_from(donor, amount)?;
-            self.pool.circulating -= amount;
+
+            // adjust pool balances
+            if donor == self.ownable.owner {
+                match self.pool.balances[REWARDS as usize].checked_sub(amount) {
+                    Some(difference) => self.pool.balances[REWARDS as usize] = difference,
+                    None => return Err(OtherError::Underflow.into()),
+                };
+            } else {
+                match self.pool.circulating.checked_sub(amount) {
+                    Some(difference) => self.pool.circulating = difference,
+                    None => return Err(OtherError::Underflow.into()),
+                };
+            }
 
             Ok(())
         }
@@ -1634,7 +1646,10 @@ pub mod ilockmvp {
         use ink_e2e::{
             build_message,
         };
-        use openbrush::contracts::psp22::psp22_external::PSP22;
+        use openbrush::contracts::psp22::{
+            psp22_external::PSP22,
+            extensions::burnable::psp22burnable_external::PSP22Burnable,
+        };
 
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -1661,8 +1676,7 @@ pub mod ilockmvp {
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
             match client
-                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None)
-                .await {
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await {
                 Ok(result) => {
                     let mut transfer_present: bool = false;
                     for event in result.events.iter() {
@@ -1739,6 +1753,7 @@ pub mod ilockmvp {
         /// HAPPY TRANSFER_FROM
         /// - Test if customized transfer_from function works correctly.
         /// - When transfer from contract owner, circulating supply increases.
+        /// - Transfer and Approval events are emitted.
         /// - When transfer to contract owner, circulating supply decreases
         /// - When caller transfers, their allowace with from decreases
         ///   and rewards pool increases
@@ -1768,8 +1783,7 @@ pub mod ilockmvp {
                     alice_account.clone(), charlie_account.clone(), 1000, Vec::new())
             );
             match client
-                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None)
-                .await {
+                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await {
                 Ok(result) => {
                     let mut transfer_present: bool = false;
                     let mut approval_present: bool = false;
@@ -1819,8 +1833,7 @@ pub mod ilockmvp {
             // bob transfers 1000 ILOCK from charlie to alice
             let bob_transfer_from_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer_from(
-                    charlie_account.clone(), alice_account.clone(), 1000, Vec::new())
-            );
+                    charlie_account.clone(), alice_account.clone(), 1000, Vec::new()));
             let _transfer_from_result = client
                 .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await;
 
@@ -1863,6 +1876,74 @@ pub mod ilockmvp {
         async fn happye2e_burn(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            // alice transfers 1000 ILOCK to bob (to check !owner burn)
+            let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(
+                    bob_account.clone(), 1000, Vec::new()));
+            let _transfer_from_result = client
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await;
+
+            // alice burns 1000 tokens
+            let alice_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.burn(alice_account.clone(), 1000));
+            match client
+                .call(&ink_e2e::alice(), alice_burn_msg, 0, None).await {
+                Ok(result) => {
+                    let mut transfer_present: bool = false;
+                    for event in result.events.iter() {
+                        let bytes_text: String = String::from_utf8_lossy(
+                                                 event.expect("bad event").bytes()).to_string();
+                        if bytes_text.contains("ILOCKmvp::Transfer") {
+                            transfer_present = true;
+                        };
+                    }
+                    if !transfer_present {panic!("Transfer event not present")};
+                },
+                Err(error) => panic!("transfer_from calling error: {:?}", error),
+            };
+
+            // checks that alice has expected resulting balance
+            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000, alice_balance);
+
+            // checks that reward pool decreased appropriately
+            let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(REWARDS));
+            let rewards_balance = client
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value();
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, rewards_balance.1);
+
+            // bob burns 500 tokens
+            let bob_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.burn(bob_account.clone(), 500));
+            let _bob_burn_result = client
+                .call(&ink_e2e::alice(), bob_burn_msg, 0, None).await;
+
+            // checks that circulating supply decreased appropriately
+            let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.total_supply());
+            let total_supply = client
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 500, total_supply);
+
+            // checks that bob has expected resulting balance
+            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::charlie(), &bob_balance_of_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 500, bob_balance);
 
             Ok(())
         }
