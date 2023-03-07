@@ -869,7 +869,7 @@ pub mod ilockmvp {
         pub fn stakeholder_data(
             &self,
             stakeholder: AccountId,
-        ) -> (String, String, String, String) {
+        ) -> (StakeholderData, Balance, Balance, String) {
 
             // get pool and stakeholder data structs first
             let this_stakeholder = self.vest.stakeholder.get(stakeholder).unwrap();
@@ -885,10 +885,10 @@ pub mod ilockmvp {
             let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
 
             return (
-                format!("paidout: {:?} ", paidout),
-                format!("payremaining: {:?} ", payremaining),
-                format!("payamount: {:?} ", payamount),
-                format!("pool: {:?}", POOLS[this_stakeholder.pool as usize].name),
+                this_stakeholder.clone(),
+                payremaining,
+                payamount,
+                POOLS[this_stakeholder.pool as usize].name.to_string(),
             )
         }
 
@@ -935,7 +935,7 @@ pub mod ilockmvp {
             }
 
             // calculate the new total paid to stakeholder
-            let newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
+            let mut newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
                 Some(sum) => sum,
                 None => return Err(OtherError::Overflow.into()),
             };
@@ -948,14 +948,10 @@ pub mod ilockmvp {
 
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
-            // ! no checked_div needed; pool.vests guaranteed to be nonzero
-            if remainingshare < this_stakeholder.share / pool.vests as Balance {
+            if remainingshare < payout {
 
-                // add remainder
-                match payout.checked_add(this_stakeholder.share % pool.vests as Balance) {
-                    Some(sum) => payout = sum,
-                    None => return Err(OtherError::Overflow.into()),
-                };
+                payout += remainingshare;
+                newpaidtotal = this_stakeholder.share;
             }
 
             // now transfer tokens
@@ -1588,7 +1584,7 @@ pub mod ilockmvp {
 // [] sade2e_transfer                |
 // [x] happye2e_transfer_from        |---- we test these because we change the default openbrush
 // [] sade2e_transfer_from           |     implementations ... per agreement with Kudelski, we will
-// [] happye2e_burn                  |     be assuming that openbrush is safe ... we may wish to perform
+// [x] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
 // [] sade2e_burn                    /     additional tests once audit is underway or/ in general future
 // [x] happyunit_new_token (no sad, returns only Self)
 // [] happyunit_check_time
@@ -1598,13 +1594,13 @@ pub mod ilockmvp {
 // [] sadunit_register_stakeholder . ..... add sad case where share is greater than pool total?
 // [] happyunit_stakeholder_data
 // [] happye2e_distribute_tokens  <-- this is to check that the vesting schedule works...
-// [] happye2e_payout_tokens                 ...month passage is artificial here, without 
+// [x] happye2e_payout_tokens                 ...month passage is artificial here, without 
 // [] sade2e_payout_tokens                    advancing blocks.
 // [x] happyunit_pool_data
 // [] happyunit_pool_balances
-// [] happye2e_reward_interlocker           
-// [] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
-// [] happyunit_rewarded_total              <-- checked within reward_interlocker() 
+// [x] happye2e_reward_interlocker           
+// [x] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
+// [x] happyunit_rewarded_total              <-- checked within reward_interlocker() 
 // [] happye2e_withdraw_proceeds
 // [] sadunit_withdraw_proceeds
 // [] happyunit_proceeds_available      <-- checked within withdraw_proceeds()
@@ -1973,40 +1969,118 @@ pub mod ilockmvp {
         async fn happye2e_distribute_tokens(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-/*
+
             // fire up contract
             let constructor = ILOCKmvpRef::new_token();
             let contract_acct_id = client
                 .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
-                .await
-                .expect("instantiate failed")
-                .account_id;
+                .await.expect("instantiate failed").account_id;
 
-            // register generic stakeholder
+            // register accounts
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let stakeholder_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
             let stakeholder_share = 1_000_000_000;
+            let pool_size = POOLS[TEAM_FOUNDERS as usize].tokens * DECIMALS_POWER10;
 
-            // prepare messages
-            let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+            // register stakeholder
+            let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.register_stakeholder(
+                    stakeholder_account.clone(), stakeholder_share, TEAM_FOUNDERS));
+            let _register_stakeholder_result = client
+                .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
+
+            let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
+            let stakeholder_data = client
+                .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None).await.return_value();
+            assert_eq!(stakeholder_data.0.share, stakeholder_share);
+
+            let cliff = POOLS[TEAM_FOUNDERS as usize].cliffs;
+            let vests = POOLS[TEAM_FOUNDERS as usize].vests;
+            let schedule_end = vests + cliff - 1;
+            let schedule_period = vests;
+            let payout = 1_000_000_000 / vests as Balance; // 27_777_777
+            let last_payout = payout + 1_000_000_000 % vests as Balance; // 27_777_805
+            println!("{:?}", payout);
 
             // iterate through one vesting schedule
-            for month in 0..(POOLS[0].vests + POOLS[0].cliffs + 1) {
+            for month in 0..(schedule_end + 2) {
 
-                let mut balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.balance_of(stakeholder_account.clone()));
-                let mut stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
-                let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
-                let mut increment_month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.TESTING_increment_month());
-                let mut months_passed_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                let month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                     .call(|contract| contract.months_passed());
+                let month_result = client
+                    .call_dry_run(&ink_e2e::alice(), &month_msg, 0, None).await.return_value();
+                if month >= cliff && month <= schedule_end {
 
-                println!("{}", month);
+                    let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                        .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+                    let _distribute_tokens_result = client
+                        .call(&ink_e2e::alice(), distribute_tokens_msg, 0, None).await;
+
+                }
+
+                let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
+                let stakeholder_paid = client
+                    .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None)
+                    .await.return_value().0.paid;
+
+                let stakeholder_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.balance_of(stakeholder_account.clone()));
+                let stakeholder_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &stakeholder_balance_msg.clone(), 0, None)
+                    .await.return_value();
+
+                let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.pool_balance(TEAM_FOUNDERS));
+                let pool_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &pool_balance_msg.clone(), 0, None)
+                    .await.return_value().1;
+
+                let owner_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.balance_of(alice_account.clone()));
+                let owner_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &owner_balance_msg.clone(), 0, None)
+                    .await.return_value();
+
+                let increment_month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.TESTING_increment_month());
+                let _increment_month_result = client
+                    .call(&ink_e2e::alice(), increment_month_msg, 0, None).await;
+
+                /* // visual proof of workee
+                println!("{:?}", month_result);
+                println!("{:?}", stakeholder_paid);
+                println!("{:?}", stakeholder_balance);
+                println!("{:?}", pool_balance);
+                println!("{:?}", owner_balance);
+                */
+                if month < cliff {
+
+                    assert_eq!(stakeholder_paid, 0);
+                    assert_eq!(stakeholder_balance, 0);
+                    assert_eq!(owner_balance, SUPPLY_CAP);
+                    assert_eq!(pool_balance, pool_size);
+
+                } else if month >= cliff && month < schedule_end {
+
+                    assert_eq!(stakeholder_paid, (month - cliff + 1) as Balance * payout);
+                    assert_eq!(stakeholder_balance, (month - cliff + 1) as Balance * payout);
+                    assert_eq!(owner_balance, SUPPLY_CAP - (month - cliff + 1) as Balance * payout);
+                    assert_eq!(pool_balance, pool_size - (month - cliff + 1) as Balance * payout);
+
+                } else if month >= schedule_end {
+
+                    assert_eq!(stakeholder_paid, (schedule_period - 1) as Balance * payout + last_payout);
+                    assert_eq!(stakeholder_balance, (schedule_period - 1) as Balance * payout + last_payout);
+                    assert_eq!(owner_balance,
+                               SUPPLY_CAP - (schedule_period - 1) as Balance * payout - last_payout);
+                    assert_eq!(pool_balance,
+                               pool_size - (schedule_period - 1) as Balance * payout - last_payout);
+
+                }
             }
-*/            
+            
             Ok(())
         }
 
