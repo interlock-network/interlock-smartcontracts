@@ -1523,36 +1523,6 @@ pub mod ilockmvp {
 
             Ok(true)
         }
-
-        /// - Function to test for Events.
-        ///
-        ///     MUST BE DELETED PRIOR TO TGE
-        ///
-        #[ink(message)]
-        pub fn test_events(
-            &self,
-            alice: AccountId,
-            bob: AccountId,
-        ) -> () {
-
-            // emit Transfer event
-            Self::env().emit_event(Transfer {
-                from: Some(alice),
-                to: Some(bob),
-                amount: 1000,
-            });
-            // emit Approval event
-            Self::env().emit_event(Approval {
-                owner: Some(alice),
-                spender: Some(bob),
-                amount: 1000,
-            });
-            // emit Reward event
-            Self::env().emit_event(Reward {
-                to: Some(alice),
-                amount: 1000,
-            });
-        }
     } // END OF ILOCKmvp IMPL BLOCK
 
 //
@@ -1588,9 +1558,9 @@ pub mod ilockmvp {
 // [x] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
 // [] sade2e_burn                    /     additional tests once audit is underway or/ in general future
 // [x] happyunit_new_token (no sad, returns only Self)
-// [*] happyunit_check_time           <-- not possible to advance block, TEST ON TESTNET
-// [*] sadunit_check_time             <-- not possible to advance block, TEST ON TESTNET
-// [*] happyunit_remaining_time       <-- not possible to advance block, TEST ON TESTNET
+// [!] happyunit_check_time           <-- not possible to advance block, TEST ON TESTNET
+// [!] sadunit_check_time             <-- not possible to advance block, TEST ON TESTNET
+// [!] happyunit_remaining_time       <-- not possible to advance block, TEST ON TESTNET
 // [x] happyunit_register_stakeholder <-- this checked within distribute_tokens()
 // [] sadunit_register_stakeholder . ..... add sad case where share is greater than pool total?
 // [x] happyunit_stakeholder_data  <-- checked within distriut_tokens()
@@ -1603,10 +1573,10 @@ pub mod ilockmvp {
 // [x] happyunit_rewarded_total              <-- checked within reward_interlocker() 
 // [x] happyunit_months_passed       <-- checked within new_token()
 // [x] happyunit_cap                 <-- checked within new_token()
-// [] happyunit_update_contract      <-- TEST ON TESTNET
+// [!] happyunit_update_contract      <-- TEST ON TESTNET
 // [] sadunit_update_contract
-// [] happyunit_create_port
-//      [] happyunit_port        <-- checked within create_port()
+// [x] happyunit_create_port
+//      [x] happyunit_port        <-- checked within create_port()
 // [] ** happye2e_create_socket     \
 // [] ** sade2e_create_socket       |---- these must be performed from generic port
 // [] ** happye2e_call_socket       |     or from the uanft contract's self minting message
@@ -1669,23 +1639,40 @@ pub mod ilockmvp {
             // transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            match client
-                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await {
-                Ok(result) => {
-                    let mut transfer_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Transfer") {
-                            transfer_present = true;
-                            break;
-                        };
-                    }
-                    if !transfer_present {panic!("Transfer event not present")};
-                },
-                Err(error) => panic!("transfer calling error: {:?}", error),
-            };
+            let transfer_response = client
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await.unwrap();
             
+            // filter for transfer event
+            let contract_emitted_transfer = transfer_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // Decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[35..]).expect("invalid data");
+
+            // Destructor decoded event
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // Assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
+            assert_eq!(to, Some(bob_account), "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");    
+
             // checks that bob has expected resulting balance
             let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
@@ -1776,27 +1763,71 @@ pub mod ilockmvp {
                 .call(|contract| contract.transfer_from(
                     alice_account.clone(), charlie_account.clone(), 1000, Vec::new())
             );
-            match client
-                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await {
-                Ok(result) => {
-                    let mut transfer_present: bool = false;
-                    let mut approval_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Transfer") {
-                            transfer_present = true;
-                        };
-                        if bytes_text.contains("ILOCKmvp::Approval") {
-                            approval_present = true;
-                        };
-                    }
-                    if !transfer_present {panic!("Transfer event not present")};
-                    if !approval_present {panic!("Approval event not present")};
-                },
-                Err(error) => panic!("transfer_from calling error: {:?}", error),
-            };
+            let transfer_from_response = client
+                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await.unwrap();
+            
+            // filter for approval event
+            let contract_emitted_approval = transfer_from_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Approval")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
 
+            // decode to the expected event type (skip field_context)
+            let approval_event = contract_emitted_approval.field_bytes();
+            let decoded_approval =
+                <Approval as scale::Decode>::decode(&mut &approval_event[35..]).expect("invalid data");
+
+            // destructor decoded eapproval
+            let Approval { owner, spender, amount } = decoded_approval;
+
+            // assert with the expected value
+            assert_eq!(owner, Some(alice_account), "encountered invalid Approval.owner");
+            assert_eq!(spender, Some(bob_account), "encountered invalid Approval.spender");
+            assert_eq!(amount, 1000 - 1000, "encountered invalid Approval.amount");  
+            
+            // filter for transfer event
+            let contract_emitted_transfer = transfer_from_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[35..]).expect("invalid data");
+
+            // destructor decoded transfer
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
+            assert_eq!(to, Some(charlie_account), "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");  
+            
             // checks that charlie has expected resulting balance
             let charlie_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(charlie_account.clone()));
@@ -1883,28 +1914,46 @@ pub mod ilockmvp {
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(
                     bob_account.clone(), 1000, Vec::new()));
-            let _transfer_from_result = client
+            let _transfer_result = client
                 .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await;
 
             // alice burns 1000 tokens
             let alice_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.burn(alice_account.clone(), 1000));
-            match client
-                .call(&ink_e2e::alice(), alice_burn_msg, 0, None).await {
-                Ok(result) => {
-                    let mut transfer_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Transfer") {
-                            transfer_present = true;
-                        };
-                    }
-                    if !transfer_present {panic!("Transfer event not present")};
-                },
-                Err(error) => panic!("transfer_from calling error: {:?}", error),
-            };
+            let burn_response = client
+                .call(&ink_e2e::alice(), alice_burn_msg, 0, None).await.unwrap();
 
+           
+            let contract_emitted_transfer = burn_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[34..]).expect("invalid data");
+
+            // Destructor decoded event
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // Assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.fromr");
+            assert_eq!(to, None, "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");  
+            
             // checks that alice has expected resulting balance
             let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
@@ -2006,17 +2055,12 @@ pub mod ilockmvp {
             // iterate through one vesting schedule
             for month in 0..(schedule_end + 2) {
 
-                let month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.months_passed());
-                let month_result = client
-                    .call_dry_run(&ink_e2e::alice(), &month_msg, 0, None).await.return_value();
                 if month >= cliff && month <= schedule_end {
 
                     let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                         .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
                     let _distribute_tokens_result = client
                         .call(&ink_e2e::alice(), distribute_tokens_msg, 0, None).await;
-
                 }
 
                 let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -2077,10 +2121,8 @@ pub mod ilockmvp {
                                SUPPLY_CAP - (schedule_period - 1) as Balance * payout - last_payout);
                     assert_eq!(pool_balance,
                                pool_size - (schedule_period - 1) as Balance * payout - last_payout);
-
                 }
             }
-            
             Ok(())
         }
 
@@ -2239,21 +2281,38 @@ pub mod ilockmvp {
             // alice rewards bob the happy interlocker 1000 ILOCK
             let alice_reward_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.reward_interlocker(1000, bob_account.clone()));
-            match client
-                .call(&ink_e2e::alice(), alice_reward_msg, 0, None).await {
-                Ok(result) => {
-                    let mut reward_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Reward") {
-                            reward_present = true;
-                        };
-                    }
-                    if !reward_present {panic!("Reward event not present")};
-                },
-                Err(error) => panic!("transfer_from calling error: {:?}", error),
-            };
+            let reward_response = client
+                .call(&ink_e2e::alice(), alice_reward_msg, 0, None).await.unwrap();
+            
+            // filter for reward event
+            let contract_emitted_reward = reward_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Reward")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let reward_event = contract_emitted_reward.field_bytes();
+            let decoded_reward =
+                <Reward as scale::Decode>::decode(&mut &reward_event[34..]).expect("invalid data");
+
+            // destructor decoded transfer
+            let Reward { to, amount } = decoded_reward;
+
+            // assert with the expected value
+            assert_eq!(to, Some(bob_account), "encountered invalid Reward.to");
+            assert_eq!(amount, 1000, "encountered invalid Reward.amount");  
 
             // checks that alice has expected resulting balance
             let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -2324,10 +2383,7 @@ pub mod ilockmvp {
     #[cfg(test)]
     mod tests {
 
-        use ink::primitives::{
-            Clear,
-            Hash,
-        };
+        use ink::primitives::Hash;
 
         use super::*;
 
@@ -2438,242 +2494,6 @@ pub mod ilockmvp {
         fn sadunit_tax_port_transfer() {
 
         }
-
-
-////////////////////////////////////////////////////////////////////////////
-//// test events emit properly in general //////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        ///
-        /// - Test events emit in general.
-        /// - Due to fact that openbrush invokes 'cross contract calls',
-        /// it is not possible to run standard unit tests for any functions
-        /// that include PSP22 standard messages, so we need to perform e2e tests in general.
-        /// - For now, the most we can do is verify within e2e tests that a
-        /// particular event occured.
-        /// - There is no clear way to catch events in their entirety within an
-        /// e2e test (ie, the topics and values).
-        /// - To make up for this, in this non-e2e test we verify that *when* one of the
-        /// three events are emitted, their topics are indeed accurate in general.
-        /// - Capturing complete events within the e2e tests is an active issue, #225
-        #[ink::test]
-        fn test_events_work() {
-
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-
-            ILOCKmvpPSP22.test_events(accounts.alice.clone(), accounts.bob.clone());
-
-            // Transfer event triggered during initial construction.
-            let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
-
-            assert_event(
-                "Transfer",
-                &emitted_events[1],
-                Some(accounts.alice.clone()),
-                Some(accounts.bob.clone()),
-                1000,
-            );
-            assert_event(
-                "Approval",
-                &emitted_events[2],
-                Some(accounts.alice.clone()),
-                Some(accounts.bob.clone()),
-                1000,
-            );
-            assert_event(
-                "Reward",
-                &emitted_events[3],
-                Some(accounts.alice.clone()),
-                Some(accounts.alice.clone()), // <- not used
-                1000,
-            );
-        }
-
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// For calculating the event topic hash.
-        struct PrefixedValue<'a, 'b, T> {
-            pub prefix: &'a [u8],
-            pub value: &'b T,
-        }
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// Use this implementation to encode and decode events.
-        impl<X> scale::Encode for PrefixedValue<'_, '_, X>
-        where
-            X: scale::Encode,
-        {
-            #[inline]
-            fn size_hint(&self) -> usize {
-                self.prefix.size_hint() + self.value.size_hint()
-            }
-
-            #[inline]
-            fn encode_to<T: scale::Output + ?Sized>(&self, dest: &mut T) {
-                self.prefix.encode_to(dest);
-                self.value.encode_to(dest);
-            }
-        }
-        type Event = <ILOCKmvp as ::ink::reflect::ContractEventBase>::Type;
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo, modified to check three Event types.
-        ///
-        /// This function compares emitted events against expectations.
-        fn assert_event(
-            kind: &str,
-            event: &ink::env::test::EmittedEvent,
-            expected_A: Option<AccountId>,
-            expected_B: Option<AccountId>,
-            expected_C: Balance,
-        ) {
-            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
-                .expect("encountered invalid contract event data buffer");
-
-            let mut expected_topics = Vec::new();
-            match kind {
-
-                "Transfer" => {
-                    if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
-                        assert_eq!(from, expected_A, "encountered invalid Transfer.from");
-                        assert_eq!(to, expected_B, "encountered invalid Transfer.to");
-                        assert_eq!(amount, expected_C, "encountered invalid Transfer.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Transfer",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::from",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::to",
-                                value: &expected_B,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Transfer event");
-                    }
-                },
-
-                "Approval" => {
-                    if let Event::Approval(Approval { owner, spender, amount }) = decoded_event {
-                        assert_eq!(owner, expected_A, "encountered invalid Approval.owner");
-                        assert_eq!(spender, expected_B, "encountered invalid Approval.spender");
-                        assert_eq!(amount, expected_C, "encountered invalid Approval.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Approval",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::owner",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::spender",
-                                value: &expected_B,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Approval event");
-                    }
-                },
-
-                "Reward" => {
-                    if let Event::Reward(Reward { to, amount }) = decoded_event {
-                        assert_eq!(to, expected_A, "encountered invalid Reward.to");
-                        assert_eq!(amount, expected_C, "encountered invalid Reward.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Reward",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Reward::to",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Reward::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Reward event");
-                    }
-                },
-                &_ => (),
-            };
-
-            let topics = event.topics.clone();
-            for (n, (actual_topic, expected_topic)) in
-                topics.iter().zip(expected_topics).enumerate()
-            {
-                let mut topic_hash = Hash::CLEAR_HASH;
-                let len = actual_topic.len();
-                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
-
-                assert_eq!(
-                    topic_hash, expected_topic,
-                    "encountered invalid topic at {n}"
-                );
-            }
-        }
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// This function takes hash of encoded topic data
-        fn encoded_into_hash<T>(entity: &T) -> Hash
-        where
-            T: scale::Encode,
-        {
-            use ink::{
-                env::hash::{
-                    Blake2x256,
-                    CryptoHash,
-                    HashOutput,
-                },
-                primitives::Clear,
-            };
-
-            let mut result = Hash::CLEAR_HASH;
-            let len_result = result.as_ref().len();
-            let encoded = entity.encode();
-            let len_encoded = encoded.len();
-            if len_encoded <= len_result {
-                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
-                return result
-            }
-            let mut hash_output =
-                <<Blake2x256 as HashOutput>::Type as Default>::default();
-            <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
-            let copy_len = core::cmp::min(hash_output.len(), len_result);
-            result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
-            result
-        }
     }
-
 }
 
