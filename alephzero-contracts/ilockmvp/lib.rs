@@ -1986,19 +1986,22 @@ pub mod ilockmvp {
             let _register_stakeholder_result = client
                 .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
 
-            let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
-            let stakeholder_data = client
-                .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None).await.return_value();
-            assert_eq!(stakeholder_data.0.share, stakeholder_share);
-
             let cliff = POOLS[TEAM_FOUNDERS as usize].cliffs;
             let vests = POOLS[TEAM_FOUNDERS as usize].vests;
             let schedule_end = vests + cliff - 1;
             let schedule_period = vests;
             let payout = 1_000_000_000 / vests as Balance; // 27_777_777
             let last_payout = payout + 1_000_000_000 % vests as Balance; // 27_777_805
-            println!("{:?}", payout);
+
+            // check stakeholder_data()
+            let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
+            let stakeholder_data = client
+                .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None).await.return_value();
+            assert_eq!(stakeholder_data.0.share, stakeholder_share);
+            assert_eq!(stakeholder_data.1, stakeholder_data.0.share);
+            assert_eq!(stakeholder_data.2, payout);
+            assert_eq!(stakeholder_data.3, "team+founders".to_string());
 
             // iterate through one vesting schedule
             for month in 0..(schedule_end + 2) {
@@ -2387,6 +2390,7 @@ pub mod ilockmvp {
 
             let ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
+            let codehash: Hash = ILOCKmvpPSP22.env().own_code_hash().unwrap();
 
         }
 
