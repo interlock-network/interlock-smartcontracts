@@ -1177,23 +1177,6 @@ pub mod ilockmvp {
             SUPPLY_CAP
         }
 
-        /// - function to increment monthspassed for testing
-        /// 
-        ///
-        ///     MUST BE DELETED PRIOR TO AUDIT
-        ///
-        ///
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn TESTING_increment_month(
-            &mut self,
-        ) -> OtherResult<bool> {
-
-            self.vest.monthspassed += 1;
-
-            Ok(true)
-        }
-
 ////////////////////////////////////////////////////////////////////////////
 //// portability and extensibility  ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -1523,10 +1506,28 @@ pub mod ilockmvp {
     
 
 ////////////////////////////////////////////////////////////////////////////
-//// tests /////////////////////////////////////////////////////////////////
+//// testing helpers ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - Test Events.
+        /// - Function to increment monthspassed for testing.
+        ///
+        ///     MUST BE DELETED PRIOR TO TGE
+        ///
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn TESTING_increment_month(
+            &mut self,
+        ) -> OtherResult<bool> {
+
+            self.vest.monthspassed += 1;
+
+            Ok(true)
+        }
+
+        /// - Function to test for Events.
+        ///
+        ///     MUST BE DELETED PRIOR TO TGE
+        ///
         #[ink(message)]
         pub fn test_events(
             &self,
@@ -1563,7 +1564,7 @@ pub mod ilockmvp {
 //
 // . To view debug for specific method run test via:
 //
-//      cargo nightly+ test <test_function_here> -- --nocapture
+//      cargo +nightly test <test_function_here> -- --nocapture
 //
 // . To run end-to-end tests, first make sure you have the substrate
 //   dev node capabilities installed via:
@@ -1576,7 +1577,7 @@ pub mod ilockmvp {
 //
 
 
-// TESTTODO
+// TEST TODO
 // in order of appearance
 //
 // [x] happyunit_total_supply     <-- checked within new_token()
@@ -1587,26 +1588,22 @@ pub mod ilockmvp {
 // [x] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
 // [] sade2e_burn                    /     additional tests once audit is underway or/ in general future
 // [x] happyunit_new_token (no sad, returns only Self)
-// [] happyunit_check_time
-// [] sadunit_check_time
-// [] happyunit_remaining_time
-// [x] happyunit_register_stakeholder
+// [*] happyunit_check_time           <-- not possible to advance block, TEST ON TESTNET
+// [*] sadunit_check_time             <-- not possible to advance block, TEST ON TESTNET
+// [*] happyunit_remaining_time       <-- not possible to advance block, TEST ON TESTNET
+// [x] happyunit_register_stakeholder <-- this checked within distribute_tokens()
 // [] sadunit_register_stakeholder . ..... add sad case where share is greater than pool total?
-// [] happyunit_stakeholder_data
-// [] happye2e_distribute_tokens  <-- this is to check that the vesting schedule works...
+// [x] happyunit_stakeholder_data  <-- checked within distriut_tokens()
+// [x] happye2e_distribute_tokens  <-- this is to check that the vesting schedule works...
 // [x] happye2e_payout_tokens                 ...month passage is artificial here, without 
 // [] sade2e_payout_tokens                    advancing blocks.
 // [x] happyunit_pool_data
-// [] happyunit_pool_balances
 // [x] happye2e_reward_interlocker           
 // [x] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
 // [x] happyunit_rewarded_total              <-- checked within reward_interlocker() 
-// [] happye2e_withdraw_proceeds
-// [] sadunit_withdraw_proceeds
-// [] happyunit_proceeds_available      <-- checked within withdraw_proceeds()
-// [x] happyunit_months_passed   <-- checked within new_token()
-// [x] happyunit_cap             <-- checked within new_token()
-// [] happyunit_update_contract
+// [x] happyunit_months_passed       <-- checked within new_token()
+// [x] happyunit_cap                 <-- checked within new_token()
+// [] happyunit_update_contract      <-- TEST ON TESTNET
 // [] sadunit_update_contract
 // [] happyunit_create_port
 //      [] happyunit_port        <-- checked within create_port()
@@ -2314,31 +2311,7 @@ pub mod ilockmvp {
         ) -> E2EResult<()> {
 
             Ok(())
-        }
-
-        /// HAPPY WITHDRAW_PROCEEDS
-        /// - Test if proceeds withdraw functionality works correctly.
-        #[ink_e2e::test]
-        async fn happye2e_withdraw_proceeds(
-            mut client: ink_e2e::Client<C, E>,
-        ) -> E2EResult<()> {
-
-            Ok(())
-        }
-
-        /// SAD WITHDRAW_PROCEEDS
-        /// - Test if proceeds withdraw function fails correctly.
-        /// 
-        /// - Return
-        ///     CallerNotOwner               - when caller does not own contract
-        ///     PaymentTooLarge              - when arithmetic over or underflows
-        #[ink_e2e::test]
-        async fn sade2e_withdraw_proceeds(
-            mut client: ink_e2e::Client<C, E>,
-        ) -> E2EResult<()> {
-
-            Ok(())
-        }
+        } 
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -2379,34 +2352,8 @@ pub mod ilockmvp {
             assert_eq!(total_tokens, ILOCKmvpPSP22.cap());
             assert_eq!(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
         }
-      
-        /// HAPPY CHECK_TIME
-        /// - Test if check_time function functions correctly.
-        /// - If block timestamp is > than next month's payout date, then 
-        ///   function increments months_passed by one.
-        #[ink::test]
-        fn happyunit_check_time() {
 
-        }    
 
-        /// SAD CHECK_TIME
-        /// - Test if check_time function fails correctly.
-        ///
-        /// - Return
-        ///     PayoutTooEarly            - when block timestamp < nextpayout time
-        #[ink::test]
-        fn sadunit_check_time() {
-
-        }    
-
-        /// HAPPY REMAINING_TIME
-        /// - Test if remaingint_time function works correctly.
-        /// - If timestamp < nextpayout, return difference.
-        /// - If difference underflows, then time is up and ready for next payout.
-        #[ink::test]
-        fn happyunit_remaining_time() {
-
-        }    
 
         /// HAPPY REGISTER_STAKEHOLDER & STAKEHOLDER_DATA
         /// - Test if register_stakeholder and stakeholder_data functions works correctly.
@@ -2433,19 +2380,13 @@ pub mod ilockmvp {
             ));
         }
 
-        /// HAPPY/SAD UPDATE CONTRACT
-        /// - test if update_contract functions/fails correctly.
-        /// 
-        /// - I am not sure how to do this or if it's even possible.
-        #[ink::test]
-        fn happyunit_update_contract() {
-
-        }
-
         /// HAPPY CREATE_GET_PORT
         /// - Test if create_port() and port() functions correctly.
         #[ink::test]
         fn happyunit_create_get_port() {
+
+            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+
 
         }
 
@@ -2703,5 +2644,6 @@ pub mod ilockmvp {
             result
         }
     }
+
 }
 
