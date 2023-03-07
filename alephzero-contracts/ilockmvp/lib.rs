@@ -2388,10 +2388,36 @@ pub mod ilockmvp {
         #[ink::test]
         fn happyunit_create_get_port() {
 
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
-            let codehash: Hash = ILOCKmvpPSP22.env().own_code_hash().unwrap();
+            let codehash: Hash = Default::default(); // offchain environment doesn't support
+            let tax: Balance = 1000;                 // .own_code_hash()
+            let cap: Balance = 1_000_000;
+            let locked: bool = true;
+            let number: u16 = 2;
+            let owner: AccountId = accounts.bob;
 
+            let _ = ILOCKmvpPSP22.create_port(
+                codehash,
+                tax,
+                cap,
+                locked,
+                number,
+                owner,
+            );
+
+            let port: Port = ILOCKmvpPSP22.port(number);
+
+            assert_eq!(port, Port {
+                application: codehash,
+                tax: tax,
+                cap: cap,
+                locked: locked,
+                paid: 0,
+                collected: 0,
+                owner: owner,
+            });
         }
 
         /// HAPPY TAX_PORT_TRANSFER
