@@ -1,32 +1,33 @@
-//
-// INTERLOCK NETWORK MVP SMART CONTRACT
-//  - PSP22 TOKEN
-//  - REWARDS
-//
-// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
-//
-// This is a standard ERC20-style token contract
-// with provisions for enforcing a token distribution
-// vesting schedule, and for rewarding interlockers for
-// browsing the internet with the Interlock browser extension.
-//
-// Build with cargo-contract version 2.0.0
-//
-//      cargo install cargo-contract --force --version 2.0.0
-//
-// Build
-//
-//      cargo +nightly contract build
-//
-//  To build docs:
-//
-//      cargo +nightly doc --no-deps --document-private-items --open
-//
-// To reroute docs in Github
-//
-//      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-//      target/doc/index.html;
-//      cp -r target/doc ./docs
+//!
+//! INTERLOCK NETWORK MVP SMART CONTRACT
+//!  - PSP22 TOKEN
+//!  - REWARDS
+//!
+//! !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
+//!
+//! This is a standard ERC20-style token contract
+//! with provisions for enforcing a token distribution
+//! vesting schedule, and for rewarding interlockers for
+//! browsing the internet with the Interlock browser extension.
+//!
+//! Build with cargo-contract version 2.0.0
+//!
+//!      cargo install cargo-contract --force --version 2.0.0
+//!
+//! Build
+//!
+//!      cargo +nightly contract build
+//!
+//!  To build docs:
+//!
+//!      cargo +nightly doc --no-deps --document-private-items --open
+//!
+//! To reroute docs in Github
+//!
+//!      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//!      target/doc/index.html;
+//!      cp -r target/doc ./docs
+//!
 
 /*
 #![doc(
