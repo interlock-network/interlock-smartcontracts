@@ -975,6 +975,7 @@ pub mod ilockmvp {
         ///      PARTNERS
         ///      WHITELIST
         ///      PUBLIC_SALE
+        ///      PROCEEDS
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn payout_tokens(
@@ -988,6 +989,16 @@ pub mod ilockmvp {
                 "PARTNERS"      => 9,
                 "WHITELIST"     => 10,
                 "PUBLIC_SALE"   => 11,
+                "PROCEEDS"      => {
+                    // deduct payout amount
+                    match self.pool.proceeds.checked_sub(amount) {
+                        Some(difference) => self.pool.proceeds = difference,
+                        None => return Err(OtherError::PaymentTooLarge.into()),
+                    };
+                    // now transfer tokens
+                    let _ = self.transfer(stakeholder, amount, Default::default())?;
+                    return Ok(());
+                },
                 _ => return Err(OtherError::InvalidPool.into())
             };
 
@@ -1124,31 +1135,6 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 //// misc  /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-        
-        /// - get current balance of whitelist pool
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn withdraw_proceeds(
-            &mut self,
-            wallet: AccountId,
-            amount: Balance
-        ) -> PSP22Result<()> {
-
-            // only withdraw what is available in pool
-            if amount > self.pool.proceeds {
-                return Err(OtherError::PaymentTooLarge.into());
-            }
-
-            let _ = self.transfer(wallet, amount, Default::default())?;
-            
-            // deduct withdraw amount
-            match self.pool.proceeds.checked_sub(amount) {
-                Some(difference) => self.pool.proceeds = difference,
-                None => return Err(OtherError::PaymentTooLarge.into()),
-            };
-
-            Ok(())
-        }
 
         /// - display taxpool balance
         #[ink(message)]
