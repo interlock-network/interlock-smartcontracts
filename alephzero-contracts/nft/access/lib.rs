@@ -1,9 +1,31 @@
-//
-// INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
-//
+//!
+//! INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
+//!
+//! This is a PSP34 NFT in compatible with Art Zero marketplace and capable of managing user access
+//! credentials on the blockchain using a strategy similar to two-factor-authentication (2FA).
+//!
+//! Build with cargo-contract version 2.0.0
+//!
+//!      cargo install cargo-contract --force --version 2.0.0
+//!
+//! Build
+//!
+//!      cargo +nightly contract build
+//!
+//!  To build docs:
+//!
+//!      cargo +nightly doc --no-deps --document-private-items --open
+//!
+//! To reroute docs in Github
+//!
+//!      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//!      target/doc/index.html;
+//!      cp -r target/doc ./docs
+//!
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
+
 pub use self::psp34_nft::{Psp34Nft, Psp34NftRef};
 
 #[openbrush::contract]
@@ -65,8 +87,8 @@ pub mod psp34_nft {
         }
     }
 
-    /// this is upgradable storage for the access features for this
-    /// universal access nft contract
+    /// - This is upgradable storage for the access features for this
+    /// universal access nft contract.
     pub const ACCESS_KEY: u32 = openbrush::storage_unique_key!(AccessData);
     #[derive(Default, Debug)]
     #[openbrush::upgradeable_storage(ACCESS_KEY)]
@@ -78,84 +100,91 @@ pub mod psp34_nft {
         /// nft sale price in ILOCK (or other) PSP22 token
         pub nft_psp22price: Balance,
 
-        /// collections contains information about which uanft IDs a particular
-        /// address holds. this in part is important because it provides information
+        /// - Collections contains information about which uanft IDs a particular
+        /// address holds.
+        /// - This in part is important because it provides information
         /// about how many different access credential instances a particular wallet
-        /// owner has for a given access usecase
+        /// owner has for a given access usecase.
         ///
         /// collections:         user accress -> vector of uanft IDs in collection
         pub collections: Mapping<AccountId, Vec<Id>>,
 
-        /// credentials contains a SHA256 (or other) hashed secret and uanft ID for said
+        /// - Credentials contains a SHA256 (or other) hashed secret and uanft ID for said
         /// secret, one pair per user identifing (eg username) SHA256 hash.
-        /// this is important because it provides a means of verifying possession
+        /// - This is important because it provides a means of verifying possession
         /// of secret, and for which uanft this owner has access to for those
-        /// given credentials
+        /// given credentials.
         ///
         /// credentials:         username hash -> (password hash, uanft ID)
         pub credentials: Mapping<Hash, (Hash, Id)>,
 
-        /// userhashes contains information about which identifying credential hash
+        /// - Userhashes contains information about which identifying credential hash
         /// a given uanft commands. this is important because on transfer event
         /// we need to revoke access to particular user identifying hash, but transfer
         /// events by PSP34 standard do not include the identifying information needed 
-        /// revoke access for a particulare credential pair
+        /// revoke access for a particulare credential pair.
         ///
         /// userhashes:         uanft ID - > username hash
         pub userhashes: Mapping<Id, Hash>,
 
-        /// to expand storage related to this uanft's access functionality
+        /// - This is to expand storage related to this uanft's access functionality.
         pub _reserved: Option<()>
     }
 
-    /// this is upgradable storage for the features that allow this universal
+    /// - This is upgradable storage for the features that allow this universal
     /// access nft contract to connect as an application to the ILOCK (or other)
-    /// PSP22 contract the application socket abstraction
+    /// PSP22 contract the application socket abstraction.
     pub const APP_KEY: u32 = openbrush::storage_unique_key!(AppData);
     #[derive(Default, Debug)]
     #[openbrush::upgradeable_storage(APP_KEY)]
     pub struct AppData {
 
-        /// PSP22 token contract that this uanft application connects to via socket.
-        /// this is used for self-minting purposes, which means non-owner can
+        /// - This is PSP22 token contract that this uanft application connects to via socket.
+        /// - This is used for self-minting purposes, which means non-owner can
         /// mint in excange for PSP22 token (ILOCK in this case) without needing
-        /// to rely on a transaction relay server off-chain
+        /// to rely on a transaction relay server off-chain.
         pub token_instance: ILOCKmvpRef,
 
-        /// address that manages this uanft contract and receives ILOCK
-        /// (or other) PSP22 token for self-mint transactions
+        /// - This is address that manages this uanft contract and receives ILOCK
+        /// (or other) PSP22 token for self-mint transactions.
         pub operator: AccountID,
 
-        /// to expand storage related to this uanft application functionality
+        /// - This is to expand storage related to this uanft application functionality.
         pub _reserved: Option<()>
     }
-    /// port number for this type of uanft application socket connections to ILOCK (or other)
-    /// PSP22 token contract...
-    /// ...PORT 0 designates uanft contracts owned by Interlock Network.
-    ///    This port is locked by default (only Interlock Network may connect this uanft
-    ///    contract via socket to ILOCK PSP22 contrac.
+    /// - This is the port number for this type of uanft application socket connections to ILOCK (or other)
+    /// PSP22 token contract.
+    /// - PORT 0 designates uanft contracts owned by Interlock Network.
+    /// - This port is locked by default (only Interlock Network may connect this uanft
+    /// contract via socket to ILOCK PSP22 contrac.
     pub const PORT: u16 = 0;
 
-    /// main contract storage
+    /// - Main contract storage.
     #[derive(Default, Storage)]
     #[ink(storage)]
     pub struct Psp34Nft {
 
-        // openbrush storage fields
+        /// - Openbrush PSP34 storage fields.
         #[storage_field]
         psp34: psp34::Data<enumerable::Balances>,
+
+        /// - Openbrush metadata extension storage fields.
         #[storage_field]
         metadata: metadata::Data,
+
+        /// - Openbrush ownable extension storage fields.
         #[storage_field]
         ownable: ownable::Data,
 
-        // uanft storage fields
+        /// - Universal access NFT storage fields.
         #[storage_field]
         access: AccessData,
+
+        /// - Storage fields related to the UANFT as an application for the ILOCK PSP22 contract.
         #[storage_field]
         app: AppData,
 
-        // art zero storage fields
+        /// - Art zero storage fields.
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
@@ -168,8 +197,8 @@ pub mod psp34_nft {
 
     impl PSP34 for Psp34Nft {
 
-        /// . override transfer function to revoke access credentials if existent
-        /// . also updates collection
+        /// - Override transfer function to revoke access credentials if existent.
+        /// - This also updates collection.
         #[ink(message)]
         fn transfer(
             &mut self,
@@ -263,6 +292,7 @@ pub mod psp34_nft {
 
     impl Psp34Nft {
 
+        /// - UANFY contract constructor.
         #[ink(constructor)]
         pub fn new(
             name: String,
@@ -309,7 +339,7 @@ pub mod psp34_nft {
             contract
         }
 
-        /// . mint a universal access nft
+        /// - This mints a universal access nft.
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint(
@@ -342,7 +372,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . mint a universal access nft to self at token_price in PSP22 token
+        /// - This mints a universal access nft to caller's self at token_price in terms of PSP22 token.
         #[ink(message)]
         pub fn self_mint(
             &mut self,
@@ -396,7 +426,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . only contract owner can mint new token and add attributes for it
+        /// - Only contract owner can mint new token and add custom attributes for it.
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint_with_attributes(
@@ -430,8 +460,8 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . register this universal access nft contract with PSP22 token contract to allow self-minting
-        /// . only contract owner may create a socket between this contract and the PSP22 token
+        /// - This registers this universal access nft contract with ILOCK PSP22 token contract to allow self-minting.
+        /// - Only contract owner may create a socket between this contract and the ILOCK PSP22 token.
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn create_socket(
@@ -447,9 +477,11 @@ pub mod psp34_nft {
             self.app.token_instance.create_socket(self.env().caller(), PORT)
         }
 
-        /// . make call through universal access nft socket to PSP22 token contract
-        ///   (ie, transfer token from recipient to contract owner within PSP22 contract)
-        /// . only operator may call
+        /// - This makes call through universal access nft socket to ILOCK PSP22 token contract on
+        /// port 0 or port 1, depending on this contract's configuration and affiliation with
+        /// Interlock Network.
+        /// - (Ie, transfer token from recipient to contract owner within PSP22 contract.)
+        /// - Only operator may call.
         #[ink(message)]
         pub fn call_socket(
             &mut self,
@@ -461,7 +493,8 @@ pub mod psp34_nft {
             self.app.token_instance.call_socket(address, amount, data)
         }
 
-        /// . store hashed username password pair to register credentials
+        /// - Store hashed username password pair to register credentials of UANFT owner.
+        /// - Anybody may call, but only UANFT owner of Id may successfully register.
         #[ink(message)]
         pub fn register(
             &mut self,
@@ -527,8 +560,8 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . store hashed username password pair
-        /// . associate uanft id with username
+        /// - Store hashed username password pair.
+        /// - Also associate uanft id with username.
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_credential(
@@ -548,7 +581,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . revoke access for particular user
+        /// - Revoke access for particular user.
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn revoke_access(
@@ -572,7 +605,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . retrieve the current price of universal access nft
+        /// - Retrieve the current price of universal access nft self-minting.
         #[ink(message)]
         pub fn get_token_price(
             &self,
@@ -581,7 +614,7 @@ pub mod psp34_nft {
             self.access.nft_psp22price
         }
 
-        /// . change the price that self-minter must pay for universal access nft
+        /// - Owner may change the price that self-minter must pay for universal access nft.
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
         pub fn set_token_price(
@@ -594,7 +627,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . get collection of nfts held by particular address
+        /// - Get collection of nfts held by particular address.
         #[ink(message)]
         pub fn get_collection(
             &self,
@@ -609,7 +642,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . get hashed username password pair
+        /// - Get hashed username password pair (plus UANFT Id).
         #[ink(message)]
         pub fn get_credential(
             &mut self,
@@ -624,7 +657,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . check to see if uanft is authenticated
+        /// - Check to see if UANFT is authenticated (has credentials registered).
         #[ink(message)]
         pub fn is_authenticated(
             &mut self,
@@ -638,7 +671,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . get total token count
+        /// - Get total token count.
         #[ink(message)]
         pub fn get_last_token_id(
             &self
@@ -669,7 +702,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . lock nft - only token owner can call
+        /// - Lock UANFT, only token owner can call.
         #[ink(message)]
         pub fn lock(
             &mut self,
@@ -695,7 +728,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . check if token is locked or not
+        /// - Check if token is locked or not.
         #[ink(message)]
         pub fn is_locked_nft(
             &self,
@@ -708,7 +741,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . get locked token count
+        /// - Get locked token count.
         #[ink(message)]
         pub fn get_locked_token_count(
             &self
@@ -716,7 +749,7 @@ pub mod psp34_nft {
             return self.locked_token_count;
         }
 
-        /// . remove token from circulation
+        /// - Remove token from circulation.
         #[ink(message)]
         pub fn burn(
             &mut self,
@@ -739,8 +772,8 @@ pub mod psp34_nft {
             self._burn_from(caller, id)
         }
 
-        /// . modifies the code which is used to execute calls to this contract address
-        /// . this upgrades the token contract logic while using old state
+        /// - Modifies the code which is used to execute calls to this contract address.
+        /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
@@ -762,7 +795,7 @@ pub mod psp34_nft {
 
     impl Psp34Traits for Psp34Nft {
 
-        /// . change base URI
+        /// - Change UANFT base URI.
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_base_uri(
@@ -778,7 +811,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . only contract owner can set multiple attributes to a token
+        /// - Only contract owner can set multiple attributes to a UANFT.
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_multiple_attributes(
@@ -825,7 +858,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// . get multiple attributes
+        /// - Get multiple attributes.
         #[ink(message)]
         fn get_attributes(
             &self,
@@ -847,7 +880,7 @@ pub mod psp34_nft {
             ret
         }
 
-        /// . get attribute count
+        /// - Get attribute count.
         #[ink(message)]
         fn get_attribute_count(
             &self
@@ -855,7 +888,7 @@ pub mod psp34_nft {
             self.attribute_count
         }
 
-        /// . get attribute name
+        /// - Get attribute name.
         #[ink(message)]
         fn get_attribute_name(
             &self,
@@ -868,7 +901,7 @@ pub mod psp34_nft {
             }
         }
 
-        /// . get URI from token ID
+        /// - Get URI from UANFT Id.
         #[ink(message)]
         fn token_uri(
             &self,
