@@ -29,12 +29,12 @@
 //!      cp -r target/doc ./docs
 //!
 
-/*
+
 #![doc(
-    html_logo_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png",
-    html_favicon_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png",
+    html_logo_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
+    html_favicon_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
 )]
-*/
+
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
