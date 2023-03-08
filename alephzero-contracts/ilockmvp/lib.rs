@@ -1455,22 +1455,30 @@ pub mod ilockmvp {
                 Some(sum) => self.pool.proceeds = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match port.collected.checked_add(tax) {
-                Some(sum) => port.collected = sum,
-                None => return Err(OtherError::Overflow),
-            };
             match self.pool.circulating.checked_sub(tax) {
                 Some(difference) => self.pool.circulating = difference,
                 None => return Err(OtherError::Underflow),
             };
 
-            // update port
+            // update port (paid and collected) 
+            match port.collected.checked_add(tax) {
+                Some(sum) => port.collected = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            let adjustedamount: Balance = match amount.checked_sub(tax) {
+                Some(difference) => difference,
+                None => return Err(OtherError::Underflow),
+            };
+            match port.paid.checked_add(adjustedamount) {
+                Some(sum) => port.paid = sum,
+                None => return Err(OtherError::Overflow),
+            };
             self.app.ports.insert(socket.portnumber, &port);
                     
             // emit Transfer event, operator to ILOCK proceeds pool
             self.env().emit_event(Transfer {
-                from: Some(socket.operator),
-                to: Some(self.ownable.owner),
+                from: Some(socket.operator), // we do not tax port owner,
+                to: Some(self.ownable.owner),// rather we tax xfer itself in this case
                 amount: tax,
             });
 
@@ -2412,8 +2420,6 @@ pub mod ilockmvp {
             assert_eq!(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
         }
 
-
-
         /// HAPPY REGISTER_STAKEHOLDER & STAKEHOLDER_DATA
         /// - Test if register_stakeholder and stakeholder_data functions works correctly.
         /// - Registration should succeed as long as stakeholder share > 0.
@@ -2448,7 +2454,7 @@ pub mod ilockmvp {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
             let codehash: Hash = Default::default(); // offchain environment doesn't support
-            let tax: Balance = 1000;                 // .own_code_hash()
+            let tax: Balance = 1_000; // 10% tax      // .own_code_hash()
             let cap: Balance = 1_000_000;
             let locked: bool = true;
             let number: u16 = 2;
@@ -2463,7 +2469,7 @@ pub mod ilockmvp {
                 owner,
             );
 
-            let port: Port = ILOCKmvpPSP22.port(number);
+            let mut port: Port = ILOCKmvpPSP22.port(number);
 
             assert_eq!(port, Port {
                 application: codehash,
@@ -2474,25 +2480,33 @@ pub mod ilockmvp {
                 collected: 0,
                 owner: owner,
             });
-        }
 
-        /// HAPPY TAX_PORT_TRANSFER
-        /// - Test if the socket tax on transfer functions correctly.
-        /// - Transfer event emits recognizing tax amount transfer.
-        /// - Proceeds pool updates correctly
-        /// - Port collected field updates correctly.
-        /// - Tax amount is taken out of circulation.
-        /// - Return is correct adjusted post-tax amount.
-        #[ink::test]
-        fn happyunit_tax_port_transfer() {
+            ILOCKmvpPSP22.pool.circulating += 1_000_000;
 
+            let test_socket: Socket = Socket {
+
+                operator: accounts.eve,
+                portnumber: 2,
+            };
+
+            let _ = ILOCKmvpPSP22.tax_port_transfer(
+                test_socket,
+                port,
+                cap,
+            );
+
+            port = ILOCKmvpPSP22.app.ports.get(number).unwrap();
+
+            assert_eq!(port.paid, 1_000_000 - 1_000); // 999_000
+            assert_eq!(port.collected, 0 + 1_000);
+            assert_eq!(ILOCKmvpPSP22.proceeds_available(), 0 + 1_000);
+            assert_eq!(ILOCKmvpPSP22.total_supply(), 1_000_000 - 1_000);
         }
 
         /// SAD TAX_PORT_TRANSFER
         /// - Not sure there is much to do here.
-        #[ink::test]
+        #[test]
         fn sadunit_tax_port_transfer() {
-
         }
     }
 }
