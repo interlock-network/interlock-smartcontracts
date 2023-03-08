@@ -20,7 +20,6 @@ openbrush = { tag = "3.0.0", git = "https://github.com/727-Ventures/openbrush-co
 
 [dev-dependencies]
 ink_e2e = { version = "4.0" }
-hex = "0.4"
 
 [lib]
 name = "ilockmvp"
@@ -44,3 +43,4 @@ std = [
 
 ink-as-dependency = []
 e2e-tests = []
+dox = []
