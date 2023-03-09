@@ -671,6 +671,7 @@ pub mod psp34_nft {
             }
         }
 
+        /// - Art Zero message.
         /// - Get total token count.
         #[ink(message)]
         pub fn get_last_token_id(
@@ -680,6 +681,7 @@ pub mod psp34_nft {
             return self.last_token_id;
         }
 
+        /// - Art Zero function.
         fn add_attribute_name(
             &mut self,
             attribute_input: Vec<u8>
@@ -702,6 +704,7 @@ pub mod psp34_nft {
             }
         }
 
+        /// - Art Zero message.
         /// - Lock UANFT, only token owner can call.
         #[ink(message)]
         pub fn lock(
@@ -728,6 +731,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
+        /// - Art Zero message.
         /// - Check if token is locked or not.
         #[ink(message)]
         pub fn is_locked_nft(
@@ -741,6 +745,7 @@ pub mod psp34_nft {
             }
         }
 
+        /// - Art Zero message.
         /// - Get locked token count.
         #[ink(message)]
         pub fn get_locked_token_count(
@@ -749,6 +754,7 @@ pub mod psp34_nft {
             return self.locked_token_count;
         }
 
+        /// - Art Zero message.
         /// - Remove token from circulation.
         #[ink(message)]
         pub fn burn(
@@ -795,6 +801,7 @@ pub mod psp34_nft {
 
     impl Psp34Traits for Psp34Nft {
 
+        /// - Art Zero message.
         /// - Change UANFT base URI.
         #[ink(message)]
         #[modifiers(only_owner)]
@@ -811,6 +818,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
+        /// - Art Zero message.
         /// - Only contract owner can set multiple attributes to a UANFT.
         #[ink(message)]
         #[modifiers(only_owner)]
@@ -858,6 +866,7 @@ pub mod psp34_nft {
             Ok(())
         }
 
+        /// - Art Zero message.
         /// - Get multiple attributes.
         #[ink(message)]
         fn get_attributes(
@@ -880,6 +889,7 @@ pub mod psp34_nft {
             ret
         }
 
+        /// - Art Zero message.
         /// - Get attribute count.
         #[ink(message)]
         fn get_attribute_count(
@@ -888,6 +898,7 @@ pub mod psp34_nft {
             self.attribute_count
         }
 
+        /// - Art Zero message.
         /// - Get attribute name.
         #[ink(message)]
         fn get_attribute_name(
@@ -901,6 +912,7 @@ pub mod psp34_nft {
             }
         }
 
+        /// - Art Zero message.
         /// - Get URI from UANFT Id.
         #[ink(message)]
         fn token_uri(
@@ -912,6 +924,70 @@ pub mod psp34_nft {
             token_uri = token_uri + &token_id.to_string() + &String::from(".json");
             return token_uri;
         }
+
+    }
+//
+// TESTING INCOMPLETE
+//
+// . To view debug prints and assertion failures run test via:
+//
+//      cargo +nightly test --features e2e-tests -- --show-output
+//
+// . To view debug for specific method run test via:
+//
+//      cargo +nightly test <test_function_here> -- --nocapture
+//
+// . To run end-to-end tests, first make sure you have the substrate
+//   dev node capabilities installed via:
+//
+//      cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+//
+//   Then run the node:
+//
+//      substrate-contracts-node
+//
+//
+//
+// TEST TODO
+// in order of appearance
+//
+// [] happye2e_transfer      
+// [] sade2e_transfer       
+// [] happyunit_new (no sad, returns only Self)
+// [] happye2e_mint
+//      [] happye2e_get_collection
+// [] sade2e_mint
+// [] happye2e_self_mint            <-- includes call_socket()
+// [] sade2e_self_mint
+// [] ** happye2e_create_socket     \
+// [] ** sade2e_create_socket       |----- these must be performed from generic port
+// [] ** happye2e_call_socket       |      or from the uanft contract's self minting message
+// [] ** sade2e_call_socket         /
+// [] happyunit_register
+//      [] happyunit_set_credential
+//      [] happyunit_get_gredental
+//      [] happyunit_is_authenticated
+//      [] happyunit_revoke_access
+// [] happyunit_set_token_price
+//      [] happyunit_get_token_price
+//
+
+////////////////////////////////////////////////////////////////////////////
+//// end to end ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+    #[cfg(all(test, feature = "e2e-tests"))]
+    mod e2e_tests {
+
+    }
+
+
+////////////////////////////////////////////////////////////////////////////
+//// unit tests ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+    #[cfg(test)]
+    mod tests {
 
     }
 }
