@@ -11,8 +11,8 @@ ADDRESS=$(
 	cargo contract instantiate \
 		--constructor new_token \
 		--manifest-path=../../ilockmvp/Cargo.toml \
-		--suri //Alice \
-		--salt $(date +%s) |
+		--suri //Alice |
+#		--salt $(date +%s) |
 	# find output line with token contract address
 	grep "Contract " |
 	# get address string
@@ -22,13 +22,13 @@ ADDRESS=$(
 # assign address string to $ADDRESS
 )
 
-# deploy UANFT contract
+# deploy UANFT contract (not necessary but command left for posterity's sake
 yes |
 cargo contract instantiate \
 	--manifest-path=Cargo.toml \
 	--suri //Alice \
 	--args \
-		'"Interlock-Network-Universal-Access-NFT".to_string' \
+		'"Interlock-Network-Universal-Access-NFT".to_string()' \
 		'"ILOCK-UANFT".to_string()' \
 		'"USERPASS-ACCESS".to_string()' \
 		10000 \

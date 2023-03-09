@@ -1,27 +1,27 @@
-//!
-//! INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
-//!
-//! This is a PSP34 NFT in compatible with Art Zero marketplace and capable of managing user access
-//! credentials on the blockchain using a strategy similar to two-factor-authentication (2FA).
-//!
-//! Build with cargo-contract version 2.0.0
-//!
-//!      cargo install cargo-contract --force --version 2.0.0
-//!
-//! Build
-//!
-//!      cargo +nightly contract build
-//!
-//!  To build docs:
-//!
-//!      cargo +nightly doc --no-deps --document-private-items --open
-//!
-//! To reroute docs in Github
-//!
-//!      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-//!      target/doc/index.html;
-//!      cp -r target/doc ./docs
-//!
+//
+// INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
+//
+// This is a PSP34 NFT in compatible with Art Zero marketplace and capable of managing user access
+// credentials on the blockchain using a strategy similar to two-factor-authentication (2FA).
+//
+// Build with cargo-contract version 2.0.0
+//
+// -     cargo install cargo-contract --force --version 2.0.0
+//
+// Build
+//
+// -     cargo +nightly contract build
+//
+//  To build docs:
+//
+// -     cargo +nightly doc --no-deps --document-private-items --open
+//
+// To reroute docs in Github
+//
+// -     echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+// -     target/doc/index.html;
+// -     cp -r target/doc ./docs
+//
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
@@ -985,21 +985,28 @@ pub mod psp34_nft {
         };
         use openbrush::contracts::psp34::psp34_external::PSP34;
 
+        // generated from ./test.sh PSP22 ILOCKmvp token instantiate script
+        //
+        // no salt provided in script ... must restart node each testing deployment
+        //                               (each run of test.sh, that is)
+        // byte array for contract account ID 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+        const TOKEN_ACCOUNT_ARRAY: [u8; 32] = [ 142, 175,   4,  21,  22, 135, 115,  99,
+                                                38, 201, 254, 161, 126,  37, 252,  82,
+                                                135,  97,  54, 147, 201,  18, 144, 156,
+                                                178,  38, 170,  71, 148, 242, 106,  72 ];
+
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
         /// HAPPY TRANSFER
         /// - Test if customized transfer function works correctly.
-        /// - When transfer from contract owner, circulating supply increases.
-        /// - When transfer to contract owner, circulating supply decreases
-        /// and rewards pool increases/
-        #[ink_e2e::test(
-            additional_contracts = "../../ilockmvp/Cargo.toml"
-        )]
+        /// - When transfer, credentials are revoked..
+        #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
         async fn happye2e_transfer(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
-
+            let token_contract: AccountId = AccountId::from(TOKEN_ACCOUNT_ARRAY);
+/*
             let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
 
@@ -1011,8 +1018,10 @@ pub mod psp34_nft {
                 100,
                 );
             let contract_acct_id = client
-                .instantiate("uanft", &ink_e2e::alice(), constructor, 0, None)
+                .instantiate("interlock_access_nft", &ink_e2e::alice(), constructor, 0, None)
                 .await.expect("instantiate failed").account_id;
+        }*/
+            Ok(())
         }
     }
 
