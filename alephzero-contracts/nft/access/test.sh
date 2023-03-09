@@ -23,7 +23,7 @@ ADDRESS=$(
 # assign address string to $ADDRESS
 )
 
-
-
+# deploy UANFT contract
+yes | cargo contract instantiate --manifest-path=Cargo.toml --suri //Alice --args '"Interlock-Network-Universal-Access-NFT".to_string' '"ILOCK-UANFT".to_string()' '"USERPASS-ACCESS".to_string()' 10000 100 $ADDRESS --salt $(date +%s)
 
 
