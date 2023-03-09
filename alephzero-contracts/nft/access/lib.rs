@@ -979,6 +979,41 @@ pub mod psp34_nft {
     #[cfg(all(test, feature = "e2e-tests"))]
     mod e2e_tests {
 
+        use super::*;
+        use ink_e2e::{
+            build_message,
+        };
+        use openbrush::contracts::psp34::psp34_external::PSP34;
+
+        type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+        /// HAPPY TRANSFER
+        /// - Test if customized transfer function works correctly.
+        /// - When transfer from contract owner, circulating supply increases.
+        /// - When transfer to contract owner, circulating supply decreases
+        /// and rewards pool increases/
+        #[ink_e2e::test(
+            additional_contracts = "../../ilockmvp/Cargo.toml"
+        )]
+        async fn happye2e_transfer(
+            mut client: ink_e2e::Client<C, E>,
+        ) -> E2EResult<()> {
+
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = Psp34NftRef::new(
+                "Interlock Network Universal Access NFT".to_string(),
+                "ILOCK-UANFT".to_string(),
+                "GENERAL-ACCESS".to_string(),
+                10_000,
+                100,
+                );
+            let contract_acct_id = client
+                .instantiate("uanft", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+        }
     }
 
 
