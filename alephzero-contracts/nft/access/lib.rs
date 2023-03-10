@@ -33,13 +33,14 @@ pub mod psp34_nft {
 
     // ink 4 imports
     use ink::{
-        codegen::Env,
+        codegen::{Env, EmitEvent},
         storage::Mapping,
         prelude::{
             string::{String, ToString},
             vec::Vec,
             format,
         },
+        reflect::ContractEventBase,
     };
 
     // openbrush 3 imports
@@ -48,7 +49,10 @@ pub mod psp34_nft {
         modifiers,
         contracts::{
             ownable::*,
-            psp34::extensions::{enumerable::*, metadata::*},
+            psp34::{
+                extensions::{enumerable::*, metadata::*},
+                Internal,
+            },
             psp22::psp22_external::PSP22,
         },
     };
@@ -192,6 +196,69 @@ pub mod psp34_nft {
         locked_token_count: u64,
     }
 
+    /// - Specify transfer event.
+    #[ink(event)]
+    pub struct Transfer {
+        #[ink(topic)]
+        from: Option<AccountId>,
+        #[ink(topic)]
+        to: Option<AccountId>,
+        id: Id,
+    }
+
+    /// - Specify approval event.
+    #[ink(event)]
+    pub struct Approval {
+        #[ink(topic)]
+        from: Option<AccountId>,
+        #[ink(topic)]
+        to: Option<AccountId>,
+        id: Id,
+        approved: bool,
+    }
+
+    /// - Needed for Openbrush internal event emission implementations.
+    pub type Event = <Psp34Nft as ContractEventBase>::Type;
+
+    impl Internal for Psp34Nft {
+
+        /// - Impliment Transfer emit event because Openbrush doesn't.
+        fn _emit_transfer_event(
+            &self,
+            _from: Option<AccountId>,
+            _to: Option<AccountId>,
+            _id: Id,
+        ) {
+            Psp34Nft::emit_event(
+                self.env(),
+                Event::Transfer(Transfer {
+                    from: _from,
+                    to: _to,
+                    id: _id,
+                }),
+            );
+        }
+
+        /// - Impliment Approval emit event because Openbrush doesn't.
+        fn _emit_approval_event(
+            &self,
+            _from: AccountId,
+            _to: AccountId,
+            _id: Option<Id>,
+            _approved: bool,
+        ) {
+            Psp34Nft::emit_event(
+                self.env(),
+                Event::Approval(Approval {
+                    from: Some(_from),
+                    to: Some(_to),
+                    id: _id.unwrap(),
+                    approved: _approved,
+                }),
+            );
+        }
+    }
+
     #[openbrush::wrapper]
     pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
 
@@ -291,6 +358,11 @@ pub mod psp34_nft {
     }
 
     impl Psp34Nft {
+
+        /// - Function for internal _emit_event implementations.
+        pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
+            emitter.emit_event(event);
+        }
 
         /// - UANFY contract constructor.
         #[ink(constructor)]
@@ -980,6 +1052,7 @@ pub mod psp34_nft {
     mod e2e_tests {
 
         use super::*;
+        use crate::psp34_nft::PSP34Error::Custom;
         use ink_e2e::{
             build_message,
         };
@@ -989,11 +1062,24 @@ pub mod psp34_nft {
         //
         // no salt provided in script ... must restart node each testing deployment
         //                               (each run of test.sh, that is)
+        //
         // byte array for contract account ID 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
         const TOKEN_ACCOUNT_ARRAY: [u8; 32] = [ 142, 175,   4,  21,  22, 135, 115,  99,
                                                 38, 201, 254, 161, 126,  37, 252,  82,
                                                 135,  97,  54, 147, 201,  18, 144, 156,
                                                 178,  38, 170,  71, 148, 242, 106,  72 ];
+
+        // byte array representing SHA256('test_username')
+        const TEST_USERNAME_ARRAY: [u8; 32] = [ 204, 221, 179,  10, 141,  56,  15, 156,
+                                                2, 209, 187,  54, 104,  62,  98, 214,
+                                                103, 214,  46,  36,  77,  66, 122, 252,
+                                                68,  10, 183, 131, 110, 216,  20, 240 ];
+
+        // byte array representing SHA256('test_password')
+        const TEST_PASSWORD_ARRAY: [u8; 32] = [ 16, 166, 230, 204, 131,  17, 163, 226,
+                                                188, 192, 155, 246, 193, 153, 173, 236,
+                                                213, 221,  89,  64, 140,  52,  62, 146,
+                                                107,  18, 156,  73,  20, 243, 203,   1 ];
 
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -1001,14 +1087,17 @@ pub mod psp34_nft {
         /// - Test if customized transfer function works correctly.
         /// - When transfer, credentials are revoked..
         #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
-        async fn happye2e_transfer(
+        async fn happye2e_mint_register_transfer(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
             let token_contract: AccountId = AccountId::from(TOKEN_ACCOUNT_ARRAY);
-/*
+            let test_username_hash: Hash = Hash::from(TEST_USERNAME_ARRAY);
+            let test_password_hash: Hash = Hash::from(TEST_PASSWORD_ARRAY);
+
             let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+            let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
             let constructor = Psp34NftRef::new(
                 "Interlock Network Universal Access NFT".to_string(),
@@ -1016,11 +1105,145 @@ pub mod psp34_nft {
                 "GENERAL-ACCESS".to_string(),
                 10_000,
                 100,
-                );
+                token_contract
+            );
             let contract_acct_id = client
                 .instantiate("interlock_access_nft", &ink_e2e::alice(), constructor, 0, None)
                 .await.expect("instantiate failed").account_id;
-        }*/
+        
+            let mint_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.mint(bob_account.clone()));
+            let mint_response = client
+                .call(&ink_e2e::alice(), mint_msg, 0, None).await.unwrap();
+            
+            // filter for transfer mint event
+            let contract_emitted_transfer = mint_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("Psp34Nft::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[34..]).expect("invalid data");
+
+            // destructor decoded eapproval
+            let Transfer { from, to, id } = decoded_transfer;
+
+            // assert with the expected value
+            assert_eq!(from, None, "encountered invalid Transfer.to");
+            assert_eq!(to, Some(bob_account), "encountered invalid Transfer.from");
+            assert_eq!(id, Id::U64(1), "encountered invalid Transfer.id");  
+            
+            let owner_of_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.owner_of(Id::U64(1)));
+            let owner = client
+                .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(owner, bob_account.clone());
+
+            let get_bob_collection_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.get_collection(bob_account.clone()));
+            let mut bob_collection = client
+                .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(bob_collection, [Id::U64(1)]);
+
+            let mint_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.mint(bob_account.clone()));
+            let _mint_result = client
+                .call(&ink_e2e::alice(), mint_msg, 0, None).await;
+
+            let bob_collection = client
+                .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(bob_collection, [Id::U64(1), Id::U64(2)]);
+        
+            let register_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.register(Id::U64(2), test_username_hash, test_password_hash));
+            let _register_result = client
+                .call(&ink_e2e::bob(), register_msg, 0, None).await;
+
+            let bob_get_credential_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.get_credential(test_username_hash));
+            let bob_credential = client
+                .call_dry_run(&ink_e2e::bob(), &bob_get_credential_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(bob_credential.0, test_password_hash);
+            assert_eq!(bob_credential.1, Id::U64(2));
+                    
+            let transfer_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(
+                    charlie_account.clone(), Id::U64(2), Default::default()));
+            let transfer_result = client
+                .call(&ink_e2e::bob(), transfer_msg, 0, None).await.unwrap();
+            
+            // filter for transfer event
+            let contract_emitted_transfer = transfer_result
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("Psp34Nft::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[35..]).expect("invalid data");
+
+            // destructor decoded eapproval
+            let Transfer { from, to, id } = decoded_transfer;
+
+            // assert with the expected value
+            assert_eq!(from, Some(bob_account), "encountered invalid Transfer.to");
+            assert_eq!(to, Some(charlie_account), "encountered invalid Transfer.from");
+            assert_eq!(id, Id::U64(2), "encountered invalid Transfer.id");  
+
+            let bob_collection = client
+                .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(bob_collection, [Id::U64(1)]);
+
+            let get_charlie_collection_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.get_collection(charlie_account.clone()));
+            let charlie_collection = client
+                .call_dry_run(&ink_e2e::alice(), &get_charlie_collection_msg, 0, None)
+                .await.return_value().unwrap();
+            assert_eq!(charlie_collection, [Id::U64(2)]);
+
+            let owner_of_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.owner_of(Id::U64(2)));
+            let owner = client
+                .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(owner, charlie_account.clone());
+
+            let bob_get_credential_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+                .call(|contract| contract.get_credential(test_username_hash));
+            let bob_credential = client
+                .call_dry_run(&ink_e2e::bob(), &bob_get_credential_msg, 0, None).await.return_value();
+            assert_eq!(bob_credential,
+                // Error: collection does not exist
+                Err(Custom([67, 114, 101, 100, 101, 110, 116,
+                           105, 97, 108, 115, 32, 110, 111, 110,
+                           101, 120, 105, 115, 116, 101, 110, 116, 46].to_vec())));
+
             Ok(())
         }
     }
