@@ -548,7 +548,13 @@ pub mod psp34_nft {
 
             self.app.token_instance.create_socket(self.env().caller(), PORT)
         }
+        #[ink(message)]
+        pub fn total_supply(
+            &self
+        ) -> Balance {
 
+            self.app.token_instance.total_supply()
+        }
         /// - This makes call through universal access nft socket to ILOCK PSP22 token contract on
         /// port 0 or port 1, depending on this contract's configuration and affiliation with
         /// Interlock Network.
@@ -869,6 +875,19 @@ pub mod psp34_nft {
 
             Ok(())
         }
+
+        /// - This is a testing helper for port applications.
+        /// - Returns code hash for contract running e2e test (for port application verification).
+        /// - Otherwise, each attempt to hardcode hash in application contract
+        /// changes the hash for that run.
+        #[ink(message)]
+        pub fn contract_hash(
+            &self,
+            application: AccountId,
+        ) -> Hash {
+
+            self.env().code_hash(&application).unwrap()
+        }
     }
 
     impl Psp34Traits for Psp34Nft {
@@ -997,6 +1016,8 @@ pub mod psp34_nft {
             return token_uri;
         }
 
+
+
     }
 //
 // TESTING INCOMPLETE
@@ -1023,25 +1044,25 @@ pub mod psp34_nft {
 // TEST TODO
 // in order of appearance
 //
-// [] happye2e_transfer      
+// [x] happye2e_transfer      
 // [] sade2e_transfer       
-// [] happyunit_new (no sad, returns only Self)
-// [] happye2e_mint
-//      [] happye2e_get_collection
+// [x] happyunit_new (no sad, returns only Self)
+// [x] happye2e_mint
+//      [x] happye2e_get_collection
 // [] sade2e_mint
-// [] happye2e_self_mint            <-- includes call_socket()
+// [x] happye2e_self_mint            <-- includes call_socket()
 // [] sade2e_self_mint
-// [] ** happye2e_create_socket     \
+// [x] ** happye2e_create_socket     \
 // [] ** sade2e_create_socket       |----- these must be performed from generic port
-// [] ** happye2e_call_socket       |      or from the uanft contract's self minting message
+// [x] ** happye2e_call_socket       |      or from the uanft contract's self minting message
 // [] ** sade2e_call_socket         /
-// [] happyunit_register
-//      [] happyunit_set_credential
-//      [] happyunit_get_gredental
-//      [] happyunit_is_authenticated
-//      [] happyunit_revoke_access
-// [] happyunit_set_token_price
-//      [] happyunit_get_token_price
+// [x] happyunit_register
+//      [x] happyunit_set_credential
+//      [x] happyunit_get_gredental
+//      [x] happyunit_is_authenticated
+//      [x] happyunit_revoke_access
+// [x] happyunit_set_token_price
+//      [x] happyunit_get_token_price
 //
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1058,25 +1079,14 @@ pub mod psp34_nft {
         };
         use openbrush::contracts::psp34::psp34_external::PSP34;
 
-        // generated from ./test.sh PSP22 ILOCKmvp token instantiate script
-        //
-        // no salt provided in script ... must restart node each testing deployment
-        //                               (each run of test.sh, that is)
-        //
-        // byte array for contract account ID 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
-        const TOKEN_ACCOUNT_ARRAY: [u8; 32] = [ 142, 175,   4,  21,  22, 135, 115,  99,
-                                                38, 201, 254, 161, 126,  37, 252,  82,
-                                                135,  97,  54, 147, 201,  18, 144, 156,
-                                                178,  38, 170,  71, 148, 242, 106,  72 ];
-
         // byte array representing SHA256('test_username')
         const TEST_USERNAME_ARRAY: [u8; 32] = [ 204, 221, 179,  10, 141,  56,  15, 156,
-                                                2, 209, 187,  54, 104,  62,  98, 214,
+                                                  2, 209, 187,  54, 104,  62,  98, 214,
                                                 103, 214,  46,  36,  77,  66, 122, 252,
-                                                68,  10, 183, 131, 110, 216,  20, 240 ];
+                                                 68,  10, 183, 131, 110, 216,  20, 240 ];
 
         // byte array representing SHA256('test_password')
-        const TEST_PASSWORD_ARRAY: [u8; 32] = [ 16, 166, 230, 204, 131,  17, 163, 226,
+        const TEST_PASSWORD_ARRAY: [u8; 32] = [  16, 166, 230, 204, 131,  17, 163, 226,
                                                 188, 192, 155, 246, 193, 153, 173, 236,
                                                 213, 221,  89,  64, 140,  52,  62, 146,
                                                 107,  18, 156,  73,  20, 243, 203,   1 ];
@@ -1085,19 +1095,25 @@ pub mod psp34_nft {
 
         /// HAPPY TRANSFER
         /// - Test if customized transfer function works correctly.
-        /// - When transfer, credentials are revoked..
+        /// - When transfer, credentials are revoked.
+        /// - Test that register function works correctly.
+        /// - Test that transfer events are properly emitted.
+        /// - Test that get_credential() and get_collection() works..
         #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
         async fn happye2e_mint_register_transfer(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
-            let token_contract: AccountId = AccountId::from(TOKEN_ACCOUNT_ARRAY);
             let test_username_hash: Hash = Hash::from(TEST_USERNAME_ARRAY);
             let test_password_hash: Hash = Hash::from(TEST_PASSWORD_ARRAY);
 
-            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
             let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
+
+            let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token();
+            let ilock_contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), ilock_constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
 
             let constructor = Psp34NftRef::new(
                 "Interlock Network Universal Access NFT".to_string(),
@@ -1105,13 +1121,13 @@ pub mod psp34_nft {
                 "GENERAL-ACCESS".to_string(),
                 10_000,
                 100,
-                token_contract
+                ilock_contract_acct_id,
             );
-            let contract_acct_id = client
+            let uanft_contract_acct_id = client
                 .instantiate("interlock_access_nft", &ink_e2e::alice(), constructor, 0, None)
                 .await.expect("instantiate failed").account_id;
         
-            let mint_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.mint(bob_account.clone()));
             let mint_response = client
                 .call(&ink_e2e::alice(), mint_msg, 0, None).await.unwrap();
@@ -1147,19 +1163,19 @@ pub mod psp34_nft {
             assert_eq!(to, Some(bob_account), "encountered invalid Transfer.from");
             assert_eq!(id, Id::U64(1), "encountered invalid Transfer.id");  
             
-            let owner_of_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let owner_of_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.owner_of(Id::U64(1)));
             let owner = client
                 .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
             assert_eq!(owner, bob_account.clone());
 
-            let get_bob_collection_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let get_bob_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.get_collection(bob_account.clone()));
-            let mut bob_collection = client
+            let bob_collection = client
                 .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
             assert_eq!(bob_collection, [Id::U64(1)]);
 
-            let mint_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.mint(bob_account.clone()));
             let _mint_result = client
                 .call(&ink_e2e::alice(), mint_msg, 0, None).await;
@@ -1168,19 +1184,19 @@ pub mod psp34_nft {
                 .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
             assert_eq!(bob_collection, [Id::U64(1), Id::U64(2)]);
         
-            let register_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let register_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.register(Id::U64(2), test_username_hash, test_password_hash));
             let _register_result = client
                 .call(&ink_e2e::bob(), register_msg, 0, None).await;
 
-            let bob_get_credential_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let bob_get_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.get_credential(test_username_hash));
             let bob_credential = client
                 .call_dry_run(&ink_e2e::bob(), &bob_get_credential_msg, 0, None).await.return_value().unwrap();
             assert_eq!(bob_credential.0, test_password_hash);
             assert_eq!(bob_credential.1, Id::U64(2));
                     
-            let transfer_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let transfer_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.transfer(
                     charlie_account.clone(), Id::U64(2), Default::default()));
             let transfer_result = client
@@ -1221,20 +1237,20 @@ pub mod psp34_nft {
                 .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
             assert_eq!(bob_collection, [Id::U64(1)]);
 
-            let get_charlie_collection_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let get_charlie_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.get_collection(charlie_account.clone()));
             let charlie_collection = client
                 .call_dry_run(&ink_e2e::alice(), &get_charlie_collection_msg, 0, None)
                 .await.return_value().unwrap();
             assert_eq!(charlie_collection, [Id::U64(2)]);
 
-            let owner_of_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let owner_of_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.owner_of(Id::U64(2)));
             let owner = client
                 .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
             assert_eq!(owner, charlie_account.clone());
 
-            let bob_get_credential_msg = build_message::<Psp34NftRef>(contract_acct_id.clone())
+            let bob_get_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
                 .call(|contract| contract.get_credential(test_username_hash));
             let bob_credential = client
                 .call_dry_run(&ink_e2e::bob(), &bob_get_credential_msg, 0, None).await.return_value();
@@ -1243,6 +1259,114 @@ pub mod psp34_nft {
                 Err(Custom([67, 114, 101, 100, 101, 110, 116,
                            105, 97, 108, 115, 32, 110, 111, 110,
                            101, 120, 105, 115, 116, 101, 110, 116, 46].to_vec())));
+
+            let set_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.set_credential(Id::U64(1), test_username_hash, test_password_hash));
+            let _set_credential_result = client
+                .call(&ink_e2e::alice(), set_credential_msg, 0, None).await;
+
+            let is_authenticated_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.is_authenticated(Id::U64(1)));
+            let status = client
+                .call_dry_run(&ink_e2e::alice(), &is_authenticated_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(status, true);
+
+            let revoke_access_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.revoke_access(test_username_hash));
+            let _revoke_access_result = client
+                .call(&ink_e2e::alice(), revoke_access_msg, 0, None).await;
+
+            let is_authenticated_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.is_authenticated(Id::U64(1)));
+            let status = client
+                .call_dry_run(&ink_e2e::alice(), &is_authenticated_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(status, false);
+
+
+            Ok(())
+        }
+
+        /// HAPPY SELF-MINT
+        /// - Test that anybody can mint UANFT for themselves using ILOCK.
+        #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
+        async fn happye2e_self_mint(
+            mut client: ink_e2e::Client<C, E>,
+        ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token();
+            let ilock_contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), ilock_constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            let uanft_constructor = Psp34NftRef::new(
+                "Interlock Network Universal Access NFT".to_string(),
+                "ILOCK-UANFT".to_string(),
+                "GENERAL-ACCESS".to_string(),
+                10_000,
+                0,
+                ilock_contract_acct_id,
+            );
+            let uanft_contract_acct_id = client
+                .instantiate("interlock_access_nft", &ink_e2e::alice(), uanft_constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            let set_price_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.set_token_price(100));
+            let _create_port_result = client
+                .call(&ink_e2e::alice(), set_price_msg, 0, None).await;
+
+            // we are assuming this testing contract is safe
+            let get_hash_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.contract_hash(uanft_contract_acct_id.clone()));
+            let application_hash = client
+                .call_dry_run(&ink_e2e::alice(), &get_hash_msg, 0, None).await.return_value();
+
+            let create_port_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
+                .call(|contract| contract.create_port(application_hash, 0, 0, false, 0, alice_account.clone() ));
+            let _create_port_result = client
+                .call(&ink_e2e::alice(), create_port_msg, 0, None).await;
+
+            let reward_bob_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
+                .call(|contract| contract.reward_interlocker(100_000, bob_account.clone()));
+            let _reward_result = client
+                .call(&ink_e2e::alice(), reward_bob_msg, 0, None).await;
+          
+            let create_socket_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.create_socket());
+            let _create_socket_result = client
+                .call(&ink_e2e::alice(), create_socket_msg, 0, None).await;
+           
+            let get_token_price_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.get_token_price());
+            let token_price = client
+                .call_dry_run(&ink_e2e::alice(), &get_token_price_msg, 0, None).await.return_value();
+            assert_eq!(token_price, 100);
+
+            let self_mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.self_mint(token_price));
+            let _mint_result = client
+                .call(&ink_e2e::bob(), self_mint_msg, 0, None).await;
+
+            let get_bob_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.get_collection(bob_account.clone()));
+            let bob_collection = client
+                .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
+            assert_eq!(bob_collection, [Id::U64(1)]);
+
+            let bob_balance_of_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_of_msg, 0, None).await.return_value();
+            assert_eq!(bob_balance, 100_000 - 100);
+
+            let supply_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+                .call(|contract| contract.total_supply());
+            let supply = client
+                .call_dry_run(&ink_e2e::alice(), &supply_msg, 0, None).await.return_value();
+            assert_eq!(supply, 100_000 - 100);
 
             Ok(())
         }
