@@ -1,44 +1,40 @@
-//
-// INTERLOCK NETWORK MVP SMART CONTRACT
-//  - PSP22 TOKEN
-//  - REWARDS
-//
-// !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
-//
-// This is a standard ERC20-style token contract
-// with provisions for enforcing a token distribution
-// vesting schedule, and for rewarding interlockers for
-// browsing the internet with the Interlock browser extension.
-//
-// Build with cargo-contract version 2.0.0
-//
-//      cargo install cargo-contract --force --version 2.0.0
-//
-// Build
-//
-//      cargo +nightly contract build
-//
-//  To build docs:
-//
-//      cargo +nightly doc --no-deps --document-private-items --open
-//
-// To reroute docs in Github
-//
-//      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-//      target/doc/index.html;
-//      cp -r target/doc ./docs
+//!
+//! INTERLOCK NETWORK MVP SMART CONTRACT
+//!  - PSP22 TOKEN
+//!  - REWARDS
+//!
+//! This is a standard ERC20-style token contract
+//! with provisions for enforcing a token distribution
+//! vesting schedule, and for rewarding interlockers for
+//! browsing the internet with the Interlock browser extension.
+//!
+//! #### To ensure build with cargo-contract version 2.0.0, run:
+//!
+//! cargo install cargo-contract --force --version 2.0.0
+//!
+//! #### To build, run:
+//!
+//! cargo +nightly contract build
+//!
+//! #### To build docs, run:
+//!
+//! cargo +nightly doc --no-deps --document-private-items --open
+//!
+//! #### To reroute docs in Github, run:
+//!
+//! echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//! target/doc/index.html;
+//! cp -r target/doc ./docs
+//!
 
-/*
 #![doc(
-    html_logo_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle128px.png",
-    html_favicon_url = "https://github.com/interlock-network/interlock-brand/blob/main/favicons/Interlock_Blue_BlackCircle16px.png",
+    html_logo_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
+    html_favicon_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
 )]
-*/
 
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
-
 
 
 pub use self::ilockmvp::{
@@ -74,12 +70,12 @@ pub mod ilockmvp {
 //// constants /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// - magic numbers
+    /// - Magic numbers.
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
     pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
 
-    /// - token data
+    /// - Token data.
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
     pub const DECIMALS_POWER10: u128 = 1_000_000_000_000_000_000;   // 10^18
     pub const SUPPLY_CAP: u128 = TOKEN_CAP * DECIMALS_POWER10;      // 10^27
@@ -95,7 +91,7 @@ pub mod ilockmvp {
         cliffs: u8,
     }
 
-    /// - pool data
+    /// - Pool data.
     pub const POOLS: [PoolData; POOL_COUNT] = [
         PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
@@ -111,6 +107,7 @@ pub mod ilockmvp {
         PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 48, cliffs: 0, },
     ];
 
+    /// - Pools.
     pub const EARLY_BACKERS: u8     = 0;
     pub const PRESALE_1: u8         = 1;
     pub const PRESALE_2: u8         = 2;
@@ -423,7 +420,7 @@ pub mod ilockmvp {
 
         /// - Openbrush ownership extension.
         #[storage_field]
-		ownable: ownable::Data,
+        ownable: ownable::Data,
 
         /// - Openbrush metadata extension.
         #[storage_field]
@@ -450,7 +447,7 @@ pub mod ilockmvp {
 //// events and errors /////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-    /// - specify transfer event
+    /// - Specify transfer event.
     #[ink(event)]
     pub struct Transfer {
         #[ink(topic)]
@@ -460,7 +457,7 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// - specify approve event
+    /// - Specify approval event.
     #[ink(event)]
     pub struct Approval {
         #[ink(topic)]
@@ -470,7 +467,7 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// - specify reward event
+    /// - Specify reward event.
     #[ink(event)]
     pub struct Reward {
         #[ink(topic)]
@@ -478,80 +475,85 @@ pub mod ilockmvp {
         amount: Balance,
     }
 
-    /// - Other contract error types
+    /// - Other contract error types.
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo)
     )]
     pub enum OtherError {
-        /// Returned if caller is not contract owner
+        /// - Returned if caller is not contract owner.
         CallerNotOwner,
-        /// Returned if stakeholder share is entirely paid out
+        /// - Returned if stakeholder share is entirely paid out.
         StakeholderSharePaid,
-        /// Returned if the stakeholder doesn't exist
+        /// - Returned if the stakeholder doesn't exist.
         StakeholderNotFound,
-        /// Returned if stakeholder has not yet passed cliff
+        /// - Returned if stakeholder has not yet passed cliff.
         CliffNotPassed,
-        /// Returned if it is too soon to payout for month
+        /// - Returned if it is too soon to payout for month.
         PayoutTooEarly,
-        /// Returned if reward is too large
+        /// - Returned if reward is too large.
         PaymentTooLarge,
-        /// Returned if socket does not exist
+        /// - Returned if socket does not exist.
         NoSocket,
-        /// Returned if port does not exist
+        /// - Returned if port does not exist.
         NoPort,
-        /// Returned if not contract
+        /// - Returned if not contract.
         NotContract,
-        /// Returned if only owner can add socket
+        /// - Returned if only owner can add socket.
         PortLocked,
-        /// Returned if port cap is surpassed
+        /// - Returned if port cap is surpassed.
         PortCapSurpassed,
-        /// Returned if reward recipient is a contract
+        /// - Returned if reward recipient is a contract.
         CannotRewardContract,
-        /// Returned if socket contract does not match registered hash
+        /// - Returned if socket contract does not match registered hash.
         UnsafeContract,
-        /// Returned if application contract caller is not its operator
+        /// - Returned if application contract caller is not its operator.
         CallerNotOperator,
-        /// Returned if checked add overflows
+        /// - Returned if checked add overflows.
         Overflow,
-        /// Returned if checked sub underflows
+        /// - Returned if checked sub underflows.
         Underflow,
-        /// Returned if checked divide errors out
+        /// - Returned if checked divide errors out.
         DivError,
-        /// Returned if share is not greater than zero.
+        /// - Returned if share is not greater than zero.
         ShareTooSmall,
-        /// Returned if pool number provided is invalid
+        /// - Returned if pool number provided is invalid.
         InvalidPool,
-        /// Returned if port number provided is invalid
+        /// - Returned if port number provided is invalid.
         InvalidPort,
-        /// custome contract error
+        /// - Custom contract error.
         Custom(String),
     }
 
+    /// - Convert from OtherError into PSP22Error.
     impl Into<PSP22Error> for OtherError {
         fn into(self) -> PSP22Error {
             PSP22Error::Custom(format!("{:?}", self).into_bytes())
         }
     }
 
+    /// - Convert from PSP22Error into OtherError.
     impl Into<OtherError> for PSP22Error {
         fn into(self) -> OtherError {
             OtherError::Custom(format!("{:?}", self))
         }
     }
 
-    // for ILOCKmvpRef used in PSP34 contract
+    /// - For ILOCKmvpRef used in PSP34 or application contracts.
     impl From<OwnableError> for OtherError {
         fn from(error: OwnableError) -> Self {
             OtherError::Custom(format!("{:?}", error))
         }
     }
 
+    /// - Convenience Result Type.
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
+    /// - Convenience Result Type
     pub type OtherResult<T> = core::result::Result<T, OtherError>;
 
+    /// - Needed for Openbrush internal event emission implementations.
     pub type Event = <ILOCKmvp as ContractEventBase>::Type;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -560,9 +562,8 @@ pub mod ilockmvp {
 
     impl PSP22 for ILOCKmvp {
         
-        ///
-        /// - override default total_supply getter
-        /// - total supply reflects token in circulation
+        /// - Override default total_supply getter.
+        /// - Total supply reflects token in circulation.
         #[ink(message)]
         fn total_supply(&self) -> Balance {
 
@@ -570,8 +571,7 @@ pub mod ilockmvp {
             self.pool.circulating
         }
 
-        ///
-        /// - Override default transfer doer
+        /// - Override default transfer doer.
         /// - Transfer from owner increases total circulating supply.
         /// - Transfer to owner decreases total circulating supply.
         #[ink(message)]
@@ -611,8 +611,8 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - override default transfer_from_to doer
-        /// - transfer from owner increases total supply
+        /// - Override default transfer_from_to doer.
+        /// - Transfer from owner increases total supply.
         #[ink(message)]
         fn transfer_from(
             &mut self,
@@ -622,6 +622,10 @@ pub mod ilockmvp {
             data: Vec<u8>,
         ) -> PSP22Result<()> {
 
+            let caller = self.env().caller();
+            let allowance = self._allowance(&from, &caller);
+
+            let _ = self._approve_from_to(from, caller, allowance - value)?;
             let _ = self._transfer_from_to(from, to, value, data)?;
 
             // if sender is owner, then tokens are entering circulation
@@ -661,8 +665,8 @@ pub mod ilockmvp {
 
     impl PSP22Burnable for ILOCKmvp {
 
-        /// - override default burn doer
-        /// - burn function to permanently remove tokens from circulation / supply
+        /// - Override default burn doer.
+        /// - Burn function to permanently remove tokens from circulation / supply.
         #[ink(message)]
 		#[openbrush::modifiers(only_owner)]
         fn burn(
@@ -673,15 +677,27 @@ pub mod ilockmvp {
 
             // burn the tokens
             let _ = self._burn_from(donor, amount)?;
-            self.pool.circulating -= amount;
+
+            // adjust pool balances
+            if donor == self.ownable.owner {
+                match self.pool.balances[REWARDS as usize].checked_sub(amount) {
+                    Some(difference) => self.pool.balances[REWARDS as usize] = difference,
+                    None => return Err(OtherError::Underflow.into()),
+                };
+            } else {
+                match self.pool.circulating.checked_sub(amount) {
+                    Some(difference) => self.pool.circulating = difference,
+                    None => return Err(OtherError::Underflow.into()),
+                };
+            }
 
             Ok(())
         }
 	}
 
-    // these implementations are because open brush does not implement
     impl Internal for ILOCKmvp {
 
+        /// - Impliment Transfer emit event because Openbrush doesn't.
         fn _emit_transfer_event(
             &self,
             _from: Option<AccountId>,
@@ -698,6 +714,7 @@ pub mod ilockmvp {
             );
         }
 
+        /// - Impliment Approval emit event because Openbrush doesn't.
         fn _emit_approval_event(
             &self,
             _owner: AccountId,
@@ -715,7 +732,7 @@ pub mod ilockmvp {
         }
     }
 
-    // this is for linking openbrush PSP34 contract
+    /// - This is for linking openbrush PSP34 or application contract.
     impl Default for ILOCKmvpRef {
         fn default() -> ILOCKmvpRef {
             ink::env::call::FromAccountId::from_account_id(AccountId::from([1_u8; 32]))
@@ -728,13 +745,12 @@ pub mod ilockmvp {
 
     impl ILOCKmvp {
 
-        /// - function for internal _emit_event implementations
+        /// - Function for internal _emit_event implementations.
         pub fn emit_event<EE: EmitEvent<Self>>(emitter: EE, event: Event) {
             emitter.emit_event(event);
         }
 
-        /// - constructor to initialize contract
-        /// - note: pool contracts must be created prior to construction (for args)
+        /// - Constructor to initialize contract.
         #[ink(constructor)]
         pub fn new_token(
         ) -> Self {
@@ -774,9 +790,9 @@ pub mod ilockmvp {
 /////// timing /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - function to check if enough time has passed to collect next payout
-        /// - this function ensures Interlock cannot rush the vesting schedule
-        /// - this function must be called before the next round of token distributions
+        /// - Function to check if enough time has passed to collect next payout.
+        /// - This function ensures Interlock cannot rush the vesting schedule.
+        /// - This function must be called before the next round of token distributions.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn check_time(
@@ -797,7 +813,7 @@ pub mod ilockmvp {
             return Err(OtherError::PayoutTooEarly.into())
         }
         
-        /// - time in seconds until next payout in minutes
+        /// - Time in seconds until next payout in minutes.
         #[ink(message)]
         pub fn remaining_time(
             &self
@@ -816,9 +832,9 @@ pub mod ilockmvp {
 /////// stakeholders  //////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - function that registers a stakeholder's wallet and vesting info
-        /// - used to calculate monthly payouts and track net paid
-        /// - stakeholder data also used for stakeholder to verify their place in vesting schedule
+        /// - Function that registers a stakeholder's wallet and vesting info.
+        /// - Used to calculate monthly payouts and track net paid.
+        /// - Stakeholder data also used for stakeholder to verify their place in vesting schedule.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn register_stakeholder(
@@ -846,14 +862,14 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - function that returns a stakeholder's payout and other data
-        /// - this will allow stakeholders to verify their stake from explorer if so motivated
-        /// - returns tuple (paidout, payremaining, payamount, poolnumber)
+        /// - Function that returns a stakeholder's payout and other data.
+        /// - This will allow stakeholders to verify their stake from explorer if so motivated.
+        /// - Returns tuple (StakeholderData, payremaining, payamount, poolnumber).
         #[ink(message)]
         pub fn stakeholder_data(
             &self,
             stakeholder: AccountId,
-        ) -> (String, String, String, String) {
+        ) -> (StakeholderData, Balance, Balance, String) {
 
             // get pool and stakeholder data structs first
             let this_stakeholder = self.vest.stakeholder.get(stakeholder).unwrap();
@@ -869,10 +885,10 @@ pub mod ilockmvp {
             let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
 
             return (
-                format!("paidout: {:?} ", paidout),
-                format!("payremaining: {:?} ", payremaining),
-                format!("payamount: {:?} ", payamount),
-                format!("pool: {:?}", POOLS[this_stakeholder.pool as usize].name),
+                this_stakeholder.clone(),
+                payremaining,
+                payamount,
+                POOLS[this_stakeholder.pool as usize].name.to_string(),
             )
         }
 
@@ -880,9 +896,9 @@ pub mod ilockmvp {
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - general function to transfer the token share a stakeholder is currently entitled to
-        /// - this is called once per stakeholder by Interlock, Interlock paying fees
-        /// - pools are guaranteed to have enough tokens for all stakeholders
+        /// - General function to transfer the token share a stakeholder is currently entitled to.
+        /// - This is called once per stakeholder by Interlock, Interlock paying fees.
+        /// - Pools are guaranteed to have enough tokens for all stakeholders.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn distribute_tokens(
@@ -919,7 +935,7 @@ pub mod ilockmvp {
             }
 
             // calculate the new total paid to stakeholder
-            let newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
+            let mut newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
                 Some(sum) => sum,
                 None => return Err(OtherError::Overflow.into()),
             };
@@ -932,14 +948,10 @@ pub mod ilockmvp {
 
             // if this is final payment, add token remainder to payout
             // (this is to compensate for floor division that calculates payamount)
-            // ! no checked_div needed; pool.vests guaranteed to be nonzero
-            if remainingshare < this_stakeholder.share / pool.vests as Balance {
+            if remainingshare < payout {
 
-                // add remainder
-                match payout.checked_add(this_stakeholder.share % pool.vests as Balance) {
-                    Some(sum) => payout = sum,
-                    None => return Err(OtherError::Overflow.into()),
-                };
+                payout += remainingshare;
+                newpaidtotal = this_stakeholder.share;
             }
 
             // now transfer tokens
@@ -958,11 +970,12 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - function used to payout tokens to pools with no vesting schedule
+        /// - Function used to payout tokens to pools with no vesting schedule.
         /// POOL ARGUMENTS:
         ///      PARTNERS
         ///      WHITELIST
         ///      PUBLIC_SALE
+        ///      PROCEEDS
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn payout_tokens(
@@ -976,6 +989,16 @@ pub mod ilockmvp {
                 "PARTNERS"      => 9,
                 "WHITELIST"     => 10,
                 "PUBLIC_SALE"   => 11,
+                "PROCEEDS"      => {
+                    // deduct payout amount
+                    match self.pool.proceeds.checked_sub(amount) {
+                        Some(difference) => self.pool.proceeds = difference,
+                        None => return Err(OtherError::PaymentTooLarge.into()),
+                    };
+                    // now transfer tokens
+                    let _ = self.transfer(stakeholder, amount, Default::default())?;
+                    return Ok(());
+                },
                 _ => return Err(OtherError::InvalidPool.into())
             };
 
@@ -995,11 +1018,11 @@ pub mod ilockmvp {
 /////// pool data //////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - function that returns pool data
-        /// - this will allow observers to verify vesting parameters for each pool (esp. theirs)
-        /// - observers may verify pool data from explorer if so motivated
-        /// - pool numbers range from 0-11
-        /// - returns (name, tokens, vests, cliff)
+        /// - Function that returns pool data.
+        /// - This will allow observers to verify vesting parameters for each pool (esp. theirs).
+        /// - Observers may verify pool data from explorer if so motivated.
+        /// - Pool numbers range from 0-11.
+        /// - Returns (name, tokens, vests, cliff) (formatted for convenient for Substrate UI)..
         #[ink(message)]
         pub fn pool_data(
             &self,
@@ -1016,7 +1039,7 @@ pub mod ilockmvp {
             )
         }
         
-        /// - get current balance of whitelist pool
+        /// - Get current balance of any vesting pool.
         #[ink(message)]
         pub fn pool_balance(
             &self,
@@ -1029,12 +1052,21 @@ pub mod ilockmvp {
              self.pool.balances[pool as usize])
         }
 
+        /// - Display proceeds pool balance.
+        #[ink(message)]
+        pub fn proceeds_available(
+            &self,
+        ) -> Balance {
+
+            self.pool.proceeds
+        }
+
 ////////////////////////////////////////////////////////////////////////////
 //// rewarding  ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - reward the interlocker for browsing
-        /// - this is a manual rewarding function, to override the socket formalism
+        /// - Reward the interlocker for browsing, etc.
+        /// - This is a manual rewarding function, to override the socket formalism.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn reward_interlocker(
@@ -1055,6 +1087,7 @@ pub mod ilockmvp {
             };
 
             // update rewards pool balance
+            // (contract calls transfer, not owner, thus we must update here)
             match self.pool.balances[REWARDS as usize].checked_sub(reward) {
                 Some(difference) => self.pool.balances[REWARDS as usize] = difference,
                 None => return Err(OtherError::PaymentTooLarge.into()),
@@ -1086,7 +1119,7 @@ pub mod ilockmvp {
             Ok(newrewardedtotal)
         }
 
-        /// - get amount rewarded to interlocker to date
+        /// - Get amount rewarded to interlocker to date.
         #[ink(message)]
         pub fn rewarded_interlocker_total(
             &self,
@@ -1099,7 +1132,7 @@ pub mod ilockmvp {
             }
         }
 
-        /// - get total amount rewarded to date
+        /// - Get total amount rewarded to date.
         #[ink(message)]
         pub fn rewarded_total(
             &self
@@ -1111,42 +1144,8 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 //// misc  /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-        
-        /// - get current balance of whitelist pool
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn withdraw_proceeds(
-            &mut self,
-            wallet: AccountId,
-            amount: Balance
-        ) -> PSP22Result<()> {
 
-            // only withdraw what is available in pool
-            if amount > self.pool.proceeds {
-                return Err(OtherError::PaymentTooLarge.into());
-            }
-
-            let _ = self.transfer(wallet, amount, Default::default())?;
-            
-            // deduct withdraw amount
-            match self.pool.proceeds.checked_sub(amount) {
-                Some(difference) => self.pool.proceeds = difference,
-                None => return Err(OtherError::PaymentTooLarge.into()),
-            };
-
-            Ok(())
-        }
-
-        /// - display taxpool balance
-        #[ink(message)]
-        pub fn proceeds_available(
-            &self,
-        ) -> Balance {
-
-            self.pool.proceeds
-        }
-
-        /// - function to get the number of months passed for contract
+        /// - Function to get the number of months passed for contract.
         #[ink(message)]
         pub fn months_passed(
             &self,
@@ -1155,7 +1154,7 @@ pub mod ilockmvp {
             self.vest.monthspassed
         }
 
-        /// - function to get the supply cap minted on TGE
+        /// - Function to get the supply cap minted on TGE.
         #[ink(message)]
         pub fn cap(
             &self,
@@ -1164,29 +1163,12 @@ pub mod ilockmvp {
             SUPPLY_CAP
         }
 
-        /// - function to increment monthspassed for testing
-        /// 
-        ///
-        ///     MUST BE DELETED PRIOR TO AUDIT
-        ///
-        ///
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn TESTING_increment_month(
-            &mut self,
-        ) -> OtherResult<bool> {
-
-            self.vest.monthspassed += 1;
-
-            Ok(true)
-        }
-
 ////////////////////////////////////////////////////////////////////////////
 //// portability and extensibility  ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - modifies the code which is used to execute calls to this contract address
-        /// - this upgrades the token contract logic while using old state
+        /// - Modifies the code which is used to execute calls to this contract address.
+        /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
@@ -1205,9 +1187,9 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - create a new port that rewards contract can register with
-        /// - eaech port tracks amount rewarded, tax collected, and if it is locked or not
-        /// - a locked port may only be registered by the interlock network foundation
+        /// - Create a new port that application contract can register with.
+        /// - Each port tracks amount rewarded, tax collected, if it is locked or not, owner.
+        /// - A locked port may only be registered by the Interlock Network foundation.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn create_port(
@@ -1234,8 +1216,9 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - rewards/staking contracts register with token contract here
-        /// - contract must first register with token contract to allow reward transfers
+        /// - Rewards/staking/application contracts register with this token contract here.
+        /// - Contract must first register with token contract as port to allow connection via
+        /// socket.
         #[ink(message)]
         pub fn create_socket(
             &mut self,
@@ -1318,7 +1301,7 @@ pub mod ilockmvp {
             Err(OtherError::UnsafeContract)
         }
 
-        /// - check for socket and apply custom logic
+        /// - Check for socket and apply custom logic after being called from application contract.
         #[ink(message)]
         pub fn call_socket(
             &mut self,
@@ -1438,7 +1421,7 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        /// - tax and reward transfer between socket calling address and socket operator
+        /// - Tax and reward transfer between socket calling address and socket operator.
         pub fn tax_port_transfer(
             &mut self,
             socket: Socket,
@@ -1459,22 +1442,30 @@ pub mod ilockmvp {
                 Some(sum) => self.pool.proceeds = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match port.collected.checked_add(tax) {
-                Some(sum) => port.collected = sum,
-                None => return Err(OtherError::Overflow),
-            };
             match self.pool.circulating.checked_sub(tax) {
                 Some(difference) => self.pool.circulating = difference,
                 None => return Err(OtherError::Underflow),
             };
 
-            // update port
+            // update port (paid and collected) 
+            match port.collected.checked_add(tax) {
+                Some(sum) => port.collected = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            let adjustedamount: Balance = match amount.checked_sub(tax) {
+                Some(difference) => difference,
+                None => return Err(OtherError::Underflow),
+            };
+            match port.paid.checked_add(adjustedamount) {
+                Some(sum) => port.paid = sum,
+                None => return Err(OtherError::Overflow),
+            };
             self.app.ports.insert(socket.portnumber, &port);
                     
             // emit Transfer event, operator to ILOCK proceeds pool
             self.env().emit_event(Transfer {
-                from: Some(socket.operator),
-                to: Some(self.ownable.owner),
+                from: Some(socket.operator), // we do not tax port owner,
+                to: Some(self.ownable.owner),// rather we tax xfer itself in this case
                 amount: tax,
             });
 
@@ -1482,7 +1473,7 @@ pub mod ilockmvp {
             Ok(amount - tax)
         }
 
-        /// - get socket info
+        /// - Get socket info.
         #[ink(message)]
         pub fn socket(
             &self,
@@ -1495,7 +1486,7 @@ pub mod ilockmvp {
             }
         }
 
-        /// - get port info
+        /// - Get port info.
         #[ink(message)]
         pub fn port(
             &self,
@@ -1510,34 +1501,24 @@ pub mod ilockmvp {
     
 
 ////////////////////////////////////////////////////////////////////////////
-//// tests /////////////////////////////////////////////////////////////////
+//// testing helpers ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - Test Events.
-        #[ink(message)]
-        pub fn test_events(
-            &self,
-            alice: AccountId,
-            bob: AccountId,
-        ) -> () {
 
-            // emit Transfer event
-            Self::env().emit_event(Transfer {
-                from: Some(alice),
-                to: Some(bob),
-                amount: 1000,
-            });
-            // emit Approval event
-            Self::env().emit_event(Approval {
-                owner: Some(alice),
-                spender: Some(bob),
-                amount: 1000,
-            });
-            // emit Reward event
-            Self::env().emit_event(Reward {
-                to: Some(alice),
-                amount: 1000,
-            });
+
+        /// - Function to increment monthspassed for testing.
+        ///
+        ///     MUST BE DELETED PRIOR TO TGE
+        ///
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn TESTING_increment_month(
+            &mut self,
+        ) -> OtherResult<bool> {
+
+            self.vest.monthspassed += 1;
+
+            Ok(true)
         }
     } // END OF ILOCKmvp IMPL BLOCK
 
@@ -1550,7 +1531,7 @@ pub mod ilockmvp {
 //
 // . To view debug for specific method run test via:
 //
-//      cargo nightly+ test <test_function_here> -- --nocapture
+//      cargo +nightly test <test_function_here> -- --nocapture
 //
 // . To run end-to-end tests, first make sure you have the substrate
 //   dev node capabilities installed via:
@@ -1563,47 +1544,43 @@ pub mod ilockmvp {
 //
 
 
-// TESTTODO
+// TEST TODO
 // in order of appearance
 //
-// [x] happyunit_total_supply     <-- checked within new_token()
-// [x] happye2e_transfer            \
-// [] sade2e_transfer             |
-// [] happye2e_transfer_from        |---- we test these because we change the default openbrush
-// [] sade2e_transfer_from        |     implementations ... per agreement with Kudelski, we will
-// [] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
-// [] sade2e_burn                 /     additional tests once audit is underway or/ in general future
+// [x] happyunit_total_supply                <-- checked within new_token()
+// [x] happye2e_transfer             \
+// [] sade2e_transfer                |
+// [x] happye2e_transfer_from        |---- we test these because we change the default openbrush
+// [] sade2e_transfer_from           |     implementations ... per agreement with Kudelski, we will
+// [x] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
+// [] sade2e_burn                    /     additional tests once audit is underway or/ in general future
 // [x] happyunit_new_token (no sad, returns only Self)
-// [] happyunit_check_time
-// [] sadunit_check_time
-// [] happyunit_remaining_time
-// [x] happyunit_register_stakeholder
-// [] sadunit_register_stakeholder . ..... add sad case where share is greater than pool total?
-// [] happyunit_stakeholder_data
-// [] happye2e_distribute_tokens  <-- this is to check that the vesting schedule works...
-// [] happye2e_payout_tokens                 ...month passage is artificial here, without 
+// [!] happyunit_check_time                  <-- not possible to advance block, TEST ON TESTNET
+// [!] sadunit_check_time                    <-- not possible to advance block, TEST ON TESTNET
+// [!] happyunit_remaining_time              <-- not possible to advance block, TEST ON TESTNET
+// [x] happyunit_register_stakeholder        <-- this checked within distribute_tokens()
+// [] sadunit_register_stakeholder ... add sad case where share is greater than pool total?
+// [x] happyunit_stakeholder_data            <-- checked within distriut_tokens()
+// [x] happye2e_distribute_tokens            <-- this is to check that the vesting schedule works...
+// [x] happye2e_payout_tokens                 ...month passage is artificial here, without 
 // [] sade2e_payout_tokens                    advancing blocks.
 // [x] happyunit_pool_data
-// [] happyunit_pool_balances
-// [] happye2e_reward_interlocker           
-// [] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
-// [] happyunit_rewarded_total              <-- checked within reward_interlocker() 
-// [] happye2e_withdraw_proceeds
-// [] sadunit_withdraw_proceeds
-// [] happyunit_proceeds_available      <-- checked within withdraw_proceeds()
-// [x] happyunit_months_passed   <-- checked within new_token()
-// [x] happyunit_cap             <-- checked within new_token()
-// [] happyunit_update_contract
+// [x] happye2e_reward_interlocker           
+// [x] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
+// [x] happyunit_rewarded_total              <-- checked within reward_interlocker() 
+// [x] happyunit_months_passed               <-- checked within new_token()
+// [x] happyunit_cap                         <-- checked within new_token()
+// [!] happyunit_update_contract             <-- TEST ON TESTNET
 // [] sadunit_update_contract
-// [] happyunit_create_port
-//      [] happyunit_port        <-- checked within create_port()
+// [x] happyunit_create_port
+//      [x] happyunit_port                   <-- checked within create_port()
 // [] ** happye2e_create_socket     \
-// [] ** sade2e_create_socket     |---- these must be performed from generic port
-// [] ** happye2e_call_socket       |     or from the uanft contract's self minting message
-// [] ** sade2e_call_socket       /
-// [] happyunit_socket    
-// [] happyunit_tax_port_transfer
+// [] ** sade2e_create_socket       |----- these must be performed from generic port
+// [] ** happye2e_call_socket       |      or from the uanft contract's self minting message
+// [] ** sade2e_call_socket         /
+// [x] happyunit_tax_port_transfer
 // [] sadunit_tax_port_transfer
+// [x] happyunit_check_time
 //
 
 // * note ... unit and end to end tests must reside in separate modules
@@ -1630,7 +1607,10 @@ pub mod ilockmvp {
         use ink_e2e::{
             build_message,
         };
-        use openbrush::contracts::psp22::psp22_external::PSP22;
+        use openbrush::contracts::psp22::{
+            psp22_external::PSP22,
+            extensions::burnable::psp22burnable_external::PSP22Burnable,
+        };
 
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -1638,7 +1618,7 @@ pub mod ilockmvp {
         /// - Test if customized transfer function works correctly.
         /// - When transfer from contract owner, circulating supply increases.
         /// - When transfer to contract owner, circulating supply decreases
-        /// and rewards pool increases/
+        /// and rewards pool increases.
         #[ink_e2e::test]
         async fn happye2e_transfer(
             mut client: ink_e2e::Client<C, E>,
@@ -1650,81 +1630,84 @@ pub mod ilockmvp {
             let constructor = ILOCKmvpRef::new_token();
             let contract_acct_id = client
                 .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
-                .await
-                .expect("instantiate failed")
-                .account_id;
+                .await.expect("instantiate failed").account_id;
 
             // alice is contract owner
             // transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
             let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            match client
-                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None)
-                .await {
-                Ok(result) => {
-                    let mut transfer_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Transfer") {
-                            transfer_present = true;
-                            break;
-                        };
-                    }
-                    if !transfer_present {panic!("Transfer event not present")};
-                },
-                Err(error) => panic!("transfer calling error: {:?}", error),
-            };
+            let transfer_response = client
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await.unwrap();
             
+            // filter for transfer event
+            let contract_emitted_transfer = transfer_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // Decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[35..]).expect("invalid data");
+
+            // Destructor decoded event
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // Assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
+            assert_eq!(to, Some(bob_account), "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");    
+
             // checks that bob has expected resulting balance
-            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(bob_account.clone()));
             let bob_balance = client
-                .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None)
-                .await
-                .return_value();
+                .call_dry_run(&ink_e2e::bob(), &bob_balance_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, bob_balance);
 
             // checks that alice has expected resulting balance
-            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.balance_of(alice_account.clone()));
             let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None)
-                .await
-                .return_value();
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
             assert_eq!(SUPPLY_CAP - 1000, alice_balance);
 
             // checks that circulating supply increased appropriately
             let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.total_supply());
             let mut total_supply = client
-                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
-                .await
-                .return_value();
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, total_supply);
 
-            // transfers 500 ILOCK from bob to alice and check for resulting Transfer event
+            // transfers 500 ILOCK from bob to alice
             let bob_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.transfer(alice_account.clone(), 500, Vec::new()));
             let _result = client
-                .call(&ink_e2e::bob(), bob_transfer_msg, 0, None)
-                .await;
+                .call(&ink_e2e::bob(), bob_transfer_msg, 0, None).await;
                
             // checks that circulating supply decreased appropriately
             total_supply = client
-                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
-                .await
-                .return_value();
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
             assert_eq!(1000 - 500, total_supply);
 
             // check that rewards supply increased appropriately
             let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.pool_balance(REWARDS));
             let rewards_balance = client
-                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None)
-                .await
-                .return_value();
-            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance.1);
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance);
 
             Ok(())
         }
@@ -1748,6 +1731,7 @@ pub mod ilockmvp {
         /// HAPPY TRANSFER_FROM
         /// - Test if customized transfer_from function works correctly.
         /// - When transfer from contract owner, circulating supply increases.
+        /// - Transfer and Approval events are emitted.
         /// - When transfer to contract owner, circulating supply decreases
         /// - When caller transfers, their allowace with from decreases
         ///   and rewards pool increases
@@ -1758,85 +1742,134 @@ pub mod ilockmvp {
 
             let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+            let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
             let constructor = ILOCKmvpRef::new_token();
             let contract_acct_id = client
                 .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
-                .await
-                .expect("instantiate failed")
-                .account_id;
+                .await.expect("instantiate failed").account_id;
 
-            // alice is contract owner
-            // transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
-            let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
-            match client
-                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None)
-                .await {
-                Ok(result) => {
-                    let mut transfer_present: bool = false;
-                    for event in result.events.iter() {
-                        let bytes_text: String = String::from_utf8_lossy(
-                                                 event.expect("bad event").bytes()).to_string();
-                        if bytes_text.contains("ILOCKmvp::Transfer") {
-                            transfer_present = true;
-                            break;
-                        };
-                    }
-                    if !transfer_present {panic!("Transfer event not present")};
-                },
-                Err(error) => panic!("transfer calling error: {:?}", error),
-            };
+            // alice approves bob 1000 ILOCK
+            let alice_approve_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.approve(bob_account.clone(), 1000));
+            let _approval_result = client
+                .call(&ink_e2e::alice(), alice_approve_msg, 0, None).await;
             
-            // checks that bob has expected resulting balance
-            let bob_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.balance_of(bob_account.clone()));
-            let bob_balance = client
-                .call_dry_run(&ink_e2e::bob(), &bob_balance_of_msg, 0, None)
-                .await
-                .return_value();
-            assert_eq!(0 + 1000, bob_balance);
+            // bob transfers 1000 ILOCK from alice to charlie
+            let bob_transfer_from_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer_from(
+                    alice_account.clone(), charlie_account.clone(), 1000, Vec::new())
+            );
+            let transfer_from_response = client
+                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await.unwrap();
+            
+            // filter for approval event
+            let contract_emitted_approval = transfer_from_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Approval")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
 
-            // checks that alice has expected resulting balance
-            let alice_balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.balance_of(alice_account.clone()));
-            let alice_balance = client
-                .call_dry_run(&ink_e2e::alice(), &alice_balance_of_msg, 0, None)
-                .await
-                .return_value();
-            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+            // decode to the expected event type (skip field_context)
+            let approval_event = contract_emitted_approval.field_bytes();
+            let decoded_approval =
+                <Approval as scale::Decode>::decode(&mut &approval_event[35..]).expect("invalid data");
+
+            // destructor decoded eapproval
+            let Approval { owner, spender, amount } = decoded_approval;
+
+            // assert with the expected value
+            assert_eq!(owner, Some(alice_account), "encountered invalid Approval.owner");
+            assert_eq!(spender, Some(bob_account), "encountered invalid Approval.spender");
+            assert_eq!(amount, 1000 - 1000, "encountered invalid Approval.amount");  
+            
+            // filter for transfer event
+            let contract_emitted_transfer = transfer_from_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[35..]).expect("invalid data");
+
+            // destructor decoded transfer
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
+            assert_eq!(to, Some(charlie_account), "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");  
+            
+            // checks that charlie has expected resulting balance
+            let charlie_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(charlie_account.clone()));
+            let charlie_balance = client
+                .call_dry_run(&ink_e2e::charlie(), &charlie_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, charlie_balance);
 
             // checks that circulating supply increased appropriately
             let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.total_supply());
             let mut total_supply = client
-                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
-                .await
-                .return_value();
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
             assert_eq!(0 + 1000, total_supply);
 
-            // transfers 500 ILOCK from bob to alice and check for resulting Transfer event
-            let bob_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.transfer(alice_account.clone(), 500, Vec::new()));
-            let _result = client
-                .call(&ink_e2e::bob(), bob_transfer_msg, 0, None)
-                .await;
-               
+            // checks that bob's allowance decreased appropriately
+            let bob_allowance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.allowance(alice_account.clone(), bob_account.clone()));
+            let bob_allowance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_allowance_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 1000, bob_allowance);
+
+            // charlie approves bob 1000 ILOCK
+            let charlie_approve_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.approve(bob_account.clone(), 1000));
+            let _approval_result = client
+                .call(&ink_e2e::charlie(), charlie_approve_msg, 0, None).await;
+
+            // bob transfers 1000 ILOCK from charlie to alice
+            let bob_transfer_from_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer_from(
+                    charlie_account.clone(), alice_account.clone(), 1000, Vec::new()));
+            let _transfer_from_result = client
+                .call(&ink_e2e::bob(), bob_transfer_from_msg, 0, None).await;
+
             // checks that circulating supply decreased appropriately
             total_supply = client
-                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None)
-                .await
-                .return_value();
-            assert_eq!(1000 - 500, total_supply);
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 1000, total_supply);
 
             // check that rewards supply increased appropriately
             let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                 .call(|contract| contract.pool_balance(REWARDS));
             let rewards_balance = client
-                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None)
-                .await
-                .return_value();
-            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance.1);
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 1000, rewards_balance);
 
             Ok(())
         }
@@ -1866,6 +1899,92 @@ pub mod ilockmvp {
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            // alice transfers 1000 ILOCK to bob (to check !owner burn)
+            let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.transfer(
+                    bob_account.clone(), 1000, Vec::new()));
+            let _transfer_result = client
+                .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await;
+
+            // alice burns 1000 tokens
+            let alice_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.burn(alice_account.clone(), 1000));
+            let burn_response = client
+                .call(&ink_e2e::alice(), alice_burn_msg, 0, None).await.unwrap();
+
+           
+            let contract_emitted_transfer = burn_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Transfer")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let transfer_event = contract_emitted_transfer.field_bytes();
+            let decoded_transfer =
+                <Transfer as scale::Decode>::decode(&mut &transfer_event[34..]).expect("invalid data");
+
+            // Destructor decoded event
+            let Transfer { from, to, amount } = decoded_transfer;
+
+            // Assert with the expected value
+            assert_eq!(from, Some(alice_account), "encountered invalid Transfer.fromr");
+            assert_eq!(to, None, "encountered invalid Transfer.to");
+            assert_eq!(amount, 1000, "encountered invalid Transfer.amount");  
+            
+            // checks that alice has expected resulting balance
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000, alice_balance);
+
+            // checks that reward pool decreased appropriately
+            let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(REWARDS));
+            let rewards_balance = client
+                .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, rewards_balance);
+
+            // bob burns 500 tokens
+            let bob_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.burn(bob_account.clone(), 500));
+            let _bob_burn_result = client
+                .call(&ink_e2e::alice(), bob_burn_msg, 0, None).await;
+
+            // checks that circulating supply decreased appropriately
+            let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.total_supply());
+            let total_supply = client
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 500, total_supply);
+
+            // checks that bob has expected resulting balance
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::charlie(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(1000 - 500, bob_balance);
+
             Ok(())
         }
 
@@ -1893,40 +2012,114 @@ pub mod ilockmvp {
         async fn happye2e_distribute_tokens(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-/*
+
             // fire up contract
             let constructor = ILOCKmvpRef::new_token();
             let contract_acct_id = client
                 .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
-                .await
-                .expect("instantiate failed")
-                .account_id;
+                .await.expect("instantiate failed").account_id;
 
-            // register generic stakeholder
+            // register accounts
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
             let stakeholder_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
             let stakeholder_share = 1_000_000_000;
+            let pool_size = POOLS[TEAM_FOUNDERS as usize].tokens * DECIMALS_POWER10;
 
-            // prepare messages
-            let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+            // register stakeholder
+            let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.register_stakeholder(
+                    stakeholder_account.clone(), stakeholder_share, TEAM_FOUNDERS));
+            let _register_stakeholder_result = client
+                .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
+
+            let cliff = POOLS[TEAM_FOUNDERS as usize].cliffs;
+            let vests = POOLS[TEAM_FOUNDERS as usize].vests;
+            let schedule_end = vests + cliff - 1;
+            let schedule_period = vests;
+            let payout = 1_000_000_000 / vests as Balance; // 27_777_777
+            let last_payout = payout + 1_000_000_000 % vests as Balance; // 27_777_805
+
+            // check stakeholder_data()
+            let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
+            let stakeholder_data = client
+                .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None).await.return_value();
+            assert_eq!(stakeholder_data.0.share, stakeholder_share);
+            assert_eq!(stakeholder_data.1, stakeholder_data.0.share);
+            assert_eq!(stakeholder_data.2, payout);
+            assert_eq!(stakeholder_data.3, "team+founders".to_string());
 
             // iterate through one vesting schedule
-            for month in 0..(POOLS[0].vests + POOLS[0].cliffs + 1) {
+            for month in 0..(schedule_end + 2) {
 
-                let mut balance_of_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.balance_of(stakeholder_account.clone()));
-                let mut stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                if month >= cliff && month <= schedule_end {
+
+                    let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                        .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+                    let _distribute_tokens_result = client
+                        .call(&ink_e2e::alice(), distribute_tokens_msg, 0, None).await;
+                }
+
+                let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
                     .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
-                let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
-                let mut increment_month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.TESTING_increment_month());
-                let mut months_passed_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-                    .call(|contract| contract.months_passed());
+                let stakeholder_paid = client
+                    .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None)
+                    .await.return_value().0.paid;
 
-                println!("{}", month);
+                let stakeholder_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.balance_of(stakeholder_account.clone()));
+                let stakeholder_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &stakeholder_balance_msg.clone(), 0, None)
+                    .await.return_value();
+
+                let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.pool_balance(TEAM_FOUNDERS));
+                let pool_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &pool_balance_msg.clone(), 0, None)
+                    .await.return_value().1;
+
+                let owner_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.balance_of(alice_account.clone()));
+                let owner_balance = client
+                    .call_dry_run(&ink_e2e::alice(), &owner_balance_msg.clone(), 0, None)
+                    .await.return_value();
+
+                let increment_month_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                    .call(|contract| contract.TESTING_increment_month());
+                let _increment_month_result = client
+                    .call(&ink_e2e::alice(), increment_month_msg, 0, None).await;
+
+                /* // visual proof of workee
+                println!("{:?}", month_result);
+                println!("{:?}", stakeholder_paid);
+                println!("{:?}", stakeholder_balance);
+                println!("{:?}", pool_balance);
+                println!("{:?}", owner_balance);
+                */
+                if month < cliff {
+
+                    assert_eq!(stakeholder_paid, 0);
+                    assert_eq!(stakeholder_balance, 0);
+                    assert_eq!(owner_balance, SUPPLY_CAP);
+                    assert_eq!(pool_balance, pool_size);
+
+                } else if month >= cliff && month < schedule_end {
+
+                    assert_eq!(stakeholder_paid, (month - cliff + 1) as Balance * payout);
+                    assert_eq!(stakeholder_balance, (month - cliff + 1) as Balance * payout);
+                    assert_eq!(owner_balance, SUPPLY_CAP - (month - cliff + 1) as Balance * payout);
+                    assert_eq!(pool_balance, pool_size - (month - cliff + 1) as Balance * payout);
+
+                } else if month >= schedule_end {
+
+                    assert_eq!(stakeholder_paid, (schedule_period - 1) as Balance * payout + last_payout);
+                    assert_eq!(stakeholder_balance, (schedule_period - 1) as Balance * payout + last_payout);
+                    assert_eq!(owner_balance,
+                               SUPPLY_CAP - (schedule_period - 1) as Balance * payout - last_payout);
+                    assert_eq!(pool_balance,
+                               pool_size - (schedule_period - 1) as Balance * payout - last_payout);
+                }
             }
-*/            
             Ok(())
         }
 
@@ -1955,6 +2148,92 @@ pub mod ilockmvp {
         async fn happye2e_payout_tokens(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
+
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            // messages the pay from various pools
+            let partners_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "PARTNERS".to_string()));
+            let whitelist_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "WHITELIST".to_string()));
+            let publicsale_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.payout_tokens(
+                    bob_account.clone(), 1000, "PUBLIC_SALE".to_string()));
+
+            // alice pays 1000 ILOCK to bob from PARTNERS pool
+            let _partners_pay_result = client
+                .call(&ink_e2e::alice(), partners_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let mut alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+            // checks that bob has expected resulting balance
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let mut bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, bob_balance);
+
+            // checks that pool has expected resulting balance
+            let mut pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(PARTNERS));
+            let mut pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+
+            // alice pays 1000 ILOCK to bob from WHITELIST pool
+            let _whitelist_pay_result = client
+                .call(&ink_e2e::alice(), whitelist_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000, alice_balance);
+
+            // checks that bob has expected resulting balance
+            bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000 + 1000, bob_balance);
+
+            // checks that pool has expected resulting balance
+            pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(WHITELIST));
+            pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+
+            // alice pays 1000 ILOCK to bob from PUBLIC_SALE pool
+            let _publicsale_pay_result = client
+                .call(&ink_e2e::alice(), publicsale_pay_msg, 0, None).await;
+
+            // checks that alice has expected resulting balance
+            alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000 - 1000 - 1000, alice_balance);
+
+            // checks that bob has expected resulting balance
+            bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000 + 1000 + 1000, bob_balance);
+
+            // checks that pool has expected resulting balance
+            pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(PUBLIC_SALE));
+            pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
             Ok(())
         }
@@ -1988,6 +2267,92 @@ pub mod ilockmvp {
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
 
+            let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
+            let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+
+            let constructor = ILOCKmvpRef::new_token();
+            let contract_acct_id = client
+                .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
+                .await.expect("instantiate failed").account_id;
+
+            // alice rewards bob the happy interlocker 1000 ILOCK
+            let alice_reward_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.reward_interlocker(1000, bob_account.clone()));
+            let reward_response = client
+                .call(&ink_e2e::alice(), alice_reward_msg, 0, None).await.unwrap();
+            
+            // filter for reward event
+            let contract_emitted_reward = reward_response
+                .events
+                .iter()
+                .find(|event| {
+                    event
+                        .as_ref()
+                        .expect("expected event")
+                        .event_metadata()
+                        .event()
+                        == "ContractEmitted" &&
+                        String::from_utf8_lossy(
+                            event.as_ref().expect("bad event").bytes()).to_string()
+                       .contains("ILOCKmvp::Reward")
+                })
+                .expect("Expect ContractEmitted event")
+                .unwrap();
+
+            // decode to the expected event type (skip field_context)
+            let reward_event = contract_emitted_reward.field_bytes();
+            let decoded_reward =
+                <Reward as scale::Decode>::decode(&mut &reward_event[34..]).expect("invalid data");
+
+            // destructor decoded transfer
+            let Reward { to, amount } = decoded_reward;
+
+            // assert with the expected value
+            assert_eq!(to, Some(bob_account), "encountered invalid Reward.to");
+            assert_eq!(amount, 1000, "encountered invalid Reward.amount");  
+
+            // checks that alice has expected resulting balance
+            let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(alice_account.clone()));
+            let alice_balance = client
+                .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+            assert_eq!(SUPPLY_CAP - 1000, alice_balance);
+
+            // checks that pool has expected resulting balance
+            let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.pool_balance(REWARDS));
+            let pool_balance = client
+                .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+            assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+
+            // checks that bob has expected resulting balance
+            let bob_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.balance_of(bob_account.clone()));
+            let bob_balance = client
+                .call_dry_run(&ink_e2e::alice(), &bob_balance_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, bob_balance);
+
+            // checks that circulating supply was properly incremented
+            let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.total_supply());
+            let total_supply = client
+                .call_dry_run(&ink_e2e::alice(), &total_supply_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, total_supply);
+
+            // checks that total rewarded (overall) is correct
+            let total_rewarded_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.rewarded_total());
+            let total_rewarded = client
+                .call_dry_run(&ink_e2e::alice(), &total_rewarded_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, total_rewarded);
+
+            // checks that total rewarded (to interlocker) is correct
+            let total_rewarded_interlocker_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+                .call(|contract| contract.rewarded_interlocker_total(bob_account.clone()));
+            let total_rewarded_interlocker = client
+                .call_dry_run(&ink_e2e::alice(), &total_rewarded_interlocker_msg, 0, None).await.return_value();
+            assert_eq!(0 + 1000, total_rewarded_interlocker);
+
             Ok(())
         }
 
@@ -2005,31 +2370,7 @@ pub mod ilockmvp {
         ) -> E2EResult<()> {
 
             Ok(())
-        }
-
-        /// HAPPY WITHDRAW_PROCEEDS
-        /// - Test if proceeds withdraw functionality works correctly.
-        #[ink_e2e::test]
-        async fn happye2e_withdraw_proceeds(
-            mut client: ink_e2e::Client<C, E>,
-        ) -> E2EResult<()> {
-
-            Ok(())
-        }
-
-        /// SAD WITHDRAW_PROCEEDS
-        /// - Test if proceeds withdraw function fails correctly.
-        /// 
-        /// - Return
-        ///     CallerNotOwner               - when caller does not own contract
-        ///     PaymentTooLarge              - when arithmetic over or underflows
-        #[ink_e2e::test]
-        async fn sade2e_withdraw_proceeds(
-            mut client: ink_e2e::Client<C, E>,
-        ) -> E2EResult<()> {
-
-            Ok(())
-        }
+        } 
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -2039,10 +2380,7 @@ pub mod ilockmvp {
     #[cfg(test)]
     mod tests {
 
-        use ink::primitives::{
-            Clear,
-            Hash,
-        };
+        use ink::primitives::Hash;
 
         use super::*;
 
@@ -2070,34 +2408,6 @@ pub mod ilockmvp {
             assert_eq!(total_tokens, ILOCKmvpPSP22.cap());
             assert_eq!(ILOCKmvpPSP22.ownable.owner, ILOCKmvpPSP22.env().caller());
         }
-      
-        /// HAPPY CHECK_TIME
-        /// - Test if check_time function functions correctly.
-        /// - If block timestamp is > than next month's payout date, then 
-        ///   function increments months_passed by one.
-        #[ink::test]
-        fn happyunit_check_time() {
-
-        }    
-
-        /// SAD CHECK_TIME
-        /// - Test if check_time function fails correctly.
-        ///
-        /// - Return
-        ///     PayoutTooEarly            - when block timestamp < nextpayout time
-        #[ink::test]
-        fn sadunit_check_time() {
-
-        }    
-
-        /// HAPPY REMAINING_TIME
-        /// - Test if remaingint_time function works correctly.
-        /// - If timestamp < nextpayout, return difference.
-        /// - If difference underflows, then time is up and ready for next payout.
-        #[ink::test]
-        fn happyunit_remaining_time() {
-
-        }    
 
         /// HAPPY REGISTER_STAKEHOLDER & STAKEHOLDER_DATA
         /// - Test if register_stakeholder and stakeholder_data functions works correctly.
@@ -2124,275 +2434,93 @@ pub mod ilockmvp {
             ));
         }
 
-        /// HAPPY/SAD UPDATE CONTRACT
-        /// - test if update_contract functions/fails correctly.
-        /// 
-        /// - I am not sure how to do this or if it's even possible.
-        #[ink::test]
-        fn happyunit_update_contract() {
-
-        }
-
         /// HAPPY CREATE_GET_PORT
         /// - Test if create_port() and port() functions correctly.
+        /// - Test if tax_port_transfer() functions correctly.
         #[ink::test]
-        fn happyunit_create_get_port() {
+        fn happyunit_create_get_port_tax_transfer() {
 
-        }
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
-        /// HAPPY TAX_PORT_TRANSFER
-        /// - Test if the socket tax on transfer functions correctly.
-        /// - Transfer event emits recognizing tax amount transfer.
-        /// - Proceeds pool updates correctly
-        /// - Port collected field updates correctly.
-        /// - Tax amount is taken out of circulation.
-        /// - Return is correct adjusted post-tax amount.
-        #[ink::test]
-        fn happyunit_tax_port_transfer() {
+            let codehash: Hash = Default::default(); // offchain environment doesn't support
+            let tax: Balance = 1_000; // 10% tax      // .own_code_hash()
+            let cap: Balance = 1_000_000;
+            let locked: bool = true;
+            let number: u16 = 2;
+            let owner: AccountId = accounts.bob;
 
+            let _ = ILOCKmvpPSP22.create_port(
+                codehash,
+                tax,
+                cap,
+                locked,
+                number,
+                owner,
+            );
+
+            let mut port: Port = ILOCKmvpPSP22.port(number);
+
+            assert_eq!(port, Port {
+                application: codehash,
+                tax: tax,
+                cap: cap,
+                locked: locked,
+                paid: 0,
+                collected: 0,
+                owner: owner,
+            });
+
+            ILOCKmvpPSP22.pool.circulating += 1_000_000;
+
+            let test_socket: Socket = Socket {
+
+                operator: accounts.eve,
+                portnumber: 2,
+            };
+
+            let _ = ILOCKmvpPSP22.tax_port_transfer(
+                test_socket,
+                port,
+                cap,
+            );
+
+            port = ILOCKmvpPSP22.app.ports.get(number).unwrap();
+
+            assert_eq!(port.paid, 1_000_000 - 1_000); // 999_000
+            assert_eq!(port.collected, 0 + 1_000);
+            assert_eq!(ILOCKmvpPSP22.proceeds_available(), 0 + 1_000);
+            assert_eq!(ILOCKmvpPSP22.total_supply(), 1_000_000 - 1_000);
         }
 
         /// SAD TAX_PORT_TRANSFER
         /// - Not sure there is much to do here.
-        #[ink::test]
+        #[test]
         fn sadunit_tax_port_transfer() {
-
         }
 
+/*************************  THIS TEST IS SLOW, THUS COMMENTED OUT UNLESS NEEDED
 
-////////////////////////////////////////////////////////////////////////////
-//// test events emit properly in general //////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        ///
-        /// - Test events emit in general.
-        /// - Due to fact that openbrush invokes 'cross contract calls',
-        /// it is not possible to run standard unit tests for any functions
-        /// that include PSP22 standard messages, so we need to perform e2e tests in general.
-        /// - For now, the most we can do is verify within e2e tests that a
-        /// particular event occured.
-        /// - There is no clear way to catch events in their entirety within an
-        /// e2e test (ie, the topics and values).
-        /// - To make up for this, in this non-e2e test we verify that *when* one of the
-        /// three events are emitted, their topics are indeed accurate in general.
-        /// - Capturing complete events within the e2e tests is an active issue, #225
+        /// HAPPY CHECK_TIME
+        /// - Test to make sure month increment doesn't happen too soon.
         #[ink::test]
-        fn test_events_work() {
+        fn happyunit_check_time() {
 
-            let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
-            ILOCKmvpPSP22.test_events(accounts.alice.clone(), accounts.bob.clone());
+            for _time in 0..432_000_001 { // number of advances needed to span month
 
-            // Transfer event triggered during initial construction.
-            let emitted_events = ink::env::test::recorded_events().collect::<Vec<_>>();
-
-            assert_event(
-                "Transfer",
-                &emitted_events[1],
-                Some(accounts.alice.clone()),
-                Some(accounts.bob.clone()),
-                1000,
-            );
-            assert_event(
-                "Approval",
-                &emitted_events[2],
-                Some(accounts.alice.clone()),
-                Some(accounts.bob.clone()),
-                1000,
-            );
-            assert_event(
-                "Reward",
-                &emitted_events[3],
-                Some(accounts.alice.clone()),
-                Some(accounts.alice.clone()), // <- not used
-                1000,
-            );
-        }
-
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// For calculating the event topic hash.
-        struct PrefixedValue<'a, 'b, T> {
-            pub prefix: &'a [u8],
-            pub value: &'b T,
-        }
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// Use this implementation to encode and decode events.
-        impl<X> scale::Encode for PrefixedValue<'_, '_, X>
-        where
-            X: scale::Encode,
-        {
-            #[inline]
-            fn size_hint(&self) -> usize {
-                self.prefix.size_hint() + self.value.size_hint()
+                ink::env::test::advance_block::<ink::env::DefaultEnvironment>();
             }
+            let timestamp: Timestamp = ink::env::block_timestamp::<ink::env::DefaultEnvironment>();
 
-            #[inline]
-            fn encode_to<T: scale::Output + ?Sized>(&self, dest: &mut T) {
-                self.prefix.encode_to(dest);
-                self.value.encode_to(dest);
-            }
-        }
-        type Event = <ILOCKmvp as ::ink::reflect::ContractEventBase>::Type;
-
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo, modified to check three Event types.
-        ///
-        /// This function compares emitted events against expectations.
-        fn assert_event(
-            kind: &str,
-            event: &ink::env::test::EmittedEvent,
-            expected_A: Option<AccountId>,
-            expected_B: Option<AccountId>,
-            expected_C: Balance,
-        ) {
-            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
-                .expect("encountered invalid contract event data buffer");
-
-            let mut expected_topics = Vec::new();
-            match kind {
-
-                "Transfer" => {
-                    if let Event::Transfer(Transfer { from, to, amount }) = decoded_event {
-                        assert_eq!(from, expected_A, "encountered invalid Transfer.from");
-                        assert_eq!(to, expected_B, "encountered invalid Transfer.to");
-                        assert_eq!(amount, expected_C, "encountered invalid Transfer.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Transfer",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::from",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::to",
-                                value: &expected_B,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Transfer::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Transfer event");
-                    }
-                },
-
-                "Approval" => {
-                    if let Event::Approval(Approval { owner, spender, amount }) = decoded_event {
-                        assert_eq!(owner, expected_A, "encountered invalid Approval.owner");
-                        assert_eq!(spender, expected_B, "encountered invalid Approval.spender");
-                        assert_eq!(amount, expected_C, "encountered invalid Approval.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Approval",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::owner",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::spender",
-                                value: &expected_B,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Approval::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Approval event");
-                    }
-                },
-
-                "Reward" => {
-                    if let Event::Reward(Reward { to, amount }) = decoded_event {
-                        assert_eq!(to, expected_A, "encountered invalid Reward.to");
-                        assert_eq!(amount, expected_C, "encountered invalid Reward.amount");
-
-                        expected_topics = vec![
-                            encoded_into_hash(&PrefixedValue {
-                                value: b"ILOCKmvp::Reward",
-                                prefix: b"",
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Reward::to",
-                                value: &expected_A,
-                            }),
-                            encoded_into_hash(&PrefixedValue {
-                                prefix: b"ILOCKmvp::Reward::amount",
-                                value: &expected_C,
-                            }),
-                        ];
-                    } else {
-                        panic!("expected valid Reward event");
-                    }
-                },
-                &_ => (),
-            };
-
-            let topics = event.topics.clone();
-            for (n, (actual_topic, expected_topic)) in
-                topics.iter().zip(expected_topics).enumerate()
-            {
-                let mut topic_hash = Hash::CLEAR_HASH;
-                let len = actual_topic.len();
-                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
-
-                assert_eq!(
-                    topic_hash, expected_topic,
-                    "encountered invalid topic at {n}"
-                );
-            }
+            assert!(ILOCKmvpPSP22.vest.nextpayout < timestamp);
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 0);
+            let _ = ILOCKmvpPSP22.check_time();
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 1);
         }
 
-        ///
-        /// Serves in test for the three emitted events.
-        /// Taken from Ink! examples repo.
-        ///
-        /// This function takes hash of encoded topic data
-        fn encoded_into_hash<T>(entity: &T) -> Hash
-        where
-            T: scale::Encode,
-        {
-            use ink::{
-                env::hash::{
-                    Blake2x256,
-                    CryptoHash,
-                    HashOutput,
-                },
-                primitives::Clear,
-            };
-
-            let mut result = Hash::CLEAR_HASH;
-            let len_result = result.as_ref().len();
-            let encoded = entity.encode();
-            let len_encoded = encoded.len();
-            if len_encoded <= len_result {
-                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
-                return result
-            }
-            let mut hash_output =
-                <<Blake2x256 as HashOutput>::Type as Default>::default();
-            <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
-            let copy_len = core::cmp::min(hash_output.len(), len_result);
-            result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
-            result
-        }
+**************************/
     }
 }
 

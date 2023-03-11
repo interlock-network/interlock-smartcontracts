@@ -5,7 +5,6 @@ authors = ["Blair Munro <blairmunroakusa@gmail.com>, ArtZero <admin@artzero.io>"
 edition = "2021"
 
 [dependencies]
-# This unstable ink commit is required by Openbrush
 ink = { version = "~4.0.0", default-features = false}
 
 ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
@@ -15,13 +14,16 @@ scale-info = { version = "2.3", default-features = false, features = ["derive"],
 
 openbrush = { tag = "3.0.0", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp34", "ownable"] }
 
+[dev-dependencies]
+
+ink_e2e = { version = "4.0" }
+
 [lib]
 name = "interlock_access_nft"
 path = "lib.rs"
 crate-type = [
     # Used for normal contract Wasm blobs.
     "cdylib",
-    "rlib"
 ]
 
 [features]
@@ -32,9 +34,11 @@ std = [
     "scale-info/std",
 
     "openbrush/std",
-    "ilockmvp/std"
+    "ilockmvp/std",
 ]
 ink-as-dependency = []
+e2e-tests = []
 
 [profile.release]
 overflow-checks = false
+
