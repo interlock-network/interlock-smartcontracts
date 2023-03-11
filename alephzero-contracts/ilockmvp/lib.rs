@@ -3,43 +3,38 @@
 //!  - PSP22 TOKEN
 //!  - REWARDS
 //!
-//! !!!!! INCOMPLETE AND UNAUDITED, WARNING !!!!!
-//!
 //! This is a standard ERC20-style token contract
 //! with provisions for enforcing a token distribution
 //! vesting schedule, and for rewarding interlockers for
 //! browsing the internet with the Interlock browser extension.
 //!
-//! Build with cargo-contract version 2.0.0
+//! #### To ensure build with cargo-contract version 2.0.0, run:
 //!
-//!      cargo install cargo-contract --force --version 2.0.0
+//! cargo install cargo-contract --force --version 2.0.0
 //!
-//! Build
+//! #### To build, run:
 //!
-//!      cargo +nightly contract build
+//! cargo +nightly contract build
 //!
-//!  To build docs:
+//! #### To build docs, run:
 //!
-//!      cargo +nightly doc --no-deps --document-private-items --open
+//! cargo +nightly doc --no-deps --document-private-items --open
 //!
-//! To reroute docs in Github
+//! #### To reroute docs in Github, run:
 //!
-//!      echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-//!      target/doc/index.html;
-//!      cp -r target/doc ./docs
+//! echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//! target/doc/index.html;
+//! cp -r target/doc ./docs
 //!
-
 
 #![doc(
     html_logo_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
     html_favicon_url = "https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png",
 )]
 
-
 #![allow(non_snake_case)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
-
 
 
 pub use self::ilockmvp::{
@@ -1509,6 +1504,8 @@ pub mod ilockmvp {
 //// testing helpers ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+
+
         /// - Function to increment monthspassed for testing.
         ///
         ///     MUST BE DELETED PRIOR TO TGE
@@ -1583,6 +1580,7 @@ pub mod ilockmvp {
 // [] ** sade2e_call_socket         /
 // [x] happyunit_tax_port_transfer
 // [] sadunit_tax_port_transfer
+// [x] happyunit_check_time
 //
 
 // * note ... unit and end to end tests must reside in separate modules
@@ -1620,7 +1618,7 @@ pub mod ilockmvp {
         /// - Test if customized transfer function works correctly.
         /// - When transfer from contract owner, circulating supply increases.
         /// - When transfer to contract owner, circulating supply decreases
-        /// and rewards pool increases/
+        /// and rewards pool increases.
         #[ink_e2e::test]
         async fn happye2e_transfer(
             mut client: ink_e2e::Client<C, E>,
@@ -2500,6 +2498,29 @@ pub mod ilockmvp {
         #[test]
         fn sadunit_tax_port_transfer() {
         }
+
+/*************************  THIS TEST IS SLOW, THUS COMMENTED OUT UNLESS NEEDED
+
+        /// HAPPY CHECK_TIME
+        /// - Test to make sure month increment doesn't happen too soon.
+        #[ink::test]
+        fn happyunit_check_time() {
+
+            let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
+
+            for _time in 0..432_000_001 { // number of advances needed to span month
+
+                ink::env::test::advance_block::<ink::env::DefaultEnvironment>();
+            }
+            let timestamp: Timestamp = ink::env::block_timestamp::<ink::env::DefaultEnvironment>();
+
+            assert!(ILOCKmvpPSP22.vest.nextpayout < timestamp);
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 0);
+            let _ = ILOCKmvpPSP22.check_time();
+            assert_eq!(ILOCKmvpPSP22.vest.monthspassed, 1);
+        }
+
+**************************/
     }
 }
 
