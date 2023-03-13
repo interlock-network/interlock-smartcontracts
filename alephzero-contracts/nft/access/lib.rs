@@ -1,27 +1,27 @@
-//
-// INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
-//
-// This is a PSP34 NFT in compatible with Art Zero marketplace and capable of managing user access
-// credentials on the blockchain using a strategy similar to two-factor-authentication (2FA).
-//
-// Build with cargo-contract version 2.0.0
-//
-// -     cargo install cargo-contract --force --version 2.0.0
-//
-// Build
-//
-// -     cargo +nightly contract build
-//
-//  To build docs:
-//
-// -     cargo +nightly doc --no-deps --document-private-items --open
-//
-// To reroute docs in Github
-//
-// -     echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-// -     target/doc/index.html;
-// -     cp -r target/doc ./docs
-//
+//!
+//! INTERLOCK NETWORK - UNIVERSAL ACCESS NFT
+//!
+//! This is a PSP34 NFT in compatible with Art Zero marketplace and capable of managing user access
+//! credentials on the blockchain using a strategy similar to two-factor-authentication (2FA).
+//!
+//! Build needs cargo-contract version 2.0.0:
+//!
+//! -     cargo install cargo-contract --force --version 2.0.0
+//!
+//! To build:
+//!
+//! -     cargo +nightly contract build
+//!
+//!  To build docs:
+//!
+//! -     cargo +nightly doc --no-deps --document-private-items --open
+//!
+//! To reroute docs in Github:
+//!
+//! -     echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//! -     target/doc/index.html;
+//! -     cp -r target/doc ./docs
+//!
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(min_specialization)]
@@ -50,8 +50,13 @@ pub mod psp34_nft {
         contracts::{
             ownable::*,
             psp34::{
-                extensions::{enumerable::*, metadata::*},
+                extensions::{
+                    enumerable::*,
+                    metadata::*,
+                    burnable::*,
+                },
                 Internal,
+                PSP34Error,
             },
             psp22::psp22_external::PSP22,
         },
@@ -64,20 +69,43 @@ pub mod psp34_nft {
         ILOCKmvpRef,
     };
 
-    /// this is a type wrapper to implement Default method
+    #[openbrush::wrapper]
+    pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
+
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum Error {
+        InvalidInput,
+        Custom(String),
+        OwnableError(OwnableError),
+        PSP34Error(PSP34Error),
+    }
+    impl From<OwnableError> for Error {
+        fn from(ownable: OwnableError) -> Self {
+            Error::OwnableError(ownable)
+        }
+    }
+    impl From<PSP34Error> for Error {
+        fn from(error: PSP34Error) -> Self {
+            Error::PSP34Error(error)
+        }
+    }
+
+
+    /// This is a type wrapper to implement Default method
     /// on AccountId type. Ink 4 stable eliminated AccountId Default
     /// (which was zero address, that has known private key)
     /// ...we only really need this because Openbrush contract
     ///    relies on deriving Default for contract storage, and
-    ///    our AccesData struct contains AccountId
+    ///    our AccesData struct contains AccountId.
     #[derive(scale::Encode, scale::Decode, Clone, Debug)]
     #[cfg_attr(
-    feature = "std",
-    derive(
-        PartialEq,
-        Eq,
-        scale_info::TypeInfo,
-        ink::storage::traits::StorageLayout,
+        feature = "std",
+        derive(
+            PartialEq,
+            Eq,
+            scale_info::TypeInfo,
+            ink::storage::traits::StorageLayout,
         )
     )]
     pub struct AccountID {
@@ -192,8 +220,10 @@ pub mod psp34_nft {
         last_token_id: u64,
         attribute_count: u32,
         attribute_names: Mapping<u32, Vec<u8>>,
-        locked_tokens: Mapping<Id, u8>,
+        locked_tokens: Mapping<Id, bool>,
         locked_token_count: u64,
+        is_attribute: Mapping<String, bool>,
+
     }
 
     /// - Specify transfer event.
@@ -259,9 +289,6 @@ pub mod psp34_nft {
         }
     }
 
-    #[openbrush::wrapper]
-    pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
-
     impl PSP34 for Psp34Nft {
 
         /// - Override transfer function to revoke access credentials if existent.
@@ -321,40 +348,67 @@ pub mod psp34_nft {
     impl PSP34Metadata for Psp34Nft {}
     impl PSP34Enumerable for Psp34Nft {}
 
+    impl PSP34Burnable for Psp34Nft {
+
+        /// - Art Zero message.
+        ///
+        #[ink(message)]
+        fn burn(&mut self, account: AccountId, id: Id) -> Result<(), PSP34Error> {
+            let caller = self.env().caller();
+            let token_owner = self.owner_of(id.clone()).unwrap();
+            if token_owner != account {
+                return Err(PSP34Error::Custom(String::from("not token owner").into_bytes()))
+            }
+
+            let allowance = self.allowance(account,caller,Some(id.clone()));
+
+            if caller == account || allowance {
+                self.locked_tokens.remove(&id);
+                self.locked_token_count = self.locked_token_count.checked_sub(1).unwrap();
+                self._burn_from(account, id)
+            } else{
+                Err(PSP34Error::Custom(String::from("caller is not token owner or approved").into_bytes()))
+            }
+        }
+    }
+
+    /// - Art Zero trait definitions.
+    ///
     #[openbrush::trait_definition]
     pub trait Psp34Traits {
+
         #[ink(message)]
-        fn set_base_uri(
-            &mut self,
-            uri: String
-        ) -> Result<(), PSP34Error>;
+        fn get_last_token_id(&self) -> u64;
+
         #[ink(message)]
-        fn set_multiple_attributes(
-            &mut self,
-            token_id: Id,
-            attributes: Vec<String>,
-            values: Vec<String>,
-        ) -> Result<(), PSP34Error>;
+        fn lock(&mut self, token_id: Id) -> Result<(), Error>;
+
         #[ink(message)]
-        fn get_attributes(
-            &self,
-            token_id: Id,
-            attributes: Vec<String>
-        ) -> Vec<String>;
+        fn is_locked_nft(&self, token_id: Id) -> bool;
+
         #[ink(message)]
-        fn get_attribute_count(
-            &self
-        ) -> u32;
+        fn get_locked_token_count(&self) -> u64;
+
         #[ink(message)]
-        fn get_attribute_name(
-            &self,
-            index: u32
-        ) -> String;
+        fn set_base_uri(&mut self, uri: String) -> Result<(), Error>;
+
         #[ink(message)]
-        fn token_uri(
-            &self,
-            token_id: u64
-        ) -> String;
+        fn set_multiple_attributes(&mut self, token_id: Id, metadata: Vec<(String, String)>) -> Result<(), Error>;
+
+        #[ink(message)]
+        fn get_attributes(&self, token_id: Id, attributes: Vec<String>) -> Vec<String>;
+        
+        #[ink(message)]
+        fn get_attribute_count(&self) -> u32;
+        
+        #[ink(message)]
+        fn get_attribute_name(&self, index: u32) -> String;
+        
+        #[ink(message)]
+        fn token_uri(&self, token_id: u64) -> String;
+        
+        #[ink(message)]
+        fn get_owner(&self) -> AccountId;
     }
 
     impl Psp34Nft {
@@ -364,7 +418,7 @@ pub mod psp34_nft {
             emitter.emit_event(event);
         }
 
-        /// - UANFY contract constructor.
+        /// - UANFT contract constructor.
         #[ink(constructor)]
         pub fn new(
             name: String,
@@ -398,7 +452,7 @@ pub mod psp34_nft {
             // assign caller as owner
             contract._init_with_owner(contract.env().caller());
 
-            // create a reference to the deployed token contract
+            // create a reference to the deployed PSP22 ILOCK token contract
             contract.app.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
             contract.app.operator.address = Self::env().caller();
 
@@ -411,21 +465,56 @@ pub mod psp34_nft {
             contract
         }
 
-        /// - This mints a universal access nft.
+        /// - This generic mint function is for Art Zero interface.
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint(
             &mut self,
+        ) -> Result<(), Error> {
+
+            let caller = self.env().caller();
+
+            // next token id
+            // (overflow impossible due to cap check)
+            self.last_token_id += 1;
+
+            // make sure cap is not surpassed
+            if self.last_token_id >= self.access.cap {
+                return Err(Error::Custom(
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap)))
+            }
+
+            // if cap not surpassed, mint next id
+            let _ = self._mint_to(caller, Id::U64(self.last_token_id))?;
+
+            // get nft collection of recipient if already holding
+            let mut collection = match self.access.collections.get(caller) {
+                Some(collection) => collection,
+                None => Vec::new(),
+            };
+
+            // add id to recipient's nft collection
+            collection.push(psp34::Id::U64(self.last_token_id));
+            self.access.collections.insert(caller, &collection);
+
+            Ok(())
+        }
+
+        /// - This mints a universal access nft by Interlock Network to specific recipient.
+        #[ink(message)]
+        #[modifiers(only_owner)]
+        pub fn mint_to(
+            &mut self,
             recipient: AccountId,
-        ) -> Result<(), PSP34Error> {
+        ) -> Result<(), Error> {
 
             // next token id
             self.last_token_id += 1;
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
-                return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
+                return Err(Error::Custom(
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap)))
             }
 
             // if cap not surpassed, mint next id
@@ -449,7 +538,7 @@ pub mod psp34_nft {
         pub fn self_mint(
             &mut self,
             price: Balance,
-        ) -> Result<(), PSP34Error> {
+        ) -> Result<(), Error> {
 
             // next token id
             self.last_token_id += 1;
@@ -459,8 +548,8 @@ pub mod psp34_nft {
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
-                return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
+                return Err(Error::Custom(
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap)))
             }
 
             // make sure asking price matches nft_psp22price
@@ -468,15 +557,15 @@ pub mod psp34_nft {
             //    time somebody checks the price, and the time that somebody submits tx to
             //    self-mint for that given price
             if self.access.nft_psp22price > price {
-                return Err(PSP34Error::Custom(
-                       format!("Current NFT price greater than agreed sale price of {:?}.", price).into_bytes()))
+                return Err(Error::Custom(
+                       format!("Current NFT price greater than agreed sale price of {:?}.", price)))
             }
             
             // make sure mint recipient can afford the PSP22 token price
             let recipient_balance: Balance = self.app.token_instance.balance_of(minter);
             if recipient_balance < price {
-                return Err(PSP34Error::Custom(
-                       format!("Minter cannot affort NFT at current price of {:?}.", price).into_bytes()))
+                return Err(Error::Custom(
+                       format!("Minter cannot affort NFT at current price of {:?}.", price)))
             }
 
             // if can afford, initiate PSP22 token transfer to contract operator now
@@ -498,41 +587,42 @@ pub mod psp34_nft {
             Ok(())
         }
 
-        /// - Only contract owner can mint new token and add custom attributes for it.
+        /// - This is a mint function for Art Zero interface.
         #[ink(message)]
         #[modifiers(only_owner)]
         pub fn mint_with_attributes(
             &mut self,
-            recipient: AccountId,
-            attributes: Vec<String>,
-            values: Vec<String>,
-        ) -> Result<(), PSP34Error> {
+            metadata: Vec<(String, String)>,
+        ) -> Result<(), Error> {
+
+            let caller = self.env().caller();
 
             // next token id
             self.last_token_id += 1;
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
-                return Err(PSP34Error::Custom(
-                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap).into_bytes()))
+                return Err(Error::Custom(
+                       format!("The NFT cap of {:?} has been met. Cannot mint.", self.access.cap)))
             }
 
             // mint and set
-            let _ = self._mint_to(recipient, Id::U64(self.last_token_id))?;
-            let _ = self.set_multiple_attributes(Id::U64(self.last_token_id), attributes, values)?;
+            let _ = self._mint_to(caller, Id::U64(self.last_token_id))?;
+            let _ = self.set_multiple_attributes(Id::U64(self.last_token_id), metadata)?;
 
             // update recipient's collection
-            let mut collection = match self.access.collections.get(recipient) {
+            let mut collection = match self.access.collections.get(caller) {
                 Some(collection) => collection,
                 None => Vec::new(),
             };
             collection.push(Id::U64(self.last_token_id));
-            self.access.collections.insert(recipient, &collection);
+            self.access.collections.insert(caller, &collection);
 
             Ok(())
         }
 
-        /// - This registers this universal access nft contract with ILOCK PSP22 token contract to allow self-minting.
+        /// - This registers this universal access nft contract with
+        /// ILOCK PSP22 token contract to allow self-minting.
         /// - Only contract owner may create a socket between this contract and the ILOCK PSP22 token.
         #[openbrush::modifiers(only_owner)]
         #[ink(message)]
@@ -548,13 +638,7 @@ pub mod psp34_nft {
 
             self.app.token_instance.create_socket(self.env().caller(), PORT)
         }
-        #[ink(message)]
-        pub fn total_supply(
-            &self
-        ) -> Balance {
 
-            self.app.token_instance.total_supply()
-        }
         /// - This makes call through universal access nft socket to ILOCK PSP22 token contract on
         /// port 0 or port 1, depending on this contract's configuration and affiliation with
         /// Interlock Network.
@@ -749,113 +833,6 @@ pub mod psp34_nft {
             }
         }
 
-        /// - Art Zero message.
-        /// - Get total token count.
-        #[ink(message)]
-        pub fn get_last_token_id(
-            &self
-        ) -> u64 {
-
-            return self.last_token_id;
-        }
-
-        /// - Art Zero function.
-        fn add_attribute_name(
-            &mut self,
-            attribute_input: Vec<u8>
-        ) {
-
-            let mut exist: bool = false;
-            for index in 0..self.attribute_count {
-                let attribute_name = self.attribute_names.get(&(index + 1));
-                if attribute_name.is_some() {
-                    if attribute_name.unwrap() == attribute_input {
-                        exist = true;
-                        break;
-                    }
-                }
-            }
-            if !exist {
-                self.attribute_count += 1;
-                self.attribute_names
-                    .insert(&self.attribute_count, &attribute_input);
-            }
-        }
-
-        /// - Art Zero message.
-        /// - Lock UANFT, only token owner can call.
-        #[ink(message)]
-        pub fn lock(
-            &mut self,
-            token_id: Id
-        ) -> Result<(), PSP34Error> {
-            
-            let caller = self.env().caller();
-
-            let token_owner = match self.owner_of(token_id.clone()) {
-                Some(owner) => owner,
-                None => return Err(PSP34Error::Custom(
-                        format!("Token does not exist.").into_bytes())),
-            };
-
-            if caller != token_owner {
-                return Err(PSP34Error::Custom(
-                        format!("Caller not token owner.").into_bytes()));
-            }
-
-            self.locked_token_count += 1;
-            self.locked_tokens.insert(&token_id, &1);
-
-            Ok(())
-        }
-
-        /// - Art Zero message.
-        /// - Check if token is locked or not.
-        #[ink(message)]
-        pub fn is_locked_nft(
-            &self,
-            token_id: Id
-        ) -> bool {
-
-            match self.locked_tokens.get(&token_id) {
-                Some(_) => return true,
-                None => return false,
-            }
-        }
-
-        /// - Art Zero message.
-        /// - Get locked token count.
-        #[ink(message)]
-        pub fn get_locked_token_count(
-            &self
-        ) -> u64 {
-            return self.locked_token_count;
-        }
-
-        /// - Art Zero message.
-        /// - Remove token from circulation.
-        #[ink(message)]
-        pub fn burn(
-            &mut self,
-            id: Id
-        ) -> Result<(), PSP34Error> {
-            
-            let caller = self.env().caller();
-
-            let token_owner = match self.owner_of(id.clone()) {
-                Some(owner) => owner,
-                None => return Err(PSP34Error::Custom(
-                        format!("Token does not exist.").into_bytes())),
-            };
-
-            if caller != token_owner {
-                return Err(PSP34Error::Custom(
-                        format!("Caller not token owner.").into_bytes()));
-            }
-
-            self._burn_from(caller, id)
-        }
-
         /// - Modifies the code which is used to execute calls to this contract address.
         /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
@@ -888,18 +865,103 @@ pub mod psp34_nft {
 
             self.env().code_hash(&application).unwrap()
         }
+
+        /// - Art Zero helper function.
+        pub fn add_attribute_name(
+            &mut self,
+            attribute_input: &Vec<u8>
+        ) {
+            let attr_input: String = String::from_utf8((*attribute_input).clone()).unwrap();
+            let exist: bool = self.is_attribute.get(&attr_input).is_some();
+
+            if !exist {
+                self.attribute_count = self.attribute_count.checked_add(1).unwrap();
+                self.attribute_names.insert(self.attribute_count, attribute_input);
+                self.is_attribute.insert(&attr_input, &true);
+            }
+        }
     }
 
     impl Psp34Traits for Psp34Nft {
 
         /// - Art Zero message.
+        ///
+        /// - Get total token count.
+        #[ink(message)]
+        fn get_last_token_id(
+            &self
+        ) -> u64 {
+
+            return self.last_token_id;
+        }
+
+        /// - Art Zero message.
+        ///
+        /// - Lock UANFT, only token owner can call.
+        #[ink(message)]
+        fn lock(
+            &mut self,
+            token_id: Id
+        ) -> Result<(), Error> {
+            
+            let caller = self.env().caller();
+
+            let token_owner = match self.owner_of(token_id.clone()) {
+                Some(owner) => owner,
+                None => return Err(Error::Custom(
+                        format!("Token does not exist."))),
+            };
+
+            if caller != token_owner {
+                return Err(Error::Custom(
+                        format!("Caller not token owner.")));
+            }
+
+            match self.locked_token_count.checked_add(1) {
+                Some(sum) => self.locked_token_count = sum,
+                None => return Err(Error::Custom(
+                        format!("Overflow"))),
+            };
+
+            self.locked_tokens.insert(&token_id, &true);
+
+            Ok(())
+        }
+
+        /// - Art Zero message.
+        ///
+        /// - Check if token is locked or not.
+        #[ink(message)]
+        fn is_locked_nft(
+            &self,
+            token_id: Id
+        ) -> bool {
+
+            match self.locked_tokens.get(&token_id) {
+                Some(_) => return true,
+                None => return false,
+            }
+        }
+
+        /// - Art Zero message.
+        ///
+        /// - Get locked token count.
+        #[ink(message)]
+        fn get_locked_token_count(
+            &self
+        ) -> u64 {
+            return self.locked_token_count;
+        }
+
+        /// - Art Zero message.
+        ///
         /// - Change UANFT base URI.
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_base_uri(
             &mut self,
             uri: String
-        ) -> Result<(), PSP34Error> {
+        ) -> Result<(), Error> {
 
             self._set_attribute(
                 Id::U8(0),
@@ -910,54 +972,33 @@ pub mod psp34_nft {
         }
 
         /// - Art Zero message.
+        ///
         /// - Only contract owner can set multiple attributes to a UANFT.
         #[ink(message)]
         #[modifiers(only_owner)]
         fn set_multiple_attributes(
             &mut self,
             token_id: Id,
-            attributes: Vec<String>,
-            values: Vec<String>,
-        ) -> Result<(), PSP34Error> {
+            metadata: Vec<(String, String)>,
+        ) -> Result<(), Error> {
 
-            assert!(token_id != Id::U64(0));
+            if token_id == Id::U64(0){
+                return Err(Error::InvalidInput)
+            }            
             if self.is_locked_nft(token_id.clone()) {
-                return Err(PSP34Error::Custom(
-                        String::from("Token is locked").into_bytes()));
+                return Err(Error::Custom(
+                        String::from("Token is locked")));
             }
-            if attributes.len() != values.len() {
-                return Err(PSP34Error::Custom(
-                        String::from("Inputs not same length").into_bytes()));
+            for (attribute, value) in &metadata {
+                self.add_attribute_name(&attribute.clone().into_bytes());
+                self._set_attribute(token_id.clone(), attribute.clone().into_bytes(), value.clone().into_bytes());
             }
-            //Check Duplication
-            let mut sorted_attributes = attributes.clone();
-            sorted_attributes.sort();
-            let length = sorted_attributes.len();
-            for i in 0..length {
-                let attribute = sorted_attributes[i].clone();
-                let byte_attribute = attribute.into_bytes();
-                if i + 1 < length {
-                    let next_attribute = sorted_attributes[i + 1].clone();
-                    let byte_next_attribute = next_attribute.into_bytes();
-                    if byte_attribute == byte_next_attribute {
-                        return Err(PSP34Error::Custom(
-                                String::from("Duplicated attributes").into_bytes()));
-                    }
-                }
-                let unsorted_attribute = attributes[i].clone();
-                let byte_unsorted_attribute = unsorted_attribute.into_bytes();
-                let value = values[i].clone();
-                self.add_attribute_name(byte_unsorted_attribute.clone());
-                self._set_attribute(
-                    token_id.clone(),
-                    byte_unsorted_attribute.clone(),
-                    value.into_bytes(),
-                );
-            }
+
             Ok(())
         }
 
         /// - Art Zero message.
+        ///
         /// - Get multiple attributes.
         #[ink(message)]
         fn get_attributes(
@@ -981,6 +1022,7 @@ pub mod psp34_nft {
         }
 
         /// - Art Zero message.
+        ///
         /// - Get attribute count.
         #[ink(message)]
         fn get_attribute_count(
@@ -990,6 +1032,7 @@ pub mod psp34_nft {
         }
 
         /// - Art Zero message.
+        ///
         /// - Get attribute name.
         #[ink(message)]
         fn get_attribute_name(
@@ -1004,6 +1047,7 @@ pub mod psp34_nft {
         }
 
         /// - Art Zero message.
+        ///
         /// - Get URI from UANFT Id.
         #[ink(message)]
         fn token_uri(
@@ -1013,14 +1057,24 @@ pub mod psp34_nft {
             let value = self.get_attribute(Id::U8(0), String::from("baseURI").into_bytes());
             let mut token_uri = String::from_utf8(value.unwrap()).unwrap();
             token_uri = token_uri + &token_id.to_string() + &String::from(".json");
-            return token_uri;
+            token_uri
         }
 
-
-
+        /// - Art Zero message.
+        ///
+        /// - Get contract owner.
+        #[ink(message)]
+        fn get_owner(
+            &self,
+        ) -> AccountId {
+            
+            self.owner()
+        }
     }
+
+
 //
-// TESTING INCOMPLETE
+// TESTING 
 //
 // . To view debug prints and assertion failures run test via:
 //
@@ -1128,7 +1182,7 @@ pub mod psp34_nft {
                 .await.expect("instantiate failed").account_id;
         
             let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
-                .call(|contract| contract.mint(bob_account.clone()));
+                .call(|contract| contract.mint_to(bob_account.clone()));
             let mint_response = client
                 .call(&ink_e2e::alice(), mint_msg, 0, None).await.unwrap();
             
@@ -1176,7 +1230,7 @@ pub mod psp34_nft {
             assert_eq!(bob_collection, [Id::U64(1)]);
 
             let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
-                .call(|contract| contract.mint(bob_account.clone()));
+                .call(|contract| contract.mint_to(bob_account.clone()));
             let _mint_result = client
                 .call(&ink_e2e::alice(), mint_msg, 0, None).await;
 
@@ -1362,7 +1416,7 @@ pub mod psp34_nft {
                 .call_dry_run(&ink_e2e::alice(), &bob_balance_of_msg, 0, None).await.return_value();
             assert_eq!(bob_balance, 100_000 - 100);
 
-            let supply_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
+            let supply_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
                 .call(|contract| contract.total_supply());
             let supply = client
                 .call_dry_run(&ink_e2e::alice(), &supply_msg, 0, None).await.return_value();
@@ -1371,15 +1425,6 @@ pub mod psp34_nft {
             Ok(())
         }
     }
-
-
-////////////////////////////////////////////////////////////////////////////
-//// unit tests ////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-    #[cfg(test)]
-    mod tests {
-
-    }
 }
+
 
