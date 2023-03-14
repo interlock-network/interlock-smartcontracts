@@ -1,8 +1,10 @@
 # Port/Socket Application Template Contract
 
+Description goes here.
+
 ## How to get setup and build:
 
-#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_application/docs/application/).
+#### See [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_application/docs/application/).
 
 ## How to test on testnet: 
 

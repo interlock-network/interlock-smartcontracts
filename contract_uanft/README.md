@@ -9,7 +9,7 @@ This access NFT is funded in part by the Aleph Zero grant program, ultimately to
 
 ## How to get setup and build:
 
-#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/).
+#### See [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/).
 
 ## How to test on testnet: 
 

@@ -4,7 +4,7 @@
 
 ## How to get setup and build:
 
-#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/).
+#### See [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/).
 
 ## How to test on testnet: 
 
