@@ -1,4 +1,5 @@
 [package]
+# Interlock Network Port/Socket Application Template
 name = "application"
 version = "0.1.0"
 authors = ["Interlock Network, Blair Munro <blairmunroakusa@gmail.com>"]
@@ -7,7 +8,7 @@ edition = "2021"
 [dependencies]
 ink = { version = "~4.0.0", default-features = false}
 
-ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
+ilockmvp = { path = "../contract-ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
