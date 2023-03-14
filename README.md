@@ -1,10 +1,12 @@
 # Interlock Network Smart Contracts
 
+<img align="right" width="150" height="150" src="https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png">
+
 Welcome! This repo hosts development of all smart contracts that actualize our **token model** and **DeSec** infrastructure. It exists to be transparent about our contract development.
 
 Contracts are written in **ink!**, employ **Openbrush**, and are hosted on the Aleph Zero blockchain.
 
-### Contracts:
+## Contracts:
 
 #### [$ILOCK Token and Rewards](./contract_ilockmvp) ~ [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/)
 
@@ -18,7 +20,7 @@ This is a PSP34 token contract that is capable of managing general access creden
 
 This is a template for our port/socket contract application formalism, to be an integral part in the upcoming Interlock Network _Community Node_ architecture. The primary purpose of this contract template is to provide approved entities to interact with our PSP22 token contract internals but _without_ needing Interlock Network to act as a transaction relay for only-owner functionalities (for example, minting an Interlock-owned NFT in exchange for $ILOCK). This contract employs Ink! 4.
 
-### Extras:
+## Extras:
 
 Before our move to Aleph Zero, we were developing for an Ethereum-Wormhole-Solana blockchain stack. All this work is available in `ARCHIVE`, for transparency and future reference.
 
