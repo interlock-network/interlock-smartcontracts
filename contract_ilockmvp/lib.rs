@@ -1540,7 +1540,7 @@ pub mod ilockmvp {
 //
 //   Then run the node:
 //
-//      substrate-contracts-node
+//      substrate-contracts-node --log info,runtime::contracts=debug 2>&1
 //
 
 

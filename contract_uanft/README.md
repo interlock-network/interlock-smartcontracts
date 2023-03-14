@@ -1,8 +1,4 @@
-# Interlock NFT Smart Contracts
-
-This is the main space for Interlock Network NFT smart contracts hosted on Aleph Zero. For now this consists of the contract `access` which manages interlocker access to various kinds of priviledge.
-
-## access NFT
+# Universal Access NFT Smart Contract
 
 Beyond simple collectibility, access contract may be deployed for any different class of access NFT. For now, the first class is a line of software licenses to approve Discord moderators to use the Interlock Bouncer Discord bot in their Discord community's server. If a discord moderator would like to purchase a license NFT to use for their community server, they will then need to authenticate their ownership of the NFT on the Interlock license authentication page. If the Discord moderator can prove that they posses the wallet that owns the license NFT (via a micropayment transfer specified by Interlock during authentication process), then the moderator's Bouncer bot instance will be activated for their server. If the license changes hands, then the authentication process must be repeated for the new wallet's owner.
 
@@ -10,46 +6,36 @@ The other class of the access NFT is the vip membership class. If a stellar inte
 
 This access NFT is funded in part by the Aleph Zero grant program, ultimately to contribute to the Aleph Zero community at large to empower others to launch their own acces NFTs.
 
-## How to get setup
 
-[If any issues should arise, refer the the primary source at this link for troubleshooting tips.](https://ink.substrate.io/getting-started/setup)
+## How to get setup and build:
 
-### Install Rust and Cargo
+#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/).
 
-[Do this according to this site.](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+## How to test on testnet: 
 
-### Install cargo-dylint
-Run
-```
-cargo install cargo-dylint dylint-link
-```
-### Install cargo-contract
-Now run
-```
-cargo install cargo-contract --force --locked
-```
-!!! NOTE:
-You may need to install this particular version of cargo-contract:
-```
-cargo install cargo-contract --version 2.0.0-beta
-```
-You will only need this if you find that compiling produces this error:
-```
-ERROR: No 'ink_lang' dependency found
-```
+##### To deploy a contract to testnet, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
 
-### Finally
-Run
+## How to build and run tests
+
+##### To view debug prints and assertion failures run test via:
 ```
-rustup component add rust-src --toolchain nightly
-rustup target add wasm32-unknown-unknown --toolchain nightly
+cargo +nightly test --features e2e-tests -- --show-output
+```
+##### To view debug for specific method run test via:
+```
+cargo +nightly test <test_function_here> -- --nocapture
+```
+##### To run end-to-end tests, first make sure you have the substrate dev node capabilities installed via:
+```
+cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+```
+##### Then run the node:
+```
+substrate-contracts-node --log info,runtime::contracts=debug 2>&1
+```
+##### Finally, you can run the end-to-end and unit test suite:
+```
+cargo +nightly test --features e2e-tests -- --show-output
 ```
 
-## How to build
-
-Run from the `access` directory:
-```
-cargo contract build
-```
-To run a contract, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
 

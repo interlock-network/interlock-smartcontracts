@@ -1,10 +1,8 @@
-# $ILOCK PSP22 Rewards Smart Contract
-
-`ilockmvp` is the main Interlock Network smart contract to be hosted on Aleph Zero. For now this consists of one ERC20-style token (PSP22) contract with functionality to manage interlocker rewards for surfing the web with browser extension. Future contracts will be responsible for Phase 2, where we implement the security staking model for interlockers to actively earn rewards by staking tokens on questionable websites.
+# Port/Socket Application Template Contract
 
 ## How to get setup and build:
 
-#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/).
+#### See [DOCS](https://interlock-network.github.io/interlock-smartcontracts/contract_application/docs/application/).
 
 ## How to test on testnet: 
 
