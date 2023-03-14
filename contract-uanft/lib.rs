@@ -1153,7 +1153,7 @@ pub mod psp34_nft {
         /// - Test that register function works correctly.
         /// - Test that transfer events are properly emitted.
         /// - Test that get_credential() and get_collection() works..
-        #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
+        #[ink_e2e::test(additional_contracts = "../contract-ilockmvp/Cargo.toml")]
         async fn happye2e_mint_register_transfer(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
@@ -1342,7 +1342,7 @@ pub mod psp34_nft {
 
         /// HAPPY SELF-MINT
         /// - Test that anybody can mint UANFT for themselves using ILOCK.
-        #[ink_e2e::test(additional_contracts = "../../ilockmvp/Cargo.toml")]
+        #[ink_e2e::test(additional_contracts = "../contract-ilockmvp/Cargo.toml")]
         async fn happye2e_self_mint(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {

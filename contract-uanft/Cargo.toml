@@ -1,13 +1,18 @@
 [package]
-name = "interlock_access_nft"
+# Interlock Network Universal Access NFT
+name = "uanft"
 version = "0.0.1"
-authors = ["Blair Munro <blairmunroakusa@gmail.com>, ArtZero <admin@artzero.io>"]
+authors = [
+    "Interlock Network <contact@interlock.network",
+    "Blair Munro <blairmunroakusa@gmail.com>",
+    "ArtZero <admin@artzero.io>"
+]
 edition = "2021"
 
 [dependencies]
 ink = { version = "~4.0.0", default-features = false}
 
-ilockmvp = { path = "../../ilockmvp", default-features = false, features = ["ink-as-dependency"] }
+ilockmvp = { path = "../contract-ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
@@ -15,11 +20,10 @@ scale-info = { version = "2.3", default-features = false, features = ["derive"],
 openbrush = { tag = "3.0.0", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp34", "ownable"] }
 
 [dev-dependencies]
-
 ink_e2e = { version = "4.0" }
 
 [lib]
-name = "interlock_access_nft"
+name = "uanft"
 path = "lib.rs"
 crate-type = [
     # Used for normal contract Wasm blobs.
