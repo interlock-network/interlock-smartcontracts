@@ -10,21 +10,21 @@
 //!
 //! #### To ensure build with cargo-contract version 2.0.0, run:
 //!
-//! -   cargo install cargo-contract --force --version 2.0.0
+//! -     cargo install cargo-contract --force --version 2.0.0
 //!
 //! #### To build, run:
 //!
-//! -   cargo +nightly contract build
+//! -     cargo +nightly contract build
 //!
 //! #### To build docs, run:
 //!
-//! -   cargo +nightly doc --no-deps --document-private-items --open
+//! -     cargo +nightly doc --no-deps --document-private-items --open
 //!
 //! #### To reroute docs in Github, run:
 //!
-//! -   echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
-//! -   target/doc/index.html;
-//! -   cp -r target/doc ./docs
+//! -     echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" >
+//! -     target/doc/index.html;
+//! -     cp -r target/doc ./docs
 //!
 
 #![doc(

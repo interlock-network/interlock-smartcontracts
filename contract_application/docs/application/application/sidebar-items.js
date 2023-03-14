@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CONSTRUCTOR_0","MESSAGE_0","MESSAGE_1","MESSAGE_2","PORT"],"enum":["__ink_ConstructorDecoder","__ink_MessageDecoder"],"fn":["__ink_generate_metadata","call","deploy","push_contract"],"struct":["Application","ApplicationRef","CallBuilder","Check"],"type":["AccountId","Balance","BlockNumber","Environment","Hash","Timestamp"]};

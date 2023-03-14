@@ -1,7 +1,25 @@
 //!
 //! # INTERLOCK NETWORK - GENERIC PORT/SOCKET APPLICATION TEMPLATE CONTRACT
 //!
-
+//!
+//! #### To ensure build with cargo-contract version 2.0.0, run:
+//!
+//! -     cargo install cargo-contract --force --version 2.0.0
+//!
+//! #### To build, run:
+//!
+//! -     cargo +nightly contract build
+//!
+//! #### To build docs, run:
+//!
+//! -     cargo +nightly doc --no-deps --document-private-items --open
+//!
+//! #### To reroute docs in Github, run:
+//!
+//! -     echo "<meta http-equiv=\"refresh\" content=\"0; url=application\">" >
+//! -     target/doc/index.html;
+//! -     cp -r target/doc ./docs
+//!
 
 #![doc(
     html_logo_url = "https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cffa42ae33001294d1_interlock-visual-hero.png",
