@@ -1,4 +1,4 @@
-### [(Visit this link to explore the demo Universal Access NFT application.](https://github.com/interlock-network/universal-access-nft-demo))
+### [(Visit this link to explore the demo Universal Access NFT application.)](https://github.com/interlock-network/universal-access-nft-demo)
 
 # The Interlock Network Universal Access NFT
 
