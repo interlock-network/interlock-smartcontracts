@@ -1414,7 +1414,6 @@ pub mod ilockmvp {
                     // < inject custom logic here BEFORE tax_and_reward >
                     // <    (ie, do stuff with port and socket data)    >
                 },
-
                 _ => return Err(OtherError::InvalidPort),
             };
 
@@ -1499,12 +1498,9 @@ pub mod ilockmvp {
             }
         }        
     
-
 ////////////////////////////////////////////////////////////////////////////
-//// testing helpers ///////////////////////////////////////////////////////
+//// testing helper ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-
 
         /// - Function to increment monthspassed for testing.
         ///
@@ -1521,28 +1517,13 @@ pub mod ilockmvp {
             Ok(true)
         }
     } // END OF ILOCKmvp IMPL BLOCK
+ }
 
-//
-// TESTING INCOMPLETE
-//
-// . To view debug prints and assertion failures run test via:
-//
-//      cargo +nightly test --features e2e-tests -- --show-output
-//
-// . To view debug for specific method run test via:
-//
-//      cargo +nightly test <test_function_here> -- --nocapture
-//
-// . To run end-to-end tests, first make sure you have the substrate
-//   dev node capabilities installed via:
-//
-//      cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
-//
-//   Then run the node:
-//
-//      substrate-contracts-node --log info,runtime::contracts=debug 2>&1
-//
+#[cfg(all(test, feature = "e2e-tests"))]
+pub mod tests_e2e;
 
+#[cfg(test)]
+pub mod tests_unit;
 
 // TEST TODO
 // in order of appearance
@@ -1562,12 +1543,12 @@ pub mod ilockmvp {
 // [] sadunit_register_stakeholder ... add sad case where share is greater than pool total?
 // [x] happyunit_stakeholder_data            <-- checked within distriut_tokens()
 // [x] happye2e_distribute_tokens            <-- this is to check that the vesting schedule works...
-// [x] happye2e_payout_tokens                 ...month passage is artificial here, without 
+// [x] happye2e_payout_tokens                 ...month passage is artificial here, without
 // [] sade2e_payout_tokens                    advancing blocks.
 // [x] happyunit_pool_data
-// [x] happye2e_reward_interlocker           
+// [x] happye2e_reward_interlocker
 // [x] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
-// [x] happyunit_rewarded_total              <-- checked within reward_interlocker() 
+// [x] happyunit_rewarded_total              <-- checked within reward_interlocker()
 // [x] happyunit_months_passed               <-- checked within new_token()
 // [x] happyunit_cap                         <-- checked within new_token()
 // [!] happyunit_update_contract             <-- TEST ON TESTNET
@@ -1582,30 +1563,3 @@ pub mod ilockmvp {
 // [] sadunit_tax_port_transfer
 // [x] happyunit_check_time
 //
-
-// * note ... unit and end to end tests must reside in separate modules
-//
-// * note ... PSP22 token standart errors as implemented by openbrush:
-//
-//    /// Returned if not enough balance to fulfill a request is available.
-//    InsufficientBalance,
-//    /// Returned if not enough allowance to fulfill a request is available.
-//    InsufficientAllowance,
-//    /// Returned if recipient's address is zero.
-//    ZeroRecipientAddress,
-//    /// Returned if sender's address is zero.
-//    ZeroSenderAddress,
-
-////////////////////////////////////////////////////////////////////////////
-//// end to end ////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-    
-
-
- }
-
-    #[cfg(all(test, feature = "e2e-tests"))]
-    pub mod tests_e2e;
-
-#[cfg(test)]
-pub mod tests_unit;

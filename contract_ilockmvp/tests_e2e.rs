@@ -1,35 +1,35 @@
-//
-// INTERLOCK NETWORK MVP SMART CONTRACT END-TO-END TESTS
-//
-// End to end tests are used extensively becaus using the Openbrush
-// PSP22 framework involves cross-contract invocations under the hood.
-// EG/IE, If I want to reward an Interlocker, that involves an internal
-// call of the OpenBrush PSP22 transfer message. I know of no way to
-// get around this fact for testing besides using end-to-end tests.
-//
-// ##### to setup for e2e testin, run
-//
-// substrate-contracts-node
-// 
-// ##### after installing by running
-//
-// cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
-//
-// ##### To view debug prints and assertion failures run test via:
-//  
-// cargo +nightly test --features e2e-tests -- --show-output
-//
-// ##### To view debug for specific method run test via:
-//  
-// cargo nightly+ test <test_function_here> -- --nocapture
-//
-// ! NB ! During test build and runtime, if you ever come across errors
-//saying 'Metadata artifacts not generated' or 'Once instance
-//has previously been poisoned', then you need to run `cargo clean`
-//or delete the `target` directory the build/run from scratch.
-//OR
-//Save both the lib.rs file AND this tests_e2e.rs file, then reattempt.
-//
+//!
+//! INTERLOCK NETWORK MVP SMART CONTRACT END-TO-END TESTS
+//!
+//! End to end tests are used extensively because using the Openbrush
+//! PSP22 framework involves cross-contract invocations under the hood.
+//! EG/IE, If I want to reward an Interlocker, this involves an internal
+//! call of the OpenBrush PSP22 transfer message. I know of no way to
+//! get around this fact for testing besides using end-to-end tests.
+//!
+//! ##### to setup for e2e testin, run
+//!
+//! ubstrate-contracts-node --log info,runtime::contracts=debug 2>&1
+//! 
+//! ##### after installing by running
+//!
+//! cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+//!
+//! ##### To view debug prints and assertion failures run test via:
+//!  
+//! cargo +nightly test --features e2e-tests -- --show-output
+//!
+//! ##### To view debug for specific method run test via:
+//!  
+//! cargo nightly+ test <test_function_here> -- --nocapture
+//!
+//! ! NB ! During test build and runtime, if you ever come across errors
+//!        saying 'Metadata artifacts not generated' or 'Once instance
+//!        has previously been poisoned', then you need to run `cargo clean`
+//!        or delete the `target` directory the build/run from scratch.
+//!        OR
+//!        Save both the lib.rs file AND this tests_e2e.rs file, then reattempt.
+//!
 
 use crate::ilockmvp::*;
 
@@ -38,7 +38,6 @@ use ink_e2e::build_message;
 
 type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-
 use openbrush::{
     contracts:: psp22::{
         psp22_external::PSP22,
@@ -46,7 +45,6 @@ use openbrush::{
     },
     traits::Balance,
 };
-
 
 /// HAPPY TRANSFER
 /// - Test if customized transfer function works correctly.
