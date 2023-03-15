@@ -60,14 +60,13 @@ const TEST_PASSWORD_ARRAY: [u8; 32] = [  16, 166, 230, 204, 131,  17, 163, 226,
                                         213, 221,  89,  64, 140,  52,  62, 146,
                                         107,  18, 156,  73,  20, 243, 203,   1 ];
 
-/// HAPPY TRANSFER
 /// - Test if customized transfer function works correctly.
 /// - When transfer, credentials are revoked.
 /// - Test that register function works correctly.
 /// - Test that transfer events are properly emitted.
 /// - Test that get_credential() and get_collection() works..
 #[ink_e2e::test(additional_contracts = "../contract_ilockmvp/Cargo.toml")]
-async fn happye2e_mint_register_transfer(
+async fn happy_mint_register_transfer(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -252,10 +251,9 @@ async fn happye2e_mint_register_transfer(
     Ok(())
 }
 
-/// HAPPY SELF-MINT
 /// - Test that anybody can mint UANFT for themselves using ILOCK.
 #[ink_e2e::test(additional_contracts = "../contract_ilockmvp/Cargo.toml")]
-async fn happye2e_self_mint(
+async fn happy_self_mint(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 

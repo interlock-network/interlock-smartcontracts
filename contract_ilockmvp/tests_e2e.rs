@@ -46,13 +46,12 @@ use openbrush::{
     traits::Balance,
 };
 
-/// HAPPY TRANSFER
 /// - Test if customized transfer function works correctly.
 /// - When transfer from contract owner, circulating supply increases.
 /// - When transfer to contract owner, circulating supply decreases
 /// and rewards pool increases.
 #[ink_e2e::test]
-async fn happye2e_transfer(
+async fn happy_transfer(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -144,23 +143,21 @@ async fn happye2e_transfer(
     Ok(())
 }
 
-/// SAD TRANSFER
 /// - Test if customized transfer function fails correctly.
 ///
 /// - Return
-/// InsufficientBalance - When caller has allowance < amount
-/// ZeroRecipientAddress- when to's address is AccountId::from([0_u8; 32])
-/// ZeroSenderAddress   - When caller's address is AccountId::from([0_u8; 32])
-///   (zero address has known private key..however that works)
+///     InsufficientBalance     - When caller has allowance < amount
+///     ZeroRecipientAddress    - when to's address is AccountId::from([0_u8; 32])
+///     ZeroSenderAddress       - When caller's address is AccountId::from([0_u8; 32])
+///                              (zero address has known private key..however that works)
 #[ink_e2e::test]
-async fn sade2e_transfer(
+async fn sad_transfer(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
 
-/// HAPPY TRANSFER_FROM
 /// - Test if customized transfer_from function works correctly.
 /// - When transfer from contract owner, circulating supply increases.
 /// - Transfer and Approval events are emitted.
@@ -168,7 +165,7 @@ async fn sade2e_transfer(
 /// - When caller transfers, their allowace with from decreases
 ///   and rewards pool increases
 #[ink_e2e::test]
-async fn happye2e_transfer_from(
+async fn happy_transfer_from(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -306,28 +303,26 @@ async fn happye2e_transfer_from(
     Ok(())
 }
 
-/// SAD TRANSFER_FROM
 /// - Test if customized transfer_from function fails correctly.
 ///
 /// - Return
-/// InsufficientBalance - When caller has allowance < amount
-/// InsufficientAllowance   - When caller specs amount > from's balance
-/// ZeroRecipientAddress- when to's address is AccountId::from([0_u8; 32])
-/// ZeroSenderAddress   - When from's address is AccountId::from([0_u8; 32])
+///     InsufficientBalance     - When caller has allowance < amount
+///     InsufficientAllowance   - When caller specs amount > from's balance
+///     ZeroRecipientAddress    - when to's address is AccountId::from([0_u8; 32])
+///     ZeroSenderAddress       - When from's address is AccountId::from([0_u8; 32])
 #[ink_e2e::test]
-async fn sade2e_transfer_from(
+async fn sad_transfer_from(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
 
-/// HAPPY BURN
 /// - Test if customized burn function works correctly.
 /// - When burn occurs, donor balance decreases.
 /// - When burn occurs, circulating supply (total_supply()) decreases
 #[ink_e2e::test]
-async fn happye2e_burn(
+async fn happy_burn(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -420,28 +415,26 @@ async fn happye2e_burn(
     Ok(())
 }
 
-/// SAD BURN
 /// - Test if customized transfer_from function fails correctly.
 ///
 /// - Return
-/// CallerNotOwner  - When caller does not own contract
-/// InsufficientBalance - When donor's balance < burn amount
+///     CallerNotOwner          - When caller does not own contract
+///     InsufficientBalance     - When donor's balance < burn amount
 #[ink_e2e::test]
-async fn sade2e_burn(
+async fn sad_burn(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
 
-/// HAPPY DISTRIBUTE_TOKENS
 /// - Test if token distribution works as intended per vesting schedule.
 /// - Cycle through entire vesting period.
 /// - Includes optional print table for inspection
 /// - Includes register_stakeholder().
 /// - Includes distribute_tokens().
 #[ink_e2e::test]
-async fn happye2e_distribute_tokens(
+async fn happy_distribute_tokens(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -555,29 +548,27 @@ async fn happye2e_distribute_tokens(
     Ok(())
 }
 
-/// SAD DISTRIBUTE_TOKENS
 /// - Check to make sure distribute_tokens fails as expected.
 ///
 /// - Return
-/// CallerNotOwner   - When caller does not own contract
-/// StakeholderNotFound  - when stakeholder specified isn't registered
-/// CliffNotPassed   - when pool's vesting cliff isn't passed
-/// StakeholderSharePaid - when stakeholder has already been paid entire share
-/// PayoutTooEarly   - when next month's payment isn't ready
+///     CallerNotOwner          - When caller does not own contract
+///     StakeholderNotFound     - when stakeholder specified isn't registered
+///     CliffNotPassed          - when pool's vesting cliff isn't passed
+///     StakeholderSharePaid    - when stakeholder has already been paid entire share
+///     PayoutTooEarly          - when next month's payment isn't ready
 #[ink_e2e::test]
-async fn sade2e_distribute_tokens(
+async fn sad_distribute_tokens(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
 
-/// HAPPY PAYOUT_TOKENS
 /// - Check to make sure payout_tokens works as expected.
 /// - Checks PARTNERS, WHITELIST, and PUBLIC_SALE pools.
 /// - Checks resulting balances for three pools and recipients.
 #[ink_e2e::test]
-async fn happye2e_payout_tokens(
+async fn happy_payout_tokens(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -670,22 +661,20 @@ async fn happye2e_payout_tokens(
     Ok(())
 }
 
-/// SAD PAYOUT_TOKENS
 /// - Checks to make sure payout_tokens function fails as expected.
 ///
 /// - Return
-/// CallerNotOwner   - when caller does not own contract
-/// InvalidPool  - when pool isn't (PARTNERS|WHITELIST|PUBLIC_SALE)
-/// PaymentTooLarge  - when specified payment amount is more than pool
+///     CallerNotOwner          - when caller does not own contract
+///     InvalidPool             - when pool isn't (PARTNERS|WHITELIST|PUBLIC_SALE)
+///     PaymentTooLarge         - when specified payment amount is more than pool
 #[ink_e2e::test]
-async fn sade2e_payout_tokens(
+async fn sad_payout_tokens(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
 
-/// HAPPY REWARD_INTERLOCKER
 /// - Test if rewarding functionality works.
 /// - Update rewardedtotal.
 /// - Transfer reward amount from rewards pool to Interlocker.
@@ -695,7 +684,7 @@ async fn sade2e_payout_tokens(
 /// - Test that rewarded_total() works.
 /// - Test that rewarded_interlocker_total() works.
 #[ink_e2e::test]
-async fn happye2e_reward_interlocker(
+async fn happy_reward_interlocker(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
@@ -788,20 +777,17 @@ async fn happye2e_reward_interlocker(
     Ok(())
 }
 
-/// SAD REWARD_INTERLOCKER
 /// - Test if rewarding functionality fails correctly.
 ///
 /// - Return
-/// CallerNotOwner   - when caller does not own contract
-/// PaymentTooLarge  - when arithmetic over or underflows
+///     CallerNotOwner      - when caller does not own contract
+///     PaymentTooLarge     - when arithmetic over or underflows
 ///
 /// ... maybe check the over/underflows?
 #[ink_e2e::test]
-async fn sade2e_reward_interlocker(
+async fn sad_reward_interlocker(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
     Ok(())
 }
-
-

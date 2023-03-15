@@ -30,7 +30,6 @@ use ink::{
     },
 };
 
-
 /// - Test if the default constructor does its job
 /// - and check months_passed()
 /// - and check cap().
@@ -61,15 +60,14 @@ fn new_token_works() {
 /// - Registration should succeed as long as stakeholder share > 0.
 /// - Payremaining should accurately reflect distribution to stakeholder given share.
 #[ink::test]
-fn happyunit_register_stakeholder_data() {
+fn happy_register_stakeholder_data() {
 
 }
 
-/// HAPPY POOL_DATA AND POOL_BALANCE
 /// - Test if pool_data getter does its job.
 /// - Test if pool_balance does its job.
 #[ink::test]
-fn happyunit_pool_data_and_balance() {
+fn happy_pool_data_and_balance() {
 
     let ILOCKmvpPSP22 = ILOCKmvp::new_token();
     let pool = &POOLS[1];
@@ -81,11 +79,10 @@ fn happyunit_pool_data_and_balance() {
     ));
 }
 
-/// HAPPY CREATE_GET_PORT
 /// - Test if create_port() and port() functions correctly.
 /// - Test if tax_port_transfer() functions correctly.
 #[ink::test]
-fn happyunit_create_get_port_tax_transfer() {
+fn happy_create_get_port_tax_transfer() {
 
     let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
     let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
@@ -144,16 +141,15 @@ fn happyunit_create_get_port_tax_transfer() {
 /// SAD TAX_PORT_TRANSFER
 /// - Not sure there is much to do here.
 #[test]
-fn sadunit_tax_port_transfer() {
+fn sad_tax_port_transfer() {
 
 }
 
 /*************************  THIS TEST IS SLOW, THUS COMMENTED OUT UNLESS NEEDED
 
-/// HAPPY CHECK_TIME
 /// - Test to make sure month increment doesn't happen too soon.
 #[ink::test]
-fn happyunit_check_time() {
+fn happy_check_time() {
 
     let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
 
