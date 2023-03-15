@@ -8,7 +8,7 @@ This is effectively a way to extend the concept of a 'transfer approval' (thus t
 
 ### The formalism:
 
-An application contract is owned by an operator. A different instance of this same application contract may be owned by a different operator. All applications of a specific type interface with the Interlock token contract via a _**port**_. A port specifies specific internal logic within the token contract that an application contract has access to when it makes a call. It also specifies the unique codehash of the valid connecting application contracts code. If the previously approved application has been altered in any way, the port will reject any attempts for it to connect to the token contract.
+An application contract is owned by an operator. A different instance of this same application contract may be owned by a different operator. All applications of a specific type interface with the Interlock token contract via a _**port**_. A port specifies specific internal logic within the token contract that an application contract has access to when it makes a call. It also specifies the unique codehash of the valid connecting application contract's code. If the previously approved application has been altered in any way, the port will reject any attempts for it to connect to the token contract.
 
 Each combination of an application's port and an application contract's owner/operator is that we call a _**socket**_, specified in an address:port format. That is, a socket is like the connection from our token contract to an owner operator who may be running several different instances of an application contract at once. A given application's access to the token contract through the single socket is therefore multiplexed by the blockchain itself, as any application's cross-contract socket call on the Interlock token contracts port is atomic.
 
@@ -18,7 +18,7 @@ Each combination of an application's port and an application contract's owner/op
 
 We could try to be true to the TCP/IP formalism and think of each application as having it's own socket ($ILOCK token address : application number), but this is overly complicated, perhaps reserved for future, more advanced design.
 
-The bottom line is that this abstraction is meant to think of smart contracts in terms of a computer. A port is traditionally associated with a particular protocol or logic. This is what ports on the $ILOCK token contract do. Computers also have the ability to accept or reject incoming socket connections on a port. Sockets identify a host with a port. Different hosts (running applications) interact with different ports on the computers they connect to.
+The bottom line is that this abstraction is meant to help think of smart contracts in terms of a computer. A port is traditionally associated with a particular protocol or logic. This is what ports on the $ILOCK token contract do. Computers also have the ability to accept or reject incoming socket connections on a port. Sockets identify a host with a port. Different hosts (running applications) interact with different ports on the computers they connect to.
 
 The ultimate value in this formalism is to create a consistent and familiar way to network smartcontracts as if they were computers. The ultimate purpose of this formalism is to reduce or eliminate the need for off-chain transaction relays.
 
