@@ -8,9 +8,10 @@ authors = [
     "ArtZero <admin@artzero.io>"
 ]
 edition = "2021"
+license = "GNU GENERAL PUBLIC LICENSE"
 
 [dependencies]
-ink = { version = "~4.0.0", default-features = false}
+ink = { version = "4.0", default-features = false}
 
 ilockmvp = { path = "../contract_ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 

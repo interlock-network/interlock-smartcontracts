@@ -2,11 +2,15 @@
 # Interlock Network Port/Socket Application Template
 name = "application"
 version = "0.1.0"
-authors = ["Interlock Network, Blair Munro <blairmunroakusa@gmail.com>"]
+authors = [
+    "Interlock Network <smartcontracts@interlock.network>",
+    "Blair Munro <blairmunroakusa@gmail.com>"
+]
 edition = "2021"
+license = "GNU GENERAL PUBLIC LICENSE"
 
 [dependencies]
-ink = { version = "~4.0.0", default-features = false}
+ink = { version = "4.0", default-features = false}
 
 ilockmvp = { path = "../contract_ilockmvp", default-features = false, features = ["ink-as-dependency"] }
 
