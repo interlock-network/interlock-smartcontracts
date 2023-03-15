@@ -22,7 +22,38 @@ The Interlock Universal Access NFT is a scheme for licensing and managing access
 
 This is all possible without use of a traditional database (alas the blockchain is, technically a database).
 
-As this is a _general_ framework, it will be up to you to create your own UI frontend. To experience a minimal application of a Universal Access NFT, get started with the demonstration CLI app below:
+As this is a _general_ framework, it will be up to you to create your own UI frontend. To experience a minimal application of a Universal Access NFT, get started with the demonstration CLI app linked at the top of this page.
+
+# How to get setup and build:
+
+#### See [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/).
+
+## How to test on testnet: 
+
+##### To deploy a contract to testnet, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
+
+## How to build and run tests
+
+##### To view debug prints and assertion failures run test via:
+```
+cargo +nightly test --features e2e-tests -- --show-output
+```
+##### To view debug for specific method run test via:
+```
+cargo +nightly test <test_function_here> -- --nocapture
+```
+##### To run end-to-end tests, first make sure you have the substrate dev node capabilities installed via:
+```
+cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
+```
+##### Then run the node:
+```
+substrate-contracts-node --log info,runtime::contracts=debug 2>&1
+```
+##### Finally, you can run the end-to-end and unit test suite:
+```
+cargo +nightly test --features e2e-tests -- --show-output
+```
 
 # How this framework works:
 
@@ -144,36 +175,5 @@ In the event that a UANFT owner wishes to transfer or sell their UANFT to a diff
 
 The ultimate goal is to eliminate the need to send secrets to the restricted access server that checks access-request hashes against those stored on-chain. This will ultimately be accomplished by some sort of zero-knowledge proof scheme.
 
-
-## How to get setup and build:
-
-#### See [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/).
-
-## How to test on testnet: 
-
-##### To deploy a contract to testnet, `upload metadata.json` and `ilockmvp.wasm` (in `target`) to [testnet.alephzero.org](https://testnet.alephzero.org).
-
-## How to build and run tests
-
-##### To view debug prints and assertion failures run test via:
-```
-cargo +nightly test --features e2e-tests -- --show-output
-```
-##### To view debug for specific method run test via:
-```
-cargo +nightly test <test_function_here> -- --nocapture
-```
-##### To run end-to-end tests, first make sure you have the substrate dev node capabilities installed via:
-```
-cargo install contracts-node --git https://github.com/paritytech/substrate-contracts-node.git
-```
-##### Then run the node:
-```
-substrate-contracts-node --log info,runtime::contracts=debug 2>&1
-```
-##### Finally, you can run the end-to-end and unit test suite:
-```
-cargo +nightly test --features e2e-tests -- --show-output
-```
 
 
