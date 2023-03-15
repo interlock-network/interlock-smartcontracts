@@ -76,11 +76,13 @@ async fn happy_mint_register_transfer(
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
     let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
+    // spin up ILOCK PSP22 contract
     let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token();
     let ilock_contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), ilock_constructor, 0, None)
         .await.expect("instantiate failed").account_id;
-
+    
+    // spin up uanft PSP34 contract
     let constructor = Psp34NftRef::new(
         "Interlock Network Universal Access NFT".to_string(),
         "ILOCK-UANFT".to_string(),
@@ -93,6 +95,7 @@ async fn happy_mint_register_transfer(
         .instantiate("uanft", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
 
+    // mint a uanft to bob
     let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.mint_to(bob_account.clone()));
     let mint_response = client
@@ -129,32 +132,38 @@ async fn happy_mint_register_transfer(
     assert_eq!(to, Some(bob_account), "encountered invalid Transfer.from");
     assert_eq!(id, Id::U64(1), "encountered invalid Transfer.id");
 
+    // verify bob is uanft owner
     let owner_of_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.owner_of(Id::U64(1)));
     let owner = client
         .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
     assert_eq!(owner, bob_account.clone());
 
+    // verify bob's collection contains uanft ID1
     let get_bob_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_collection(bob_account.clone()));
     let bob_collection = client
         .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
     assert_eq!(bob_collection, [Id::U64(1)]);
 
+    // mint bob another uanft
     let mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.mint_to(bob_account.clone()));
     let _mint_result = client
         .call(&ink_e2e::alice(), mint_msg, 0, None).await;
 
+    // verify that bob's collection grows appropriately and contains uanft ID2
     let bob_collection = client
         .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
     assert_eq!(bob_collection, [Id::U64(1), Id::U64(2)]);
 
+    // register credentials 'test_username' and 'test_password' for bob's uanft ID2
     let register_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.register(Id::U64(2), test_username_hash, test_password_hash));
     let _register_result = client
         .call(&ink_e2e::bob(), register_msg, 0, None).await;
 
+    // check that bob's credentials were saved correctly, with the correct ID
     let bob_get_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_credential(test_username_hash));
     let bob_credential = client
@@ -162,6 +171,8 @@ async fn happy_mint_register_transfer(
     assert_eq!(bob_credential.0, test_password_hash);
     assert_eq!(bob_credential.1, Id::U64(2));
 
+    // transfer registered/authenticated uanft ID2 to charlie
+    // (this should revoke credentials an revert uanft to not-authenticated)
     let transfer_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.transfer(
             charlie_account.clone(), Id::U64(2), Default::default()));
@@ -199,10 +210,12 @@ async fn happy_mint_register_transfer(
     assert_eq!(to, Some(charlie_account), "encountered invalid Transfer.from");
     assert_eq!(id, Id::U64(2), "encountered invalid Transfer.id");
 
+    // verify bob's collection decreased appropriately
     let bob_collection = client
         .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
     assert_eq!(bob_collection, [Id::U64(1)]);
 
+    // verify charlie's collection increased appropriately
     let get_charlie_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_collection(charlie_account.clone()));
     let charlie_collection = client
@@ -210,12 +223,14 @@ async fn happy_mint_register_transfer(
         .await.return_value().unwrap();
     assert_eq!(charlie_collection, [Id::U64(2)]);
 
+    // verify charlie is now owner of uanft ID2
     let owner_of_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.owner_of(Id::U64(2)));
     let owner = client
         .call_dry_run(&ink_e2e::alice(), &owner_of_msg, 0, None).await.return_value().unwrap();
     assert_eq!(owner, charlie_account.clone());
 
+    // verify that bob's credentials were successfully revoked
     let bob_get_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_credential(test_username_hash));
     let bob_credential = client
@@ -226,22 +241,26 @@ async fn happy_mint_register_transfer(
                                105, 97, 108, 115, 32, 110, 111, 110,
                                101, 120, 105, 115, 116, 101, 110, 116, 46].to_vec())));
 
+    // verify that manual credentials set function works
     let set_credential_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.set_credential(Id::U64(1), test_username_hash, test_password_hash));
     let _set_credential_result = client
         .call(&ink_e2e::alice(), set_credential_msg, 0, None).await;
 
+    // verify that is_authenticated getter works
     let is_authenticated_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.is_authenticated(Id::U64(1)));
     let status = client
         .call_dry_run(&ink_e2e::alice(), &is_authenticated_msg, 0, None).await.return_value().unwrap();
     assert_eq!(status, true);
 
+    // verify that manual credential revoke works
     let revoke_access_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.revoke_access(test_username_hash));
     let _revoke_access_result = client
         .call(&ink_e2e::alice(), revoke_access_msg, 0, None).await;
-
+    
+    // verify that authentication status reflects revoked credentials
     let is_authenticated_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.is_authenticated(Id::U64(1)));
     let status = client
@@ -252,6 +271,7 @@ async fn happy_mint_register_transfer(
 }
 
 /// - Test that anybody can mint UANFT for themselves using ILOCK.
+/// - Test that uanft application contract can connect to PSP22 ILOCK contract via socket.
 #[ink_e2e::test(additional_contracts = "../contract_ilockmvp/Cargo.toml")]
 async fn happy_self_mint(
     mut client: ink_e2e::Client<C, E>,
@@ -260,11 +280,13 @@ async fn happy_self_mint(
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
 
+    // spin up ILOCK PSP22 token contract
     let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token();
     let ilock_contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), ilock_constructor, 0, None)
         .await.expect("instantiate failed").account_id;
 
+    // spin up uanft PSP34 contract
     let uanft_constructor = Psp34NftRef::new(
         "Interlock Network Universal Access NFT".to_string(),
         "ILOCK-UANFT".to_string(),
@@ -277,55 +299,65 @@ async fn happy_self_mint(
         .instantiate("uanft", &ink_e2e::alice(), uanft_constructor, 0, None)
         .await.expect("instantiate failed").account_id;
 
+    // set the token price in ILOCK
     let set_price_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.set_token_price(100));
     let _create_port_result = client
         .call(&ink_e2e::alice(), set_price_msg, 0, None).await;
 
-    // we are assuming this testing contract is safe
+    // we are assuming this testing contract is safe, so get its own hash with testing helper
+    // message
     let get_hash_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.contract_hash(uanft_contract_acct_id.clone()));
     let application_hash = client
         .call_dry_run(&ink_e2e::alice(), &get_hash_msg, 0, None).await.return_value();
 
+    // create a dummy port for PORT 0 on ILOCK token contract
     let create_port_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
         .call(|contract| contract.create_port(application_hash, 0, 0, false, 0, alice_account.clone() ));
     let _create_port_result = client
         .call(&ink_e2e::alice(), create_port_msg, 0, None).await;
 
+    // charge bob's ILOCK account by rewarding him ILOCK
     let reward_bob_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
         .call(|contract| contract.reward_interlocker(100_000, bob_account.clone()));
     let _reward_result = client
         .call(&ink_e2e::alice(), reward_bob_msg, 0, None).await;
 
+    // connect this uanft application contract to ILOCK token contract via socket
     let create_socket_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.create_socket());
     let _create_socket_result = client
         .call(&ink_e2e::alice(), create_socket_msg, 0, None).await;
 
+    // check that uanft token price getter works
     let get_token_price_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_token_price());
     let token_price = client
         .call_dry_run(&ink_e2e::alice(), &get_token_price_msg, 0, None).await.return_value();
     assert_eq!(token_price, 100);
 
+    // now finally, bob attempts a self-mint uanft in exchange for 100 ILOCK
     let self_mint_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.self_mint(token_price));
     let _mint_result = client
         .call(&ink_e2e::bob(), self_mint_msg, 0, None).await;
 
+    // verify that bob's uanft collection reflects this
     let get_bob_collection_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.get_collection(bob_account.clone()));
     let bob_collection = client
         .call_dry_run(&ink_e2e::alice(), &get_bob_collection_msg, 0, None).await.return_value().unwrap();
     assert_eq!(bob_collection, [Id::U64(1)]);
 
+    // verify that bob successfully paid 100 ILOCK
     let bob_balance_of_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
         .call(|contract| contract.balance_of(bob_account.clone()));
     let bob_balance = client
         .call_dry_run(&ink_e2e::alice(), &bob_balance_of_msg, 0, None).await.return_value();
     assert_eq!(bob_balance, 100_000 - 100);
 
+    // verify that circulating ILOCK supply decreased appropriately
     let supply_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
         .call(|contract| contract.total_supply());
     let supply = client

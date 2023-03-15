@@ -887,6 +887,8 @@ pub mod uanft {
         }
     }
 
+    /// - Art Zero traits implementation.
+    /// - This is required to be commpatible with Art Zero Marketplace
     impl Psp34Traits for Psp34Nft {
 
         /// - Art Zero message.
