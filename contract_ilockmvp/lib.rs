@@ -510,6 +510,8 @@ pub mod ilockmvp {
         UnsafeContract,
         /// - Returned if application contract caller is not its operator.
         CallerNotOperator,
+        /// - Returned if transfer caller is the owner.
+        CallerIsOwner,
         /// - Returned if checked add overflows.
         Overflow,
         /// - Returned if checked sub underflows.
@@ -584,16 +586,13 @@ pub mod ilockmvp {
 
             let from = self.env().caller();
 
-            let _ = self._transfer_from_to(from, to, value, data)?;
-
-            // if sender is owner, then tokens are entering circulation
+            // if sender is owner, deny
             if from == self.ownable.owner {
 
-                match self.pool.circulating.checked_add(value) {
-                    Some(sum) => self.pool.circulating = sum,
-                    None => return Err(OtherError::Overflow.into()),
-                };
+               return Err(OtherError::CallerIsOwner.into()); 
             }
+
+            let _ = self._transfer_from_to(from, to, value, data)?;
 
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
@@ -658,9 +657,35 @@ pub mod ilockmvp {
 
     impl Ownable for ILOCKmvp {
         
-        // PRIOR TO OWNER TRANSFER,
-        // REMAINING OWNER NONCIRCULATING
-        // BALANCE MUST BE TRANSFERRED TO NEW OWNER.
+        #[ink(message)]
+        fn transfer_ownership(
+            &mut self,
+            newowner: AccountId
+        ) -> Result<(), OwnableError> {
+
+            let oldowner = self.ownable.owner;
+            
+            if oldowner != self.env().caller() {
+
+                return Err(OwnableError::CallerIsNotOwner);
+            }
+            let oldbalance: Balance = self.balance_of(oldowner);
+
+            // increment new owner account
+            let mut newbalance: Balance = self.psp22.balance_of(newowner);
+            match newbalance.checked_add(oldbalance) {
+                Some(sum) => newbalance = sum,
+                None => (), // case not possible
+            };
+            self.psp22.balances.insert(&newowner, &newbalance);
+
+            // deduct tokens from owners account
+            self.psp22.balances.insert(&oldowner, &0);
+
+            self.ownable.owner = newowner;
+
+            Ok(())
+        }
     }
 
     impl PSP22Burnable for ILOCKmvp {
@@ -904,7 +929,7 @@ pub mod ilockmvp {
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
-        ) -> PSP22Result<()> {
+        ) -> OtherResult<()> {
 
             // get data structs
             let mut this_stakeholder = match self.vest.stakeholder.get(stakeholder) {
@@ -954,8 +979,27 @@ pub mod ilockmvp {
                 newpaidtotal = this_stakeholder.share;
             }
 
-            // now transfer tokens
-            let _ = self.transfer(stakeholder, payout, Default::default())?;
+            // increment distribution to stakeholder account
+            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+            match stakeholderbalance.checked_add(payout) {
+                Some(sum) => stakeholderbalance = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+            // increment total supply
+            match self.pool.circulating.checked_add(payout) {
+                Some(sum) => self.pool.circulating = sum,
+                None => return Err(OtherError::Overflow),
+            };
+
+            // deduct tokens from owners account
+            let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
+            match ownerbalance.checked_sub(payout) {
+                Some(difference) => ownerbalance = difference,
+                None => return Err(OtherError::Underflow),
+            };
+            self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
 
             // update pool balance
             match self.pool.balances[this_stakeholder.pool as usize].checked_sub(payout) {
@@ -1073,18 +1117,12 @@ pub mod ilockmvp {
             &mut self,
             reward: Balance,
             interlocker: AccountId
-        ) -> PSP22Result<Balance> {
+        ) -> OtherResult<Balance> {
 
             // make sure reward not too large
             if self.pool.balances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge.into())
             }
-
-            // update total amount rewarded to interlocker
-            match self.reward.total.checked_add(reward) {
-                Some(sum) => self.reward.total = sum,
-                None => return Err(OtherError::PaymentTooLarge.into()),
-            };
 
             // update rewards pool balance
             // (contract calls transfer, not owner, thus we must update here)
@@ -1093,16 +1131,39 @@ pub mod ilockmvp {
                 None => return Err(OtherError::PaymentTooLarge.into()),
             };
 
-            // transfer reward tokens from rewards pool to interlocker
-            let _ = self.transfer(interlocker, reward, Default::default())?;
+            // increment reward to operator's account
+            let mut interlockerbalance: Balance = self.psp22.balance_of(interlocker);
+            match interlockerbalance.checked_add(reward) {
+                Some(sum) => interlockerbalance = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            self.psp22.balances.insert(&interlocker, &interlockerbalance);
 
-            // get previous total rewarded to interlocker
+            // update total amount rewarded to interlocker
+            match self.reward.total.checked_add(reward) {
+                Some(sum) => self.reward.total = sum,
+                None => return Err(OtherError::PaymentTooLarge.into()),
+            };
+
+            // increment total supply
+            match self.pool.circulating.checked_add(reward) {
+                Some(sum) => self.pool.circulating = sum,
+                None => return Err(OtherError::Overflow),
+            };
+
+            // deduct tokens from owners account
+            let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
+            match ownerbalance.checked_sub(reward) {
+                Some(difference) => ownerbalance = difference,
+                None => return Err(OtherError::Underflow),
+            };
+            self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
+
+            // compute and update new total awarded to interlocker
             let rewardedinterlockertotal: Balance = match self.reward.interlocker.get(interlocker) {
                 Some(total) => total,
                 None => 0,
             };
-
-            // compute and update new total awarded to interlocker
             let newrewardedtotal: Balance = match rewardedinterlockertotal.checked_add(reward) {
                 Some(sum) => sum,
                 None => return Err(OtherError::PaymentTooLarge.into()),
