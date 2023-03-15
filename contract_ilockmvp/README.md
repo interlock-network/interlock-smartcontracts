@@ -1,6 +1,18 @@
 # $ILOCK PSP22 Rewards Smart Contract
 
-`ilockmvp` is the main Interlock Network smart contract to be hosted on Aleph Zero. For now this consists of one ERC20-style token (PSP22) contract with functionality to manage interlocker rewards for surfing the web with browser extension. Future contracts will be responsible for Phase 2, where we implement the security staking model for interlockers to actively earn rewards by staking tokens on questionable websites.
+The `ilockmvp` is the main Interlock Network smart contract to be hosted on Aleph Zero. For now this consists of one ERC20-style token contract (the Polkadot PSP22 spec) with functionality to manage interlocker rewards for surfing the web with browser extension. Future contracts will be responsible for Phase 2, where we implement the security staking model for interlockers to actively earn rewards by staking tokens on questionable websites.
+
+The `ilockmvp` contract is to be the centerpoint that the entire Interlock Network and ecosystem revolves around. The contract is meant to be simple, with upgradability and extendability in mind.
+
+The core of the contract is a standard Openbrush PSP22 token implementation. Built around the PSP22 token are provisions to enforce a vesting schedule, plus provisions to maintain higher resolution in accounting and bookkeeping than the typical PSP22 along.
+
+As for the minimum viable product, the purpose of $ILOCK utility token is to incentivize Interlocker browser extension operators to share their browsing data and feedback by issuing rewards. In addition to the basic token and vesting/accounting measures, there is a simple suite of rewards-related function built in. The minimum viable function is simply one that issues a variable reward to a specified interlocker, drawn from the rewards pool.
+
+This contract is unique in for two reasons:
+
+1) This contract has no mint function. The fixed cap of 1B tokens is dumped into the contract owner's account (Interlock Foundation) on TGE. For this reason, `total_supply()` is reimplemented to reflect total supply of tokens in _circulation_. Tokens are released into circulation from pools according to vesting schedule and rewards (rewards maximum being limited to the size of the rewards pool). All pool sizes and schedules are preallocated and hard-coded into the contract. One pool for proceeds starts with an empty balance and is used to collect fees and taxes from application contracts interacting with `ilockmvp`. Pool balances do not have entries in the PSP22 balance mapping. The only balance mapping entry is the contract owner's balance, which reflects to total of all non-circulating tokens. The purpose of this strategy is to avoid the `mint()` function, which is not part of the PSP22 spec, but wildly popular in token contracts (and on occasion, vulnerable to exploit).
+
+2) This contract implements Interlock Network's novel [application port/socket formalism](../contract_application/). In short, this formalism provides provisions for treating this PSP22 smart contract like a _computer_. What this accomplishes is to enable versatile connectivity between arbitrary application contracts and this central PSP22 token contract, while simultaneously reducing the need for Interlock Network (or any forking network) to serve as an off-chain transaction relay (a glaring vulnerability for many dApp implementations).
 
 ## How to get setup and build:
 
