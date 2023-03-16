@@ -1054,7 +1054,7 @@ pub mod ilockmvp {
 /////// pool data //////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - Function that returns pool data.
+        /// - Function that returns pool data in human readable format..
         /// - This will allow observers to verify vesting parameters for each pool (esp. theirs).
         /// - Observers may verify pool data from explorer if so motivated.
         /// - Pool numbers range from 0-11.
