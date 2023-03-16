@@ -8,7 +8,7 @@ Contracts are written in [ink!](https://use.ink), employ [Openbrush](https://ope
 
 ## Contracts:
 
-#### [$ILOCK Token and Rewards](./contract_ilockmvp) ~ [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/)
+#### [$ILOCK PSP22 Rewards Smart Contract](./contract_ilockmvp) ~ [[DOCUMENTATION]](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/)
 
 This is our primary PSP22 token contract, which contains provisions for rewarding Interlockers, enforcing a token vesting schedule, higher-resolution book keeping, and connecting approved external application contracts for 'superuser' privileged access to internal contract functionalities and single-transaction purchases paid in $ILOCK token. (Read more in Universal Access NFT and Port/Socket Application Template.) This contract employs ink! 4 and Openbrush 3.
 
