@@ -4,7 +4,7 @@
 
 <img style="top: -10px" align="right" width="300" height="150" src="media/interlockey.jpg">
 
-The Interlock Universal Access NFT is a scheme for licensing and managing access permissions via ownership of a novel PSP34 NFT. This project is sponsored by the [Aleph Zero](https://alephzero.org) Grant Program and is intended to provide this licensing/access scheme as a general framework to the Aleph Zero community at large. The NFT used in this project is compatible with the [Art Zero](https://artzero.io) marketplace.
+The Interlock Universal Access NFT is a scheme for licensing and managing access permissions via ownership of a novel PSP34 NFT. **This project is sponsored by the [Aleph Zero](https://alephzero.org) Grant Program and is intended to provide this licensing/access scheme as a general framework to the Aleph Zero community at large.** The NFT used in this project is compatible with the [Art Zero](https://artzero.io) marketplace.
 
 #### Implementing this system in production presumes knowledge of the following:
  - [PSP43 NFT standard (ERC721)](https://github.com/w3f/PSPs/blob/master/PSPs/psp-34.md)
