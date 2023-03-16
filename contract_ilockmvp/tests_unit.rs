@@ -134,7 +134,7 @@ fn happy_create_get_port_tax_transfer() {
 
     assert_eq!(port.paid, 1_000_000 - 1_000); // 999_000
     assert_eq!(port.collected, 0 + 1_000);
-    assert_eq!(ILOCKmvpPSP22.proceeds_available(), 0 + 1_000);
+    assert_eq!(ILOCKmvpPSP22.balances[PROCEEDS as usize], 0 + 1_000);
     assert_eq!(ILOCKmvpPSP22.total_supply(), 1_000_000 - 1_000);
 }
 

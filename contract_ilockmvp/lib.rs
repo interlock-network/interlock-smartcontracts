@@ -147,33 +147,6 @@ pub mod ilockmvp {
         pub _reserved: Option<()>,
     }
 
-    /// - This is upgradable storage for the token pool management and accounting feature of this
-    /// PSP22 contract.
-    pub const POOL_KEY: u32 = openbrush::storage_unique_key!(TokenPools);
-    #[derive(Default, Debug)]
-    #[openbrush::upgradeable_storage(POOL_KEY)]
-    pub struct TokenPools {
-
-        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
-        // OR TYPES IF UPGRADING THIS CONTRACT!!!
-
-        /// - What are the current balances of all the vesting pools?
-        /// - This includes the rewards pool balance.
-        pub balances: [Balance; POOL_COUNT],
-
-        /// - How much ILOCK is circulating right now?
-        /// - This includes token held by liquidity pools/exchanges.
-        /// - This is the value of `total_supply()` getter.
-        pub circulating: Balance,
-
-        /// - How much do we have available in collected taxes/fees from port owners
-        /// and application contract operators?
-        pub proceeds: Balance,
-
-        /// - Expand storage related to the pool accounting functionality.
-        pub _reserved: Option<()>,
-    }
-
     /// - This is upgradable storage for the application connection feature of this
     /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
     pub const VEST_KEY: u32 = openbrush::storage_unique_key!(VestData);
@@ -1133,6 +1106,16 @@ pub mod ilockmvp {
             // make sure reward not too large
             if self.balances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge)
+            }
+
+            // make sure vest limit will not be passed with this reward
+            let monthly: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
+                POOLS[REWARDS as usize].vests as Balance;
+            let currentcap: Balance = (self.vest.monthspassed + 1) as Balance * monthly;
+            if currentcap < POOLS[REWARDS as usize].tokens * DECIMALS_POWER10
+                - self.balances[REWARDS as usize] + reward {
+
+                return Err(OtherError::PayoutTooEarly)
             }
 
             // make sure rewardee is not contract
