@@ -58,7 +58,7 @@ pub mod ilockmvp {
     use openbrush::{
         contracts::{
             psp22::{
-                extensions::{metadata::*, burnable::*},
+                extensions::metadata::*,
                 Internal,
             },
             ownable::*,
@@ -665,38 +665,6 @@ pub mod ilockmvp {
             Ok(())
         }
     }
-
-    impl PSP22Burnable for ILOCKmvp {
-
-        /// - Override default burn doer.
-        /// - Burn function to permanently remove tokens from circulation / supply.
-        #[ink(message)]
-		#[openbrush::modifiers(only_owner)]
-        fn burn(
-            &mut self,
-            donor: AccountId,
-            amount: Balance,
-        ) -> PSP22Result<()> {
-
-            // burn the tokens
-            let _ = self._burn_from(donor, amount)?;
-
-            // adjust pool balances
-            if donor == self.ownable.owner {
-                match self.balances[REWARDS as usize].checked_sub(amount) {
-                    Some(difference) => self.balances[REWARDS as usize] = difference,
-                    None => return Err(OtherError::Underflow.into()),
-                };
-            } else {
-                match self.balances[CIRCULATING as usize].checked_sub(amount) {
-                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
-                    None => return Err(OtherError::Underflow.into()),
-                };
-            }
-
-            Ok(())
-        }
-	}
 
     impl Internal for ILOCKmvp {
 
@@ -1610,9 +1578,9 @@ pub mod tests_unit;
 // [x] happye2e_transfer             \
 // [] sade2e_transfer                |
 // [x] happye2e_transfer_from        |---- we test these because we change the default openbrush
-// [] sade2e_transfer_from           |     implementations ... per agreement with Kudelski, we will
-// [x] happye2e_burn                 |     be assuming that openbrush is safe ... we may wish to perform
-// [] sade2e_burn                    /     additional tests once audit is underway or/ in general future
+// [] sade2e_transfer_from           /     implementations ... per agreement with Kudelski, we will
+//                                         be assuming that openbrush is safe ... we may wish to perform
+//                                         additional tests once audit is underway or/ in general future
 // [x] happyunit_new_token (no sad, returns only Self)
 // [!] happyunit_check_time                  <-- not possible to advance block, TEST ON TESTNET
 // [!] sadunit_check_time                    <-- not possible to advance block, TEST ON TESTNET
