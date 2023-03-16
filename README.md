@@ -1,6 +1,6 @@
-# Interlock Network Smart Contracts
+<img align="right" width="300" height="300" src="https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cffa42ae33001294d1_interlock-visual-hero.png">
 
-<img align="right" width="150" height="150" src="https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cffa42ae33001294d1_interlock-visual-hero.png">
+# Interlock Network Smart Contracts
 
 Welcome! This repo hosts development of all smart contracts that actualize our [**Interlock token model**](https://github.com/interlock-network/interlock-models) and [**DeSec**](https://docs.interlock.network) infrastructure. It exists to be transparent about our contract development.
 
