@@ -72,7 +72,7 @@ pub mod ilockmvp {
 
     /// - Magic numbers.
     pub const ID_LENGTH: usize = 32;                                // 32B account id
-    pub const POOL_COUNT: usize = 12;                               // number of stakeholder pools
+    pub const POOL_COUNT: usize = 13;                               // number of token pools
     pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
 
     /// - Token data.
@@ -93,7 +93,6 @@ pub mod ilockmvp {
 
     /// - Pool data.
     pub const POOLS: [PoolData; POOL_COUNT] = [
-        PoolData { name: "early_backers+venture_capital", tokens: 20_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
         PoolData { name: "presale_2",                     tokens: 66_666_667,  vests: 15, cliffs: 1, },
         PoolData { name: "presale_3",                     tokens: 40_000_000,  vests: 12, cliffs: 1, },
@@ -103,23 +102,26 @@ pub mod ilockmvp {
         PoolData { name: "rewards",                       tokens: 285_000_000, vests: 1,  cliffs: 0, },
         PoolData { name: "foundation",                    tokens: 172_711_111, vests: 84, cliffs: 1, },
         PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
-        PoolData { name: "whitelist",                     tokens: 15_000_000,  vests: 48, cliffs: 0, },
+        PoolData { name: "community_sale",                tokens: 15_000_000,  vests: 48, cliffs: 0, },
         PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 48, cliffs: 0, },
+        PoolData { name: "proceeds",                      tokens: 0,           vests: 0,  cliffs: 0, },
+        PoolData { name: "circulating",                   tokens: 0,           vests: 0,  cliffs: 0, },
     ];
 
     /// - Pools.
-    pub const EARLY_BACKERS: u8     = 0;
-    pub const PRESALE_1: u8         = 1;
-    pub const PRESALE_2: u8         = 2;
-    pub const PRESALE_3: u8         = 3;
-    pub const TEAM_FOUNDERS: u8     = 4;
-    pub const OUTLIER_VENTURES: u8  = 5;
-    pub const ADVISORS: u8          = 6;
-    pub const REWARDS: u8           = 7;
-    pub const FOUNDATION: u8        = 8;
-    pub const PARTNERS: u8          = 9;
-    pub const WHITELIST: u8         = 10;
-    pub const PUBLIC_SALE: u8       = 11;
+    pub const PRESALE_1: u8         = 0;
+    pub const PRESALE_2: u8         = 1;
+    pub const PRESALE_3: u8         = 2;
+    pub const TEAM: u8              = 3;
+    pub const OUTLIER: u8           = 4;
+    pub const ADVISORS: u8          = 5;
+    pub const REWARDS: u8           = 6;
+    pub const FOUNDATION: u8        = 7;
+    pub const PARTNERS: u8          = 8;
+    pub const COMMUNITY: u8         = 9;
+    pub const PUBLIC: u8            = 10;
+    pub const PROCEEDS: u8          = 11;
+    pub const CIRCULATING: u8       = 12;
 
 ////////////////////////////////////////////////////////////////////////////
 //// structured data ///////////////////////////////////////////////////////
@@ -430,10 +432,6 @@ pub mod ilockmvp {
         #[storage_field]
         pub reward: RewardData,
 
-        /// - ILOCK token pool info.
-        #[storage_field]
-        pub pool: TokenPools,
-
         /// - ILOCK vesting info.
         #[storage_field]
         pub vest: VestData,
@@ -441,6 +439,9 @@ pub mod ilockmvp {
         /// - ILOCK connecting application contract info
         #[storage_field]
         pub app: AppData,
+
+        /// - ILOCK token pool balances.
+        pub balances: [Balance; POOL_COUNT],
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -570,7 +571,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.pool.circulating
+            self.balances[CIRCULATING as usize]
         }
 
         /// - Override default transfer doer.
@@ -597,12 +598,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.pool.balances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.pool.balances[REWARDS as usize] = sum,
+                match self.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.pool.circulating.checked_sub(value) {
-                    Some(difference) => self.pool.circulating = difference,
+                match self.balances[CIRCULATING as usize].checked_sub(value) {
+                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -630,8 +631,8 @@ pub mod ilockmvp {
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
 
-                match self.pool.circulating.checked_add(value) {
-                    Some(sum) => self.pool.circulating = sum,
+                match self.balances[CIRCULATING as usize].checked_add(value) {
+                    Some(sum) => self.balances[CIRCULATING as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
@@ -639,12 +640,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.pool.balances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.pool.balances[REWARDS as usize] = sum,
+                match self.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.pool.circulating.checked_sub(value) {
-                    Some(difference) => self.pool.circulating = difference,
+                match self.balances[CIRCULATING as usize].checked_sub(value) {
+                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -709,13 +710,13 @@ pub mod ilockmvp {
 
             // adjust pool balances
             if donor == self.ownable.owner {
-                match self.pool.balances[REWARDS as usize].checked_sub(amount) {
-                    Some(difference) => self.pool.balances[REWARDS as usize] = difference,
+                match self.balances[REWARDS as usize].checked_sub(amount) {
+                    Some(difference) => self.balances[REWARDS as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             } else {
-                match self.pool.circulating.checked_sub(amount) {
-                    Some(difference) => self.pool.circulating = difference,
+                match self.balances[CIRCULATING as usize].checked_sub(amount) {
+                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -796,7 +797,6 @@ pub mod ilockmvp {
             contract.vest.monthspassed = 0;
             contract.vest.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
             contract.reward.total = 0;
-            contract.pool.circulating = 0;
 
             contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
             contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string().into_bytes());
@@ -810,8 +810,8 @@ pub mod ilockmvp {
             // create initial pool balances
             for pool in 0..POOL_COUNT {
 
-                contract.pool.balances[pool] =
-                                POOLS[pool].tokens * DECIMALS_POWER10;
+                contract.balances[pool] =
+                            POOLS[pool].tokens * DECIMALS_POWER10;
             }
             
             contract
@@ -994,8 +994,8 @@ pub mod ilockmvp {
             self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
 
             // increment total supply
-            match self.pool.circulating.checked_add(payout) {
-                Some(sum) => self.pool.circulating = sum,
+            match self.balances[CIRCULATING as usize].checked_add(payout) {
+                Some(sum) => self.balances[CIRCULATING as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1008,8 +1008,8 @@ pub mod ilockmvp {
             self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
 
             // update pool balance
-            match self.pool.balances[this_stakeholder.pool as usize].checked_sub(payout) {
-                Some(difference) => self.pool.balances[this_stakeholder.pool as usize] = difference,
+            match self.balances[this_stakeholder.pool as usize].checked_sub(payout) {
+                Some(difference) => self.balances[this_stakeholder.pool as usize] = difference,
                 None => return Err(OtherError::Underflow),
             };
 
@@ -1023,8 +1023,8 @@ pub mod ilockmvp {
         /// - Function used to payout tokens to pools with no vesting schedule.
         /// POOL ARGUMENTS:
         ///      PARTNERS
-        ///      WHITELIST
-        ///      PUBLIC_SALE
+        ///      COMMUNITY
+        ///      PUBLIC
         ///      PROCEEDS
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -1039,13 +1039,13 @@ pub mod ilockmvp {
 
             let poolnumber: u8 = match pool.as_str() {
                 "PARTNERS"      => 9,
-                "WHITELIST"     => 10,
-                "PUBLIC_SALE"   => 11,
+                "COMMUNITY"     => 10,
+                "PUBLIC"        => 11,
                 "PROCEEDS"      => {
 
                     // deduct payout amount
-                    match self.pool.proceeds.checked_sub(amount) {
-                        Some(difference) => self.pool.proceeds = difference,
+                    match self.balances[PROCEEDS as usize].checked_sub(amount) {
+                        Some(difference) => self.balances[PROCEEDS as usize] = difference,
                         None => return Err(OtherError::PaymentTooLarge),
                     };
 
@@ -1059,8 +1059,8 @@ pub mod ilockmvp {
                     self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
 
                    // increment total supply
-                    match self.pool.circulating.checked_add(amount) {
-                        Some(sum) => self.pool.circulating = sum,
+                    match self.balances[CIRCULATING as usize].checked_add(amount) {
+                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
                         None => return Err(OtherError::Overflow),
                     };
 
@@ -1078,8 +1078,8 @@ pub mod ilockmvp {
             };
 
             // deduct payout amount
-            match self.pool.balances[poolnumber as usize].checked_sub(amount) {
-                Some(difference) => self.pool.balances[poolnumber as usize] = difference,
+            match self.balances[poolnumber as usize].checked_sub(amount) {
+                Some(difference) => self.balances[poolnumber as usize] = difference,
                 None => return Err(OtherError::PaymentTooLarge),
             };
 
@@ -1093,8 +1093,8 @@ pub mod ilockmvp {
             self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
 
             // increment total supply
-            match self.pool.circulating.checked_add(amount) {
-                Some(sum) => self.pool.circulating = sum,
+            match self.balances[CIRCULATING as usize].checked_add(amount) {
+                Some(sum) => self.balances[CIRCULATING as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1144,8 +1144,8 @@ pub mod ilockmvp {
 
             (format!("pool: {:?}, balance: {:?}", 
                     POOLS[poolnumber as usize].name.to_string(),
-                    self.pool.balances[poolnumber as usize]),
-             self.pool.balances[poolnumber as usize])
+                    self.balances[poolnumber as usize]),
+             self.balances[poolnumber as usize])
         }
 
         /// - Display proceeds pool balance.
@@ -1155,7 +1155,7 @@ pub mod ilockmvp {
             &self,
         ) -> Balance {
 
-            self.pool.proceeds
+            self.balances[PROCEEDS as usize]
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1173,7 +1173,7 @@ pub mod ilockmvp {
         ) -> OtherResult<Balance> {
 
             // make sure reward not too large
-            if self.pool.balances[REWARDS as usize] < reward {
+            if self.balances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge)
             }
 
@@ -1184,8 +1184,8 @@ pub mod ilockmvp {
 
             // update rewards pool balance
             // (contract calls transfer, not owner, thus we must update here)
-            match self.pool.balances[REWARDS as usize].checked_sub(reward) {
-                Some(difference) => self.pool.balances[REWARDS as usize] = difference,
+            match self.balances[REWARDS as usize].checked_sub(reward) {
+                Some(difference) => self.balances[REWARDS as usize] = difference,
                 None => return Err(OtherError::PaymentTooLarge),
             };
 
@@ -1204,8 +1204,8 @@ pub mod ilockmvp {
             };
 
             // increment total supply
-            match self.pool.circulating.checked_add(reward) {
-                Some(sum) => self.pool.circulating = sum,
+            match self.balances[CIRCULATING as usize].checked_add(reward) {
+                Some(sum) => self.balances[CIRCULATING as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1477,12 +1477,12 @@ pub mod ilockmvp {
                     self.psp22.balances.insert(&address, &minterbalance);
                 
                     // update pools
-                    match self.pool.balances[REWARDS as usize].checked_add(amount) {
-                        Some(sum) => self.pool.balances[REWARDS as usize] = sum,
+                    match self.balances[REWARDS as usize].checked_add(amount) {
+                        Some(sum) => self.balances[REWARDS as usize] = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    match self.pool.circulating.checked_sub(amount) {
-                        Some(difference) => self.pool.circulating = difference,
+                    match self.balances[CIRCULATING as usize].checked_sub(amount) {
+                        Some(difference) => self.balances[CIRCULATING as usize] = difference,
                         None => return Err(OtherError::Underflow),
                     };
 
@@ -1566,12 +1566,12 @@ pub mod ilockmvp {
             };
 
             // update proceeds pool and total circulation
-            match self.pool.proceeds.checked_add(tax) {
-                Some(sum) => self.pool.proceeds = sum,
+            match self.balances[PROCEEDS as usize].checked_add(tax) {
+                Some(sum) => self.balances[PROCEEDS as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match self.pool.circulating.checked_sub(tax) {
-                Some(difference) => self.pool.circulating = difference,
+            match self.balances[CIRCULATING as usize].checked_sub(tax) {
+                Some(difference) => self.balances[CIRCULATING as usize] = difference,
                 None => return Err(OtherError::Underflow),
             };
 

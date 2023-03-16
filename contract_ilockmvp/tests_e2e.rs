@@ -453,17 +453,17 @@ async fn happy_distribute_tokens(
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let stakeholder_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
     let stakeholder_share = 1_000_000_000;
-    let pool_size = POOLS[TEAM_FOUNDERS as usize].tokens * DECIMALS_POWER10;
+    let pool_size = POOLS[TEAM as usize].tokens * DECIMALS_POWER10;
 
     // register stakeholder
     let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.register_stakeholder(
-            stakeholder_account.clone(), stakeholder_share, TEAM_FOUNDERS));
+            stakeholder_account.clone(), stakeholder_share, TEAM));
     let _register_stakeholder_result = client
         .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
 
-    let cliff = POOLS[TEAM_FOUNDERS as usize].cliffs;
-    let vests = POOLS[TEAM_FOUNDERS as usize].vests;
+    let cliff = POOLS[TEAM as usize].cliffs;
+    let vests = POOLS[TEAM as usize].vests;
     let schedule_end = vests + cliff - 1;
     let schedule_period = vests;
     let payout = 1_000_000_000 / vests as Balance; // 27_777_777
@@ -503,7 +503,7 @@ async fn happy_distribute_tokens(
                 .await.return_value();
 
         let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-            .call(|contract| contract.pool_balance(TEAM_FOUNDERS));
+            .call(|contract| contract.pool_balance(TEAM));
         let pool_balance = client
             .call_dry_run(&ink_e2e::alice(), &pool_balance_msg.clone(), 0, None)
                 .await.return_value().1;
@@ -570,7 +570,7 @@ async fn sad_distribute_tokens(
 }
 
 /// - Check to make sure payout_tokens works as expected.
-/// - Checks PARTNERS, WHITELIST, and PUBLIC_SALE pools.
+/// - Checks PARTNERS, COMMUNITY, and PUBLIC pools.
 /// - Checks resulting balances for three pools and recipients.
 #[ink_e2e::test]
 async fn happy_payout_tokens(
@@ -591,10 +591,10 @@ async fn happy_payout_tokens(
             bob_account.clone(), 1000, "PARTNERS".to_string()));
     let whitelist_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.payout_tokens(
-            bob_account.clone(), 1000, "WHITELIST".to_string()));
+            bob_account.clone(), 1000, "COMMUNITY".to_string()));
     let publicsale_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.payout_tokens(
-            bob_account.clone(), 1000, "PUBLIC_SALE".to_string()));
+            bob_account.clone(), 1000, "PUBLIC".to_string()));
 
     // alice pays 1000 ILOCK to bob from PARTNERS pool
     let _partners_pay_result = client
@@ -621,7 +621,7 @@ async fn happy_payout_tokens(
         .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
     assert_eq!(POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
-    // alice pays 1000 ILOCK to bob from WHITELIST pool
+    // alice pays 1000 ILOCK to bob from COMMUNITY pool
     let _whitelist_pay_result = client
         .call(&ink_e2e::alice(), whitelist_pay_msg, 0, None).await;
 
@@ -637,12 +637,12 @@ async fn happy_payout_tokens(
 
     // checks that pool has expected resulting balance
     pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-        .call(|contract| contract.pool_balance(WHITELIST));
+        .call(|contract| contract.pool_balance(COMMUNITY));
     pool_balance = client
         .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
-    assert_eq!(POOLS[WHITELIST as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+    assert_eq!(POOLS[COMMUNITY as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
-    // alice pays 1000 ILOCK to bob from PUBLIC_SALE pool
+    // alice pays 1000 ILOCK to bob from PUBLIC pool
     let _publicsale_pay_result = client
         .call(&ink_e2e::alice(), publicsale_pay_msg, 0, None).await;
 
@@ -658,10 +658,10 @@ async fn happy_payout_tokens(
 
     // checks that pool has expected resulting balance
     pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-        .call(|contract| contract.pool_balance(PUBLIC_SALE));
+        .call(|contract| contract.pool_balance(PUBLIC));
     pool_balance = client
         .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
-    assert_eq!(POOLS[PUBLIC_SALE as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
+    assert_eq!(POOLS[PUBLIC as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
     
     Ok(())
 }
@@ -670,7 +670,7 @@ async fn happy_payout_tokens(
 ///
 /// - Return
 ///     CallerNotOwner          - when caller does not own contract
-///     InvalidPool             - when pool isn't (PARTNERS|WHITELIST|PUBLIC_SALE)
+///     InvalidPool             - when pool isn't (PARTNERS|COMMUNITY|PUBLIC)
 ///     PaymentTooLarge         - when specified payment amount is more than pool
 #[ink_e2e::test]
 async fn sad_payout_tokens(

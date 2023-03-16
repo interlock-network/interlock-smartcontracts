@@ -115,7 +115,7 @@ fn happy_create_get_port_tax_transfer() {
         owner: owner,
     });
 
-    ILOCKmvpPSP22.pool.circulating += 1_000_000;
+    ILOCKmvpPSP22.balances[CIRCULATING as usize] += 1_000_000;
 
     let test_socket: Socket = Socket {
 
