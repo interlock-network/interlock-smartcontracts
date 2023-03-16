@@ -1127,14 +1127,14 @@ pub mod ilockmvp {
 
             // make sure reward not too large
             if self.pool.balances[REWARDS as usize] < reward {
-                return Err(OtherError::PaymentTooLarge.into())
+                return Err(OtherError::PaymentTooLarge)
             }
 
             // update rewards pool balance
             // (contract calls transfer, not owner, thus we must update here)
             match self.pool.balances[REWARDS as usize].checked_sub(reward) {
                 Some(difference) => self.pool.balances[REWARDS as usize] = difference,
-                None => return Err(OtherError::PaymentTooLarge.into()),
+                None => return Err(OtherError::PaymentTooLarge),
             };
 
             // increment reward to operator's account
@@ -1148,7 +1148,7 @@ pub mod ilockmvp {
             // update total amount rewarded to interlocker
             match self.reward.total.checked_add(reward) {
                 Some(sum) => self.reward.total = sum,
-                None => return Err(OtherError::PaymentTooLarge.into()),
+                None => return Err(OtherError::PaymentTooLarge),
             };
 
             // increment total supply
@@ -1172,7 +1172,7 @@ pub mod ilockmvp {
             };
             let newrewardedtotal: Balance = match rewardedinterlockertotal.checked_add(reward) {
                 Some(sum) => sum,
-                None => return Err(OtherError::PaymentTooLarge.into()),
+                None => return Err(OtherError::PaymentTooLarge),
             };
             self.reward.interlocker.insert(interlocker, &newrewardedtotal);
 
