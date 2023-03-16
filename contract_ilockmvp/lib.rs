@@ -657,6 +657,9 @@ pub mod ilockmvp {
 
     impl Ownable for ILOCKmvp {
         
+        /// - Override default transfer ownership function.
+        /// - On transfer, also transfer old owner balance to new owner.
+        /// - That is, transfer noncirculating tokens to new owner.
         #[ink(message)]
         fn transfer_ownership(
             &mut self,
@@ -665,13 +668,14 @@ pub mod ilockmvp {
 
             let oldowner = self.ownable.owner;
             
+            // only-owner modifier not present in this scope
             if oldowner != self.env().caller() {
 
                 return Err(OwnableError::CallerIsNotOwner);
             }
             let oldbalance: Balance = self.balance_of(oldowner);
 
-            // increment new owner account
+            // transfer all remaining owner tokens (pools) to new owner
             let mut newbalance: Balance = self.psp22.balance_of(newowner);
             match newbalance.checked_add(oldbalance) {
                 Some(sum) => newbalance = sum,
@@ -758,6 +762,8 @@ pub mod ilockmvp {
     }
 
     /// - This is for linking openbrush PSP34 or application contract.
+    /// - This is necessary because a struct in PSP34 needs derive(Default)
+    /// and the contract Ref has no derivable Default implementation.
     impl Default for ILOCKmvpRef {
         fn default() -> ILOCKmvpRef {
             ink::env::call::FromAccountId::from_account_id(AccountId::from([1_u8; 32]))
@@ -858,7 +864,7 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 
         /// - Function that registers a stakeholder's wallet and vesting info.
-        /// - Used to calculate monthly payouts and track net paid.
+        /// - Data used to calculate monthly payouts and track net paid.
         /// - Stakeholder data also used for stakeholder to verify their place in vesting schedule.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -889,7 +895,7 @@ pub mod ilockmvp {
 
         /// - Function that returns a stakeholder's payout and other data.
         /// - This will allow stakeholders to verify their stake from explorer if so motivated.
-        /// - Returns tuple (StakeholderData, payremaining, payamount, poolnumber).
+        /// - Returns tuple (StakeholderData, payremaining, payamount, poolname).
         #[ink(message)]
         pub fn stakeholder_data(
             &self,
@@ -921,8 +927,8 @@ pub mod ilockmvp {
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - General function to transfer the token share a stakeholder is currently entitled to.
-        /// - This is called once per stakeholder by Interlock, Interlock paying fees.
+        /// - General function to transfer share a stakeholder is currently entitled to.
+        /// - This is called once per stakeholder per month by Interlock, Interlock paying fees.
         /// - Pools are guaranteed to have enough tokens for all stakeholders.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -934,18 +940,18 @@ pub mod ilockmvp {
             // get data structs
             let mut this_stakeholder = match self.vest.stakeholder.get(stakeholder) {
                 Some(s) => s,
-                None => { return Err(OtherError::StakeholderNotFound.into()) },
+                None => { return Err(OtherError::StakeholderNotFound) },
             };
             let pool = &POOLS[this_stakeholder.pool as usize];
 
             // require cliff to have been surpassed
             if self.vest.monthspassed < pool.cliffs as u16 {
-                return Err(OtherError::CliffNotPassed.into())
+                return Err(OtherError::CliffNotPassed)
             }
 
             // require share has not been completely paid out
             if this_stakeholder.paid == this_stakeholder.share {
-                return Err(OtherError::StakeholderSharePaid.into())
+                return Err(OtherError::StakeholderSharePaid)
             }
 
             // calculate the payout owed
@@ -956,19 +962,19 @@ pub mod ilockmvp {
             // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
             let payments = this_stakeholder.paid / payout;
             if payments >= self.vest.monthspassed as u128 {
-                return Err(OtherError::PayoutTooEarly.into())
+                return Err(OtherError::PayoutTooEarly)
             }
 
             // calculate the new total paid to stakeholder
             let mut newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
                 Some(sum) => sum,
-                None => return Err(OtherError::Overflow.into()),
+                None => return Err(OtherError::Overflow),
             };
 
             // calculate remaining share
             let remainingshare: Balance = match this_stakeholder.share.checked_sub(newpaidtotal) {
                 Some(difference) => difference,
-                None => return Err(OtherError::Underflow.into()),
+                None => return Err(OtherError::Underflow),
             };
 
             // if this is final payment, add token remainder to payout
@@ -1004,7 +1010,7 @@ pub mod ilockmvp {
             // update pool balance
             match self.pool.balances[this_stakeholder.pool as usize].checked_sub(payout) {
                 Some(difference) => self.pool.balances[this_stakeholder.pool as usize] = difference,
-                None => return Err(OtherError::Underflow.into()),
+                None => return Err(OtherError::Underflow),
             };
 
             // finally update stakeholder data struct state
