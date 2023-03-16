@@ -1,6 +1,6 @@
 ### [(Visit this link to explore the demo Universal Access NFT application.)](https://github.com/interlock-network/universal-access-nft-demo)
 
-# The Interlock Network Universal Access NFT
+# Interlock Network Universal Access NFT
 
 <img style="top: -10px" align="right" width="180" height="180" src="interkey.jpg">
 <img align="right" width="150" height="150" src="https://user-images.githubusercontent.com/69293813/211380333-f29cd213-f1f5-46c6-8c02-5ba0e15588f0.png">
