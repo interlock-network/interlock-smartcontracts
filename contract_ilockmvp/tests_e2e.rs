@@ -9,7 +9,7 @@
 //!
 //! ##### to setup for e2e testin, run
 //!
-//! ubstrate-contracts-node --log info,runtime::contracts=debug 2>&1
+//! substrate-contracts-node --log info,runtime::contracts=debug 2>&1
 //! 
 //! ##### after installing by running
 //!
@@ -39,10 +39,7 @@ use ink_e2e::build_message;
 type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 use openbrush::{
-    contracts:: psp22::{
-        psp22_external::PSP22,
-        extensions::burnable::psp22burnable_external::PSP22Burnable,
-    },
+    contracts:: psp22::psp22_external::PSP22,
     traits::Balance,
 };
 
