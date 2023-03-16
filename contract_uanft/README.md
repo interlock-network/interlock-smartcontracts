@@ -1,6 +1,6 @@
 ### [(Visit this link to explore the demo Universal Access NFT CLI application.)](https://github.com/interlock-network/universal-access-nft-demo)
 
-# Interlock Network Universal Access NFT
+# Universal Access NFT (Sponsored by Aleph Zero)
 
 <img style="top: -10px" align="right" width="350" height="150" src="media/interlockey.jpg">
 
