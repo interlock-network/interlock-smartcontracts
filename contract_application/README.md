@@ -1,4 +1,4 @@
-<img align="right" width="350" height="200" src="intersocket.jpg">
+<img align="right" width="350" height="200" src="media/intersocket.jpg">
 
 # Port/Socket Application Template
 
@@ -16,7 +16,7 @@ Each combination of an application's port and an application contract's owner/op
 
 ### Consider the following example schematic diagram, to help clear up some confusion:
 
-![Application port/socket schematic illustration](./application_port_socket_schematic.jpg)
+![Application port/socket schematic illustration](media/example_schematic.jpg)
 
 We could try to be _strictly_ true to the TCP/IP formalism and think of each application as having it's own socket ($ILOCK token address : application number), but this is overly complicated, perhaps reserved for future, more advanced design.
 
