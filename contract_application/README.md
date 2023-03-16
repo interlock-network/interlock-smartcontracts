@@ -1,6 +1,8 @@
-# Port/Socket Application Template Contract
+<img align="right" width="350" height="200" src="intersocket.jpg">
 
-The port/socket application is a formalism -- and abstraction -- drawn from the world of TCP/IP. The purpose of this formalism is to provide a clear way of thinking about how arbitrary smart contracts may interface with the $ILOCK PSP22 token contract in the forseeable future.
+# Port/Socket Application Template
+
+The port/socket application is a formalism -- and abstraction -- drawn from the world of computer networking. The purpose of this formalism is to provide a clear way of thinking about how arbitrary smart contracts may interface with the $ILOCK PSP22 token contract in the forseeable future.
 
 The formalism itself represents an interface scheme. This scheme is purposfully designed to allow verified and approved smart contract applications to use select internal or only-owner functionalities of the Interlock token contract. Verified and approved smart contracts interfacing with the Interlock token contract will only have access to features and functionalities allowed in the verification process.
 
@@ -12,7 +14,7 @@ An application contract is owned by an operator. A different instance of this sa
 
 Each combination of an application's port and an application contract's owner/operator is that we call a _**socket**_, specified in an address:port format. That is, a socket is like the connection from our token contract to an owner operator who may be running several different instances of an application contract at once. A given application's access to the token contract through the single socket is therefore multiplexed by the blockchain itself, as any application's cross-contract socket call on the Interlock token contract's port is atomic.
 
-### Consider the following schematic diagram, to help clear up some confusion:
+### Consider the following example schematic diagram, to help clear up some confusion:
 
 ![Application port/socket schematic illustration](./application_port_socket_schematic.jpg)
 
