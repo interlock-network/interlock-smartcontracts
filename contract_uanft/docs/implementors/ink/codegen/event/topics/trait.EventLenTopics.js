@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"uanft":[["impl EventLenTopics for <a class=\"struct\" href=\"uanft/psp34_nft/struct.Approval.html\" title=\"struct uanft::psp34_nft::Approval\">Approval</a>"],["impl EventLenTopics for <a class=\"struct\" href=\"uanft/psp34_nft/struct.Transfer.html\" title=\"struct uanft::psp34_nft::Transfer\">Transfer</a>"]]
+"uanft":[["impl EventLenTopics for <a class=\"struct\" href=\"uanft/uanft/struct.Approval.html\" title=\"struct uanft::uanft::Approval\">Approval</a>"],["impl EventLenTopics for <a class=\"struct\" href=\"uanft/uanft/struct.Transfer.html\" title=\"struct uanft::uanft::Transfer\">Transfer</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"uanft":[["impl OccupyStorage for <a class=\"struct\" href=\"uanft/psp34_nft/struct.AppData.html\" title=\"struct uanft::psp34_nft::AppData\">AppData</a>"],["impl OccupyStorage for <a class=\"struct\" href=\"uanft/psp34_nft/struct.AccessData.html\" title=\"struct uanft::psp34_nft::AccessData\">AccessData</a>"]]
+"uanft":[["impl OccupyStorage for <a class=\"struct\" href=\"uanft/uanft/struct.AppData.html\" title=\"struct uanft::uanft::AppData\">AppData</a>"],["impl OccupyStorage for <a class=\"struct\" href=\"uanft/uanft/struct.AccessData.html\" title=\"struct uanft::uanft::AccessData\">AccessData</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

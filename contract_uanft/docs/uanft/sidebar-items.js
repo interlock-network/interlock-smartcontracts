@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["psp34_nft"]};
+window.SIDEBAR_ITEMS = {"mod":["uanft"]};

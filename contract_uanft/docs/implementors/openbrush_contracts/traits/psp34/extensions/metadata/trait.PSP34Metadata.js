@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"uanft":[["impl PSP34Metadata for <a class=\"struct\" href=\"uanft/psp34_nft/struct.Psp34Nft.html\" title=\"struct uanft::psp34_nft::Psp34Nft\">Psp34Nft</a>"]]
+"uanft":[["impl PSP34Metadata for <a class=\"struct\" href=\"uanft/uanft/struct.Psp34Nft.html\" title=\"struct uanft::uanft::Psp34Nft\">Psp34Nft</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

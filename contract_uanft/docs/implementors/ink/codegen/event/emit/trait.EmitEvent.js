@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"uanft":[["impl&lt;'a&gt; EmitEvent&lt;<a class=\"struct\" href=\"uanft/psp34_nft/struct.Psp34Nft.html\" title=\"struct uanft::psp34_nft::Psp34Nft\">Psp34Nft</a>&gt; for EnvAccess&lt;'a, &lt;<a class=\"struct\" href=\"uanft/psp34_nft/struct.Psp34Nft.html\" title=\"struct uanft::psp34_nft::Psp34Nft\">Psp34Nft</a> as ContractEnv&gt;::Env&gt;"]]
+"uanft":[["impl&lt;'a&gt; EmitEvent&lt;<a class=\"struct\" href=\"uanft/uanft/struct.Psp34Nft.html\" title=\"struct uanft::uanft::Psp34Nft\">Psp34Nft</a>&gt; for EnvAccess&lt;'a, &lt;<a class=\"struct\" href=\"uanft/uanft/struct.Psp34Nft.html\" title=\"struct uanft::uanft::Psp34Nft\">Psp34Nft</a> as ContractEnv&gt;::Env&gt;"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
