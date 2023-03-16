@@ -94,16 +94,16 @@ pub mod ilockmvp {
     /// - Pool data.
     pub const POOLS: [PoolData; POOL_COUNT] = [
         PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
-        PoolData { name: "presale_2",                     tokens: 66_666_667,  vests: 15, cliffs: 1, },
-        PoolData { name: "presale_3",                     tokens: 40_000_000,  vests: 12, cliffs: 1, },
+        PoolData { name: "presale_2",                     tokens: 33_333_333,  vests: 15, cliffs: 1, },
+        PoolData { name: "presale_3",                     tokens: 93_750_000,  vests: 12, cliffs: 1, },
         PoolData { name: "team+founders",                 tokens: 200_000_000, vests: 36, cliffs: 6, },
         PoolData { name: "outlier_ventures",              tokens: 40_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "advisors",                      tokens: 25_000_000,  vests: 24, cliffs: 1, },
-        PoolData { name: "rewards",                       tokens: 285_000_000, vests: 1,  cliffs: 0, },
-        PoolData { name: "foundation",                    tokens: 172_711_111, vests: 84, cliffs: 1, },
+        PoolData { name: "foundation",                    tokens: 169_264_142, vests: 84, cliffs: 1, },
+        PoolData { name: "rewards",                       tokens: 300_000_000, vests: 48, cliffs: 0, },
         PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
-        PoolData { name: "community_sale",                tokens: 15_000_000,  vests: 48, cliffs: 0, },
-        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 48, cliffs: 0, },
+        PoolData { name: "community_sale",                tokens: 3_030_303,   vests: 1,  cliffs: 0, },
+        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 1,  cliffs: 0, },
         PoolData { name: "proceeds",                      tokens: 0,           vests: 0,  cliffs: 0, },
         PoolData { name: "circulating",                   tokens: 0,           vests: 0,  cliffs: 0, },
     ];
@@ -115,8 +115,8 @@ pub mod ilockmvp {
     pub const TEAM: u8              = 3;
     pub const OUTLIER: u8           = 4;
     pub const ADVISORS: u8          = 5;
-    pub const REWARDS: u8           = 6;
-    pub const FOUNDATION: u8        = 7;
+    pub const FOUNDATION: u8        = 6;
+    pub const REWARDS: u8           = 7;
     pub const PARTNERS: u8          = 8;
     pub const COMMUNITY: u8         = 9;
     pub const PUBLIC: u8            = 10;
@@ -1038,42 +1038,10 @@ pub mod ilockmvp {
             let owner: AccountId = self.env().caller();
 
             let poolnumber: u8 = match pool.as_str() {
-                "PARTNERS"      => 9,
-                "COMMUNITY"     => 10,
-                "PUBLIC"        => 11,
-                "PROCEEDS"      => {
-
-                    // deduct payout amount
-                    match self.balances[PROCEEDS as usize].checked_sub(amount) {
-                        Some(difference) => self.balances[PROCEEDS as usize] = difference,
-                        None => return Err(OtherError::PaymentTooLarge),
-                    };
-
-                    // now transfer tokens
-                    // increment distribution to stakeholder account
-                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-                    match stakeholderbalance.checked_add(amount) {
-                        Some(sum) => stakeholderbalance = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
-
-                   // increment total supply
-                    match self.balances[CIRCULATING as usize].checked_add(amount) {
-                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // deduct tokens from owners account
-                    let mut ownerbalance: Balance = self.psp22.balance_of(owner);
-                    match ownerbalance.checked_sub(amount) {
-                        Some(difference) => ownerbalance = difference,
-                        None => return Err(OtherError::Underflow),
-                    };
-                    self.psp22.balances.insert(&owner, &ownerbalance);
-
-                    return Ok(());
-                },
+                "PARTNERS"      => 8,
+                "COMMUNITY"     => 9,
+                "PUBLIC"        => 10,
+                "PROCEEDS"      => 11,
                 _ => return Err(OtherError::InvalidPool)
             };
 
@@ -1146,16 +1114,6 @@ pub mod ilockmvp {
                     POOLS[poolnumber as usize].name.to_string(),
                     self.balances[poolnumber as usize]),
              self.balances[poolnumber as usize])
-        }
-
-        /// - Display proceeds pool balance.
-        /// - This represents tokens taken as tax or fees from port applications.
-        #[ink(message)]
-        pub fn proceeds_available(
-            &self,
-        ) -> Balance {
-
-            self.balances[PROCEEDS as usize]
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1574,6 +1532,14 @@ pub mod ilockmvp {
                 Some(difference) => self.balances[CIRCULATING as usize] = difference,
                 None => return Err(OtherError::Underflow),
             };
+
+            // increment ILOCK contract owner's account balance
+            let mut ownerbalance: Balance = self.psp22.balance_of(self.ownable.owner);
+            match ownerbalance.checked_add(tax) {
+                Some(sum) => ownerbalance = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            self.psp22.balances.insert(&self.ownable.owner, &ownerbalance);
 
             // update port (paid and collected) 
             match port.collected.checked_add(tax) {
