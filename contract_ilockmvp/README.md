@@ -4,7 +4,7 @@ The `ilockmvp` is the main Interlock Network smart contract to be hosted on Alep
 
 The `ilockmvp` contract is to be the centerpoint that the entire Interlock Network and ecosystem revolves around. The contract is meant to be simple, with upgradability and extendability in mind.
 
-The core of the contract is a standard Openbrush PSP22 token implementation. Built around the PSP22 token are provisions to enforce a vesting schedule, plus provisions to maintain higher resolution in accounting and bookkeeping than the typical PSP22 along.
+The core of the contract is a standard Openbrush PSP22 token implementation. Built around the PSP22 token are provisions to enforce a vesting schedule, plus provisions to maintain higher resolution in accounting and bookkeeping than the typical PSP22 alone.
 
 As for the minimum viable product, the purpose of $ILOCK utility token is to incentivize Interlocker browser extension operators to share their browsing data and feedback by issuing rewards. In addition to the basic token and vesting/accounting measures, there is a simple suite of rewards-related function built in. The minimum viable function is simply one that issues a variable reward to a specified interlocker, drawn from the rewards pool.
 
