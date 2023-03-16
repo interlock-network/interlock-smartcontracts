@@ -1090,19 +1090,21 @@ pub mod ilockmvp {
         }
         
         /// - Get current balance of any vesting pool.
+        /// - Provide human readable and numberic format.
         #[ink(message)]
         pub fn pool_balance(
             &self,
-            pool: u8,
+            poolnumber: u8,
         ) -> (String, Balance) {
 
             (format!("pool: {:?}, balance: {:?}", 
-                    POOLS[pool as usize].name.to_string(),
-                    self.pool.balances[pool as usize]),
-             self.pool.balances[pool as usize])
+                    POOLS[poolnumber as usize].name.to_string(),
+                    self.pool.balances[poolnumber as usize]),
+             self.pool.balances[poolnumber as usize])
         }
 
         /// - Display proceeds pool balance.
+        /// - This represents tokens taken as tax or fees from port applications.
         #[ink(message)]
         pub fn proceeds_available(
             &self,
@@ -1285,7 +1287,7 @@ pub mod ilockmvp {
 
         /// - Rewards/staking/application contracts register with this token contract here.
         /// - Contract must first register with token contract as port to allow connection via
-        /// socket.
+        /// socket (ie, a port must first exist before a socket may form)..
         #[ink(message)]
         pub fn create_socket(
             &mut self,
@@ -1293,21 +1295,21 @@ pub mod ilockmvp {
             portnumber: u16,
         ) -> OtherResult<()> {
 
-            // get application address
+            // get application contract address
             let application: AccountId = self.env().caller();
 
-            // make sure caller is a contact, return if not
+            // make sure caller is a contract, return if not
             if !self.env().is_contract(&application) {
                 return Err(OtherError::NotContract);
             };
 
-            // get hash of calling contract
+            // get hash of calling application contract
             let callinghash: Hash = match self.env().code_hash(&application) {
                 Ok(hash) => hash,
                 Err(_) => return Err(OtherError::NotContract),
             };
 
-            // get port specified by calling contract
+            // get port specified by calling application contract
             let port: Port = match self.app.ports.get(portnumber) {
                 Some(port) => port,
                 None => return Err(OtherError::NoPort),
@@ -1317,16 +1319,17 @@ pub mod ilockmvp {
             //   . this makes it so that people can't build their own client application
             //     to 'hijack' an approved and registered rewards contract.
             //   . if port is locked then only interlock can create new socket with port
-            //   . socket creation is only called by an external contract that the port represents
+            //   . socket creation is only called by an external application contract that
+            //     the port represents
             if port.locked && (self.ownable.owner != operator) {
                 return Err(OtherError::PortLocked);
             }
             
             // compare calling contract hash to registered port hash
-            // to make sure it is safe (ie, approved and audited by interlock)
+            // to make sure application contract is safe (ie, approved and audited by interlock)
             if callinghash == port.application {
                 
-                // if the same, contract is allowed to create socket (socket == operatoraddress:portnumber)
+                // if safe, contract is allowed to create socket (socket == operatoraddress:portnumber)
                 let socket = Socket { operator: operator, portnumber: portnumber };
 
                 // socket is registered with token contract thus the calling
@@ -1345,6 +1348,9 @@ pub mod ilockmvp {
                     // Interlock gray area staking applications
                     2 => {
 
+                        // this is primarily to serve as a socket setup example
+                        // ... for this particular case, port two is probably *locked*
+                        //
                         // give socket allowance up to port cap
                         //   . connecting contracts will not be able to reward
                         //     more than cap specified by interlock (this may be a stipend, for example)
@@ -1364,11 +1370,14 @@ pub mod ilockmvp {
             }
 
             // returns error if calling staking application contract is not a known
-            // safe contract registered by interlock as a 'port' 
+            // safe contract registered by interlock as a 'port application' 
             Err(OtherError::UnsafeContract)
         }
 
         /// - Check for socket and apply custom logic after being called from application contract.
+        /// - Application contract calls its socket to trigger internal logic defined by port.
+        /// - Default parameters are address and amount or value.
+        /// - Additional parameters may be encoded as _data: Vec<u8>.
         #[ink(message)]
         pub fn call_socket(
             &mut self,
@@ -1377,13 +1386,16 @@ pub mod ilockmvp {
             _data: Vec<u8>,
         ) -> OtherResult<()> {
 
-            // make sure address is not contract; we do not want to reward contracts
-            if self.env().is_contract(&address) {
-                return Err(OtherError::CannotRewardContract);
+            // get application contract's address
+            let application: AccountId = self.env().caller();
+
+            // make sure caller is contract; only application contracts may call socket
+            if !self.env().is_contract(&application) {
+                return Err(OtherError::NotContract);
             }
 
             // get socket, to get port assiciated with socket
-            let socket: Socket = match self.app.sockets.get(self.env().caller()) {
+            let socket: Socket = match self.app.sockets.get(application) {
                 Some(socket) => socket,
                 None => return Err(OtherError::NoSocket),
             };
@@ -1495,7 +1507,7 @@ pub mod ilockmvp {
             amount: Balance,
         ) -> OtherResult<Balance> {
 
-            // compute tax - tax number is in centipercent, 0.01% ==> 100% = 1 & 0.01% = 10_000
+            // compute tax - tax number is in centipercent, 0.01% ==> 100% = 1 & 1% = 100 & 0.01% = 10_000
             //
             // a tax of 0.01% is amount/10_000
             let tax: Balance = match amount.checked_div(port.tax as Balance) {
@@ -1622,10 +1634,10 @@ pub mod tests_unit;
 // [] sadunit_update_contract
 // [x] happyunit_create_port
 //      [x] happyunit_port                   <-- checked within create_port()
-// [] ** happye2e_create_socket     \
-// [] ** sade2e_create_socket       |----- these must be performed from generic port
-// [] ** happye2e_call_socket       |      or from the uanft contract's self minting message
-// [] ** sade2e_call_socket         /
+// [x] ** happye2e_create_socket     \
+// [x] ** sade2e_create_socket       |----- these must be performed from generic port
+// [x] ** happye2e_call_socket       |      or from the uanft contract's self minting message
+// [x] ** sade2e_call_socket         /
 // [x] happyunit_tax_port_transfer
 // [] sadunit_tax_port_transfer
 // [x] happyunit_check_time

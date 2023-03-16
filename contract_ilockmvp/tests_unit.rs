@@ -88,7 +88,7 @@ fn happy_create_get_port_tax_transfer() {
     let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
 
     let codehash: Hash = Default::default(); // offchain environment doesn't support
-    let tax: Balance = 1_000; // 10% tax  // .own_code_hash()
+    let tax: Balance = 1_000; // 0.1% tax  // .own_code_hash()
     let cap: Balance = 1_000_000;
     let locked: bool = true;
     let number: u16 = 2;
