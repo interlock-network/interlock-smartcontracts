@@ -57,18 +57,24 @@ async fn happy_transfer(
 
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+    let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
     let constructor = ILOCKmvpRef::new_token();
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
 
-    // alice is contract owner
-    // transfers 1000 ILOCK from alice to bob and check for resulting Transfer event
-    let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+    // alice rewards 1000 token so charlie can transfer
+    let alice_reward_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.reward_interlocker(1000, charlie_account.clone()));
+    let _reward_response = client
+        .call(&ink_e2e::alice(), alice_reward_msg, 0, None).await;
+
+    // transfers 1000 ILOCK from charlie to bob and check for resulting Transfer event
+    let charlie_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.transfer(bob_account.clone(), 1000, Vec::new()));
     let transfer_response = client
-        .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await.unwrap();
+        .call(&ink_e2e::charlie(), charlie_transfer_msg, 0, None).await.unwrap();
 
     // filter for transfer event
     let contract_emitted_transfer = transfer_response
@@ -97,7 +103,7 @@ async fn happy_transfer(
     let Transfer { from, to, amount } = decoded_transfer;
 
     // Assert with the expected value
-    assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
+    assert_eq!(from, Some(charlie_account), "encountered invalid Transfer.from");
     assert_eq!(to, Some(bob_account), "encountered invalid Transfer.to");
     assert_eq!(amount, 1000, "encountered invalid Transfer.amount");
 
@@ -107,13 +113,6 @@ async fn happy_transfer(
     let bob_balance = client
         .call_dry_run(&ink_e2e::bob(), &bob_balance_msg, 0, None).await.return_value();
     assert_eq!(0 + 1000, bob_balance);
-
-    // checks that alice has expected resulting balance
-    let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-        .call(|contract| contract.balance_of(alice_account.clone()));
-    let alice_balance = client
-        .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
-    assert_eq!(SUPPLY_CAP - 1000, alice_balance);
 
     // checks that circulating supply increased appropriately
     let total_supply_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -138,7 +137,14 @@ async fn happy_transfer(
         .call(|contract| contract.pool_balance(REWARDS));
     let rewards_balance = client
         .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
-    assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 500, rewards_balance);
+    assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 500, rewards_balance);
+
+    // checks that alice has expected resulting balance
+    let alice_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.balance_of(alice_account.clone()));
+    let alice_balance = client
+        .call_dry_run(&ink_e2e::alice(), &alice_balance_msg, 0, None).await.return_value();
+    assert_eq!(SUPPLY_CAP - 500, alice_balance);
 
     Ok(())
 }
@@ -334,12 +340,11 @@ async fn happy_burn(
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
 
-    // alice transfers 1000 ILOCK to bob (to check !owner burn)
-    let alice_transfer_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-        .call(|contract| contract.transfer(
-            bob_account.clone(), 1000, Vec::new()));
-    let _transfer_result = client
-        .call(&ink_e2e::alice(), alice_transfer_msg, 0, None).await;
+    // alice rewards 1000 token to bob so she can burn
+    let alice_reward_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.reward_interlocker(1000, bob_account.clone()));
+    let _reward_response = client
+        .call(&ink_e2e::alice(), alice_reward_msg, 0, None).await;
 
     // alice burns 1000 tokens
     let alice_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -374,7 +379,7 @@ async fn happy_burn(
     let Transfer { from, to, amount } = decoded_transfer;
 
     // Assert with the expected value
-    assert_eq!(from, Some(alice_account), "encountered invalid Transfer.fromr");
+    assert_eq!(from, Some(alice_account), "encountered invalid Transfer.from");
     assert_eq!(to, None, "encountered invalid Transfer.to");
     assert_eq!(amount, 1000, "encountered invalid Transfer.amount");
 
@@ -390,9 +395,9 @@ async fn happy_burn(
         .call(|contract| contract.pool_balance(REWARDS));
     let rewards_balance = client
         .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
-    assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, rewards_balance);
+    assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000 - 1000, rewards_balance);
 
-    // bob burns 500 tokens
+    // burns 500 tokens from bob
     let bob_burn_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.burn(bob_account.clone(), 500));
     let _bob_burn_result = client

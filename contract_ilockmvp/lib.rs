@@ -1033,33 +1033,78 @@ pub mod ilockmvp {
             stakeholder: AccountId,
             amount: Balance,
             pool: String,
-        ) -> PSP22Result<()> {
+        ) -> OtherResult<()> {
+
+            let owner: AccountId = self.env().caller();
 
             let poolnumber: u8 = match pool.as_str() {
                 "PARTNERS"      => 9,
                 "WHITELIST"     => 10,
                 "PUBLIC_SALE"   => 11,
                 "PROCEEDS"      => {
+
                     // deduct payout amount
                     match self.pool.proceeds.checked_sub(amount) {
                         Some(difference) => self.pool.proceeds = difference,
-                        None => return Err(OtherError::PaymentTooLarge.into()),
+                        None => return Err(OtherError::PaymentTooLarge),
                     };
+
                     // now transfer tokens
-                    let _ = self.transfer(stakeholder, amount, Default::default())?;
+                    // increment distribution to stakeholder account
+                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+                    match stakeholderbalance.checked_add(amount) {
+                        Some(sum) => stakeholderbalance = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+                   // increment total supply
+                    match self.pool.circulating.checked_add(amount) {
+                        Some(sum) => self.pool.circulating = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // deduct tokens from owners account
+                    let mut ownerbalance: Balance = self.psp22.balance_of(owner);
+                    match ownerbalance.checked_sub(amount) {
+                        Some(difference) => ownerbalance = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+                    self.psp22.balances.insert(&owner, &ownerbalance);
+
                     return Ok(());
                 },
-                _ => return Err(OtherError::InvalidPool.into())
+                _ => return Err(OtherError::InvalidPool)
             };
 
             // deduct payout amount
             match self.pool.balances[poolnumber as usize].checked_sub(amount) {
                 Some(difference) => self.pool.balances[poolnumber as usize] = difference,
-                None => return Err(OtherError::PaymentTooLarge.into()),
+                None => return Err(OtherError::PaymentTooLarge),
             };
 
             // now transfer tokens
-            let _ = self.transfer(stakeholder, amount, Default::default())?;
+            // increment distribution to stakeholder account
+            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+            match stakeholderbalance.checked_add(amount) {
+                Some(sum) => stakeholderbalance = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+            // increment total supply
+            match self.pool.circulating.checked_add(amount) {
+                Some(sum) => self.pool.circulating = sum,
+                None => return Err(OtherError::Overflow),
+            };
+
+            // deduct tokens from owners account
+            let mut ownerbalance: Balance = self.psp22.balance_of(owner);
+            match ownerbalance.checked_sub(amount) {
+                Some(difference) => ownerbalance = difference,
+                None => return Err(OtherError::Underflow),
+            };
+            self.psp22.balances.insert(&owner, &ownerbalance);
 
             Ok(())
         }
@@ -1130,6 +1175,11 @@ pub mod ilockmvp {
             // make sure reward not too large
             if self.pool.balances[REWARDS as usize] < reward {
                 return Err(OtherError::PaymentTooLarge)
+            }
+
+            // make sure rewardee is not contract
+            if self.env().is_contract(&interlocker) {
+                return Err(OtherError::CannotRewardContract)
             }
 
             // update rewards pool balance
