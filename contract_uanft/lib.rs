@@ -146,24 +146,6 @@ pub mod uanft {
         /// collections:         user accress -> vector of uanft IDs in collection
         pub collections: Mapping<AccountId, Vec<Id>>,
 
-        /// - Credentials contains a SHA256 (or other) hashed secret and uanft ID for said
-        /// secret, one pair per user identifing (eg username) SHA256 hash.
-        /// - This is important because it provides a means of verifying possession
-        /// of secret, and for which uanft this owner has access to for those
-        /// given credentials.
-        ///
-        /// credentials:         username hash -> (password hash, uanft ID)
-        pub credentials: Mapping<Hash, (Hash, Id)>,
-
-        /// - Userhashes contains information about which identifying credential hash
-        /// a given uanft commands. this is important because on transfer event
-        /// we need to revoke access to particular user identifying hash, but transfer
-        /// events by PSP34 standard do not include the identifying information needed 
-        /// revoke access for a particulare credential pair.
-        ///
-        /// userhashes:         uanft ID - > username hash
-        pub userhashes: Mapping<Id, Hash>,
-
         /// - This is to expand storage related to this uanft's access functionality.
         pub _reserved: Option<()>
     }
@@ -309,19 +291,6 @@ pub mod uanft {
             // transfer
             let from = self.env().caller();
             let _ = self._transfer_token(to, id.clone(), data)?;
-
-            // revoke access if uanft registered to prior owner
-            match self.access.userhashes.get(id.clone()) {
-                
-                // aunft registered by prior owner
-                Some(hash) => {
-                    self.access.credentials.remove(hash);
-                    self.access.userhashes.remove(id.clone());
-                },
-
-                // aunft never registered by prior owner
-                None => (),
-            };
 
             // update sender's collection
             let mut from_collection = match self.access.collections.get(from) {
@@ -660,118 +629,6 @@ pub mod uanft {
             self.app.token_instance.call_socket(address, amount, data)
         }
 
-        /// - Store hashed username password pair to register credentials of UANFT owner.
-        /// - Anybody may call, but only UANFT owner of Id may successfully register.
-        #[ink(message)]
-        pub fn register(
-            &mut self,
-            id: Id,
-            userhash: Hash,
-            passhash: Hash,
-        ) -> Result<(), PSP34Error> {
-    
-            // get nft owner
-            let owner: AccountId = match self.owner_of(id.clone()) {
-                Some(owner) => owner,
-                None => return Err(PSP34Error::Custom(
-                               format!("NFT id {:?} does not exist.", id).into_bytes())),
-            };
-
-            // make sure signing caller owns UANFT
-            if self.env().caller() != owner {
-
-                return Err(PSP34Error::Custom(
-                       format!("Caller does not own UANFT id {:?}.", id).into_bytes()))
-            }
-
-            // make sure username is not already taken
-            match self.access.credentials.get(userhash) {
-
-                // if id matches id in credential mapping, then duplicate username belongs to
-                // caller, and caller is effectively resetting password
-                Some(credential) => {
-
-                    // no id match thus username registered with different uanft
-                    if credential.1 != id {
-                        return Err(PSP34Error::Custom(
-                               format!("Username already taken by UANFT ID {:?}.",
-                                       credential.1).into_bytes()))
-                    }
-                },
-
-                // None means username is not registered thus is available
-                None => (),
-            };
-
-            // make sure uanft owner hasn't already registered different credentials
-            match self.access.userhashes.get(id.clone()) {
-
-                // if entry exists, owner has already registered under different userhash
-                Some(userhash) => {
-
-                    // eliminate entry to deduplicate credentials
-                    self.access.credentials.remove(userhash);
-                },
-
-                // None means this is first time registering credentials with uanft
-                None => (),
-            };
-
-            // password and uanft id info affiliated with username
-            self.access.credentials.insert(userhash, &(passhash, id.clone()));
-
-            // username affiliated with uanft id
-            // ...this is necessary to revoke access upon uanft transfer
-            self.access.userhashes.insert(id, &userhash);
-
-            Ok(())
-        }
-
-        /// - Store hashed username password pair.
-        /// - Also associate uanft id with username.
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn set_credential(
-            &mut self,
-            id: Id,
-            userhash: Hash,
-            passhash: Hash,
-        ) -> Result<(), PSP34Error> {
-
-            // password and uanft id info affiliated with username
-            self.access.credentials.insert(userhash, &(passhash, id.clone()));
-
-            // username affiliated with uanft id
-            // ...this is necessary to revoke access upon uanft transfer
-            self.access.userhashes.insert(id, &userhash);
-
-            Ok(())
-        }
-
-        /// - Revoke access for particular user.
-        #[openbrush::modifiers(only_owner)]
-        #[ink(message)]
-        pub fn revoke_access(
-            &mut self,
-            userhash: Hash,
-        ) -> Result<(), PSP34Error> {
-
-            // get the uanft id associated with username
-            let uanft: Id = match self.access.credentials.get(userhash) {
-                Some(credential) => credential.1,
-                None => return Err(PSP34Error::Custom(
-                               format!("Username not registered.").into_bytes())),
-            };
-
-            // remove hash pair
-            self.access.credentials.remove(userhash);
-
-            // remove uanft id mapping to userhash
-            self.access.userhashes.remove(uanft);
-
-            Ok(())
-        }
-
         /// - Retrieve the current price of universal access nft self-minting.
         #[ink(message)]
         pub fn get_token_price(
@@ -806,35 +663,6 @@ pub mod uanft {
                 Some(vec) => Ok(vec),
                 None => Err(PSP34Error::Custom(
                         format!("The address {:?} does not have a collection.", address).into_bytes())),
-            }
-        }
-
-        /// - Get hashed username password pair (plus UANFT Id).
-        #[ink(message)]
-        pub fn get_credential(
-            &mut self,
-            username: Hash,
-        ) -> Result<(Hash, Id), PSP34Error> {
-
-            // retrieve the collection
-            match self.access.credentials.get(username) {
-                Some((password, id)) => Ok((password, id)),
-                None => Err(PSP34Error::Custom(
-                        format!("Credentials nonexistent.").into_bytes())),
-            }
-        }
-
-        /// - Check to see if UANFT is authenticated (has credentials registered).
-        #[ink(message)]
-        pub fn is_authenticated(
-            &mut self,
-            id: Id,
-        ) -> Result<bool, PSP34Error> {
-
-            // if userhash exists, then uanft is authenticated
-            match self.access.userhashes.get(id) {
-                Some(_hash) => Ok(true),
-                None => Ok(false),
             }
         }
 
