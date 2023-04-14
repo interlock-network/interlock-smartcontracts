@@ -162,7 +162,7 @@ pub mod ilockmvp {
         /// - See detailed struct below.
         ///
         /// stakeholder:         stakeholder account address -> info about stakeholder
-        pub stakeholder: Mapping<AccountId, StakeholderData>,
+        pub stakeholder: Mapping<AccountId, Vec<StakeholderData>>,
 
         /// - Counter responsible for keeping track of how many months have passed
         /// along the vesting schedule.
@@ -187,7 +187,7 @@ pub mod ilockmvp {
         PartialEq,
         Eq,
         scale_info::TypeInfo,
-        ink::storage::traits::StorageLayout
+        ink::storage::traits::StorageLayout,
         )
     )]
     pub struct StakeholderData {
@@ -498,6 +498,14 @@ pub mod ilockmvp {
         InvalidPool,
         /// - Returned if port number provided is invalid.
         InvalidPort,
+        /// - Returned if Stakeholder already registered with pool and no overwrite force.
+        AlreadyRegistered,
+        /// - Returned if Stakeholder has no stake in pool.
+        NoPool,
+        /// - Returned if no stake exists.
+        NoStake,
+        /// - Returned if zero address.
+        IsZeroAddress,
         /// - Custom contract error.
         Custom(String),
     }
@@ -814,55 +822,134 @@ pub mod ilockmvp {
             stakeholder: AccountId,
             share: Balance,
             pool: u8,
-        ) -> PSP22Result<()> {
+            overwrite: bool,
+        ) -> OtherResult<()> {
 
             // make sure share is > 0
             if share == 0 {
-                return Err(OtherError::ShareTooSmall.into());
+                return Err(OtherError::ShareTooSmall);
             }
 
-            // create stakeholder struct
-            let this_stakeholder = StakeholderData {
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => Vec::new(),
+            };
+
+            // iterate through the stakeholders stakes and check to make sure no duplicate
+            if stakes.iter().any(|stake| stake.pool == pool) && !overwrite {
+                return Err(OtherError::AlreadyRegistered)
+            }
+
+            // create stake struct
+            let this_stake = StakeholderData {
                 paid: 0,
                 share: share,
                 pool: pool,
             };
 
+            // iterate through preexisting stakes
+            for stake in stakes.iter_mut() {
+
+                if stake.pool == pool {
+
+                    // replace old stake data
+                    *stake = this_stake;
+
+                    // insert stakeholder struct into mapping
+                    self.vest.stakeholder.insert(stakeholder, &stakes);
+
+                    return Ok(());
+                }
+            }
+            
+            // add stake to stakeholder's stake collection
+            stakes.push(this_stake);
+
             // insert stakeholder struct into mapping
-            self.vest.stakeholder.insert(stakeholder, &this_stakeholder);
+            self.vest.stakeholder.insert(stakeholder, &stakes);
 
             Ok(())
         }
 
-        /// - Function that returns a stakeholder's payout and other data.
-        /// - This will allow stakeholders to verify their stake from explorer if so motivated.
-        /// - Returns tuple (StakeholderData, payremaining, payamount, poolname).
+        /// - Function that returns stakeholder data for each stake..
         #[ink(message)]
-        pub fn stakeholder_data(
+        pub fn get_stakes(
             &self,
             stakeholder: AccountId,
-        ) -> (StakeholderData, Balance, Balance, String) {
+        ) -> OtherResult<Vec<StakeholderData>> {
 
-            // get pool and stakeholder data structs first
-            let this_stakeholder = self.vest.stakeholder.get(stakeholder).unwrap();
-            let pool = &POOLS[this_stakeholder.pool as usize];
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
 
-            // how much has stakeholder already claimed?
-            let paidout: Balance = this_stakeholder.paid;
+            // get stakes held by this stakeholder
+            let stakes: Vec<StakeholderData> = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
 
-            // how much does stakeholder have yet to collect?
-            let payremaining: Balance = this_stakeholder.share - paidout;
-
-            // how much does stakeholder get each month?
-            let payamount: Balance = this_stakeholder.share / pool.vests as Balance;
-
-            return (
-                this_stakeholder.clone(),
-                payremaining,
-                payamount,
-                POOLS[this_stakeholder.pool as usize].name.to_string(),
-            )
+            Ok(stakes)
         }
+
+        /// - Function that returns a stakeholder's pay remaining for each stake.
+        #[ink(message)]
+        pub fn get_stakes_payremaining(
+            &self,
+            stakeholder: AccountId,
+        ) -> OtherResult<Vec<Balance>> {
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            // calculate pay remaining for each element?
+            let payremaining: Vec<Balance> = stakes.iter().map(|stake| stake.share - stake.paid).collect();
+
+            Ok(payremaining)
+        }
+
+        /// - Function that returns a stakeholder's payout amount for each stake.
+        #[ink(message)]
+        pub fn get_stakes_payamount(
+            &self,
+            stakeholder: AccountId,
+        ) -> OtherResult<Vec<Balance>> {
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            // calculate payout amount
+            let payamount: Vec<Balance> = stakes.iter().map(|stake| {
+                let pool = &POOLS[stake.pool as usize];
+                stake.share / pool.vests as Balance
+            }).collect();
+
+            Ok(payamount)
+        }
+
+
 
 ////////////////////////////////////////////////////////////////////////////
 /////// token distribution /////////////////////////////////////////////////
@@ -876,87 +963,108 @@ pub mod ilockmvp {
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
+            poolnumber: u8,
         ) -> OtherResult<()> {
 
-            // get data structs
-            let mut this_stakeholder = match self.vest.stakeholder.get(stakeholder) {
-                Some(s) => s,
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
                 None => { return Err(OtherError::StakeholderNotFound) },
             };
-            let pool = &POOLS[this_stakeholder.pool as usize];
 
-            // require cliff to have been surpassed
-            if self.vest.monthspassed < pool.cliffs as u16 {
-                return Err(OtherError::CliffNotPassed)
+            // iterate through the stakeholders stakes and check to make sure pool stake exists
+            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
+                return Err(OtherError::NoStake)
             }
 
-            // require share has not been completely paid out
-            if this_stakeholder.paid == this_stakeholder.share {
-                return Err(OtherError::StakeholderSharePaid)
+            // iterate through the stakeholders stakes and distribute tokens
+            for stake in stakes.iter_mut() {
+
+                if stake.pool == poolnumber {
+
+                    let pool = &POOLS[stake.pool as usize];
+
+                    // require cliff to have been surpassed
+                    if self.vest.monthspassed < pool.cliffs as u16 {
+                        return Err(OtherError::CliffNotPassed)
+                    }
+
+                    // require share has not been completely paid out
+                    if stake.paid == stake.share {
+                        return Err(OtherError::StakeholderSharePaid)
+                    }
+
+                    // calculate the payout owed
+                    // ! no checked_div needed; pool.vests guaranteed to be nonzero
+                    let mut payout: Balance = stake.share / pool.vests as Balance;
+
+                    // require that payout isn't repeatable for this month
+                    // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
+                    let payments = stake.paid / payout;
+                    if payments >= self.vest.monthspassed as u128 {
+                        return Err(OtherError::PayoutTooEarly)
+                    }
+
+                    // calculate the new total paid to stakeholder
+                    let mut newpaidtotal: Balance = match stake.paid.checked_add(payout) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // calculate remaining share
+                    let remainingshare: Balance = match stake.share.checked_sub(newpaidtotal) {
+                        Some(difference) => difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+
+                    // if this is final payment, add token remainder to payout
+                    // (this is to compensate for floor division that calculates payamount)
+                    if remainingshare < payout {
+    
+                        payout += remainingshare;
+                        newpaidtotal = stake.share;
+                    }
+
+                    // increment distribution to stakeholder account
+                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+                    match stakeholderbalance.checked_add(payout) {
+                        Some(sum) => stakeholderbalance = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+                    // increment total supply
+                    match self.balances[CIRCULATING as usize].checked_add(payout) {
+                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // deduct tokens from owners account
+                    let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
+                    match ownerbalance.checked_sub(payout) {
+                        Some(difference) => ownerbalance = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+                    self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
+
+                    // update pool balance
+                    match self.balances[stake.pool as usize].checked_sub(payout) {
+                        Some(difference) => self.balances[stake.pool as usize] = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+
+                    // update amount paid for this particular stake
+                    stake.paid = newpaidtotal;
+                }
             }
-
-            // calculate the payout owed
-            // ! no checked_div needed; pool.vests guaranteed to be nonzero
-            let mut payout: Balance = this_stakeholder.share / pool.vests as Balance;
-
-            // require that payout isn't repeatable for this month
-            // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
-            let payments = this_stakeholder.paid / payout;
-            if payments >= self.vest.monthspassed as u128 {
-                return Err(OtherError::PayoutTooEarly)
-            }
-
-            // calculate the new total paid to stakeholder
-            let mut newpaidtotal: Balance = match this_stakeholder.paid.checked_add(payout) {
-                Some(sum) => sum,
-                None => return Err(OtherError::Overflow),
-            };
-
-            // calculate remaining share
-            let remainingshare: Balance = match this_stakeholder.share.checked_sub(newpaidtotal) {
-                Some(difference) => difference,
-                None => return Err(OtherError::Underflow),
-            };
-
-            // if this is final payment, add token remainder to payout
-            // (this is to compensate for floor division that calculates payamount)
-            if remainingshare < payout {
-
-                payout += remainingshare;
-                newpaidtotal = this_stakeholder.share;
-            }
-
-            // increment distribution to stakeholder account
-            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-            match stakeholderbalance.checked_add(payout) {
-                Some(sum) => stakeholderbalance = sum,
-                None => return Err(OtherError::Overflow),
-            };
-            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
-
-            // increment total supply
-            match self.balances[CIRCULATING as usize].checked_add(payout) {
-                Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                None => return Err(OtherError::Overflow),
-            };
-
-            // deduct tokens from owners account
-            let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
-            match ownerbalance.checked_sub(payout) {
-                Some(difference) => ownerbalance = difference,
-                None => return Err(OtherError::Underflow),
-            };
-            self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
-
-            // update pool balance
-            match self.balances[this_stakeholder.pool as usize].checked_sub(payout) {
-                Some(difference) => self.balances[this_stakeholder.pool as usize] = difference,
-                None => return Err(OtherError::Underflow),
-            };
 
             // finally update stakeholder data struct state
-            this_stakeholder.paid = newpaidtotal;
-            self.vest.stakeholder.insert(stakeholder, &this_stakeholder);
+            self.vest.stakeholder.insert(stakeholder, &stakes);
 
             Ok(())
         }
@@ -978,6 +1086,17 @@ pub mod ilockmvp {
 
             let owner: AccountId = self.env().caller();
 
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
             let poolnumber: u8 = match pool.as_str() {
                 "PARTNERS"      => 8,
                 "COMMUNITY"     => 9,
@@ -986,34 +1105,60 @@ pub mod ilockmvp {
                 _ => return Err(OtherError::InvalidPool)
             };
 
-            // deduct payout amount
-            match self.balances[poolnumber as usize].checked_sub(amount) {
-                Some(difference) => self.balances[poolnumber as usize] = difference,
-                None => return Err(OtherError::PaymentTooLarge),
-            };
+            // iterate through the stakeholders stakes and distribute tokens
+            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
+                return Err(OtherError::NoStake)
+            }
 
-            // now transfer tokens
-            // increment distribution to stakeholder account
-            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-            match stakeholderbalance.checked_add(amount) {
-                Some(sum) => stakeholderbalance = sum,
-                None => return Err(OtherError::Overflow),
-            };
-            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+            // iterate through the stakeholders stakes and distribute tokens
+            for stake in stakes.iter_mut() {
 
-            // increment total supply
-            match self.balances[CIRCULATING as usize].checked_add(amount) {
-                Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                None => return Err(OtherError::Overflow),
-            };
+                if stake.pool == poolnumber {
 
-            // deduct tokens from owners account
-            let mut ownerbalance: Balance = self.psp22.balance_of(owner);
-            match ownerbalance.checked_sub(amount) {
-                Some(difference) => ownerbalance = difference,
-                None => return Err(OtherError::Underflow),
-            };
-            self.psp22.balances.insert(&owner, &ownerbalance);
+                    // require share has not been completely paid out
+                    if stake.paid == stake.share {
+                        return Err(OtherError::StakeholderSharePaid)
+                    }
+
+                    // deduct payout amount
+                    match self.balances[poolnumber as usize].checked_sub(amount) {
+                        Some(difference) => self.balances[poolnumber as usize] = difference,
+                        None => return Err(OtherError::PaymentTooLarge),
+                    };
+
+                    // now transfer tokens
+                    // increment distribution to stakeholder account
+                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+                    match stakeholderbalance.checked_add(amount) {
+                        Some(sum) => stakeholderbalance = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+                    // increment total supply
+                    match self.balances[CIRCULATING as usize].checked_add(amount) {
+                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // calculate the new total paid to stakeholder
+                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // deduct tokens from owners account
+                    let mut ownerbalance: Balance = self.psp22.balance_of(owner);
+                    match ownerbalance.checked_sub(amount) {
+                        Some(difference) => ownerbalance = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+                    self.psp22.balances.insert(&owner, &ownerbalance);
+
+                    // update amount paid for this particular stake
+                    stake.paid = newpaidtotal;
+                }
+            }
 
             Ok(())
         }
@@ -1070,6 +1215,11 @@ pub mod ilockmvp {
             reward: Balance,
             interlocker: AccountId
         ) -> OtherResult<Balance> {
+
+            // make sure interlocker is not zero address
+            if interlocker == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
 
             // make sure reward not too large
             if self.balances[REWARDS as usize] < reward {
@@ -1152,12 +1302,19 @@ pub mod ilockmvp {
         pub fn rewarded_interlocker_total(
             &self,
             interlocker: AccountId
-        ) -> Balance {
+        ) -> OtherResult<Balance> {
 
-            match self.reward.interlocker.get(interlocker) {
+            // make sure interlocker is not zero address
+            if interlocker == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            let total_rewarded: Balance = match self.reward.interlocker.get(interlocker) {
                 Some(total) => total,
                 None => 0,
-            }
+            };
+
+            Ok(total_rewarded)
         }
 
         /// - Get total amount rewarded to date.
@@ -1347,6 +1504,11 @@ pub mod ilockmvp {
 
             // get application contract's address
             let application: AccountId = self.env().caller();
+
+            // make sure address is not zero address
+            if address == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
 
             // make sure caller is contract; only application contracts may call socket
             if !self.env().is_contract(&application) {
