@@ -62,6 +62,7 @@ pub mod ilockmvp {
                 Internal,
             },
             ownable::*,
+            pausable::*,
         },
         traits::Storage,
     };
@@ -401,6 +402,10 @@ pub mod ilockmvp {
         #[storage_field]
         pub metadata: metadata::Data,
 
+        /// - Openbrush pausable extensios.
+        #[storage_field]
+		pub pausable: pausable::Data,
+
         /// - ILOCK Rewards info.
         #[storage_field]
         pub reward: RewardData,
@@ -533,6 +538,13 @@ pub mod ilockmvp {
         }
     }
 
+    /// - For Pausable functions that are only_owner.
+    impl From<PausableError> for OtherError {
+        fn from(error: PausableError) -> Self {
+            OtherError::Custom(format!("{:?}", error))
+        }
+    }
+
     /// - Convenience Result Type.
     pub type PSP22Result<T> = core::result::Result<T, PSP22Error>;
 
@@ -561,6 +573,7 @@ pub mod ilockmvp {
         /// - Transfer from owner increases total circulating supply.
         /// - Transfer to owner decreases total circulating supply.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         fn transfer(
             &mut self,
             to: AccountId,
@@ -572,7 +585,6 @@ pub mod ilockmvp {
 
             // if sender is owner, deny
             if from == self.ownable.owner {
-
                return Err(OtherError::CallerIsOwner.into()); 
             }
 
@@ -597,6 +609,7 @@ pub mod ilockmvp {
         /// - Override default transfer_from_to doer.
         /// - Transfer from owner increases total supply.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         fn transfer_from(
             &mut self,
             from: AccountId,
@@ -635,9 +648,59 @@ pub mod ilockmvp {
 
             Ok(())
         }
+
+        /// - Wrap default approve doer to enforce pausable macro.
+        #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
+        fn approve(
+            &mut self,
+            spender: AccountId,
+            value: Balance
+        ) -> Result<(), PSP22Error> {
+
+            let owner = self.env().caller();
+
+            self._approve_from_to(owner, spender, value)
+        }
+
+        /// - Wrap default increase allowance doer to enforce pausable macro.
+        #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
+        fn increase_allowance(
+            &mut self,
+            spender: AccountId,
+            delta_value: Balance
+        ) -> Result<(), PSP22Error> {
+
+            let owner = self.env().caller();
+            let allowance = self._allowance(&owner, &spender);
+
+            self._approve_from_to(owner, spender, allowance + delta_value)
+        }
+
+        /// - Wrap default decrease allowance doer to enforce pausable macro.
+        #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
+        fn decrease_allowance(
+            &mut self,
+            spender: AccountId,
+            delta_value: Balance
+        ) -> Result<(), PSP22Error> {
+
+            let owner = self.env().caller();
+            let allowance = self._allowance(&owner, &spender);
+
+            if allowance < delta_value {
+                return Err(PSP22Error::InsufficientAllowance)
+            }
+
+            self._approve_from_to(owner, spender, allowance - delta_value)
+        }
     }
 
     impl PSP22Metadata for ILOCKmvp {}
+
+    impl Pausable for ILOCKmvp {}
 
     impl Ownable for ILOCKmvp {
         
@@ -766,6 +829,40 @@ pub mod ilockmvp {
             }
             
             contract
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// pausability ////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - Function pauses contract.
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn pause(
+            &mut self,
+        ) -> Result<(), OtherError> {
+
+            self._pause()
+        }
+
+        /// - Function unpauses contract.
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn unpause(
+            &mut self,
+        ) -> Result<(), OtherError> {
+
+            self._unpause()
+        }
+
+        /// - Function unpauses contract.
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn switch_pause(
+            &mut self,
+        ) -> Result<(), OtherError> {
+
+            self._switch_pause()
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -967,6 +1064,7 @@ pub mod ilockmvp {
         /// - Pools are guaranteed to have enough tokens for all stakeholders.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn distribute_tokens(
             &mut self,
             stakeholder: AccountId,
@@ -1089,6 +1187,7 @@ pub mod ilockmvp {
         ///      PROCEEDS
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn payout_tokens(
             &mut self,
             stakeholder: AccountId,
@@ -1229,6 +1328,7 @@ pub mod ilockmvp {
         /// - This is a manual rewarding function, to override the socket formalism.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn reward_interlocker(
             &mut self,
             reward: Balance,
@@ -1424,6 +1524,7 @@ pub mod ilockmvp {
         /// - Contract must first register with token contract as port to allow connection via
         /// socket (ie, a port must first exist before a socket may form)..
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn create_socket(
             &mut self,
             operator: AccountId,
@@ -1514,6 +1615,7 @@ pub mod ilockmvp {
         /// - Default parameters are address and amount or value.
         /// - Additional parameters may be encoded as _data: Vec<u8>.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn call_socket(
             &mut self,
             address: AccountId,
