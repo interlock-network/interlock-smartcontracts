@@ -506,6 +506,8 @@ pub mod ilockmvp {
         NoStake,
         /// - Returned if zero address.
         IsZeroAddress,
+        /// - Returned if pool argument is out of bounds.
+        PoolOutOfBounds,
         /// - Custom contract error.
         Custom(String),
     }
@@ -777,7 +779,7 @@ pub mod ilockmvp {
         #[openbrush::modifiers(only_owner)]
         pub fn check_time(
             &mut self,
-        ) -> PSP22Result<()> {
+        ) -> OtherResult<()> {
 
             // test to see if current time falls beyond time for next payout
             if self.env().block_timestamp() > self.vest.nextpayout {
@@ -790,7 +792,7 @@ pub mod ilockmvp {
             }
 
             // too early, do nothing
-            return Err(OtherError::PayoutTooEarly.into())
+            return Err(OtherError::PayoutTooEarly)
         }
         
         /// - Time in seconds until next payout in minutes.
@@ -821,13 +823,18 @@ pub mod ilockmvp {
             &mut self,
             stakeholder: AccountId,
             share: Balance,
-            pool: u8,
+            poolnumber: u8,
             overwrite: bool,
         ) -> OtherResult<()> {
 
             // make sure share is > 0
             if share == 0 {
                 return Err(OtherError::ShareTooSmall);
+            }
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
             }
 
             // make sure stakeholder is not zero address
@@ -842,7 +849,7 @@ pub mod ilockmvp {
             };
 
             // iterate through the stakeholders stakes and check to make sure no duplicate
-            if stakes.iter().any(|stake| stake.pool == pool) && !overwrite {
+            if stakes.iter().any(|stake| stake.pool == poolnumber) && !overwrite {
                 return Err(OtherError::AlreadyRegistered)
             }
 
@@ -850,13 +857,13 @@ pub mod ilockmvp {
             let this_stake = StakeholderData {
                 paid: 0,
                 share: share,
-                pool: pool,
+                pool: poolnumber,
             };
 
             // iterate through preexisting stakes
             for stake in stakes.iter_mut() {
 
-                if stake.pool == pool {
+                if stake.pool == poolnumber {
 
                     // replace old stake data
                     *stake = this_stake;
@@ -969,6 +976,11 @@ pub mod ilockmvp {
             // make sure stakeholder is not zero address
             if stakeholder == AccountId::from([0_u8; 32]) {
                 return Err(OtherError::IsZeroAddress)
+            }
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
             }
 
             // get stakes held by this stakeholder
@@ -1098,10 +1110,10 @@ pub mod ilockmvp {
             };
 
             let poolnumber: u8 = match pool.as_str() {
-                "PARTNERS"      => 8,
-                "COMMUNITY"     => 9,
-                "PUBLIC"        => 10,
-                "PROCEEDS"      => 11,
+                "PARTNERS"      => PARTNERS,
+                "COMMUNITY"     => COMMUNITY,
+                "PUBLIC"        => PUBLIC,
+                "PROCEEDS"      => PROCEEDS,
                 _ => return Err(OtherError::InvalidPool)
             };
 
@@ -1176,16 +1188,21 @@ pub mod ilockmvp {
         pub fn pool_data(
             &self,
             poolnumber: u8,
-        ) -> (String, String, String, String) {
+        ) -> OtherResult<(String, String, String, String)> {
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
         
             let pool = &POOLS[poolnumber as usize];
 
-            return (
+            Ok((
                 format!("pool: {:?} ", pool.name.to_string()),
                 format!("tokens alotted: {:?} ", pool.tokens),
                 format!("number of vests: {:?} ", pool.vests),
                 format!("vesting cliff: {:?} ", pool.cliffs),
-            )
+            ))
         }
         
         /// - Get current balance of any vesting pool.
@@ -1194,12 +1211,14 @@ pub mod ilockmvp {
         pub fn pool_balance(
             &self,
             poolnumber: u8,
-        ) -> (String, Balance) {
+        ) -> OtherResult<Balance> {
 
-            (format!("pool: {:?}, balance: {:?}", 
-                    POOLS[poolnumber as usize].name.to_string(),
-                    self.balances[poolnumber as usize]),
-             self.balances[poolnumber as usize])
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
+
+            Ok(self.balances[poolnumber as usize])
         }
 
 ////////////////////////////////////////////////////////////////////////////
