@@ -1345,7 +1345,7 @@ pub mod ilockmvp {
             }
 
             // make sure reward not too large
-            if self.balances[REWARDS as usize] < reward {
+            if self.balances[REWARDS as usize] <= reward {
                 return Err(OtherError::PaymentTooLarge)
             }
 
