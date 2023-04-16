@@ -513,8 +513,12 @@ pub mod ilockmvp {
         IsZeroAddress,
         /// - Returned if pool argument is out of bounds.
         PoolOutOfBounds,
-        /// - Returned if pool argument is out of bounds.
+        /// - Returned if checked div by zero.
         DivideByZero,
+        /// - Returned if port exists and no overwrite flag.
+        PortExists,
+        /// - Returned if port cap is larger than rewards pool.
+        CapTooLarge,
         /// - Custom contract error.
         Custom(String),
     }
@@ -1508,7 +1512,29 @@ pub mod ilockmvp {
             locked: bool,
             number: u16,
             owner: AccountId,
-        ) -> PSP22Result<()> {
+            overwrite: bool,
+        ) -> OtherResult<()> {
+
+            // guard to check if port exists and if intention is to overwrite
+            // * note: bool value is false by default
+            match self.app.ports.get(number) {
+                Some(_port) => {
+                    if !overwrite {
+                        return Err(OtherError::PortExists);
+                    }
+                },
+                None => (),
+            }
+
+            // guard to make sure cap is not greater than rewards on hand
+            if cap > self.balances[REWARDS as usize] {
+                return Err(OtherError::CapTooLarge);
+            }
+
+            // make sure interlocker is not zero address
+            if owner == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
 
             let port = Port {
                 application: codehash,     // <--! a port defines an external staking/reward contract plus any
