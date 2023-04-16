@@ -9,9 +9,8 @@ authors = [
 edition = "2021"
 license = "GNU GENERAL PUBLIC LICENSE"
 
-# This is to enable unsigned integer division (floor division)
-# ...safe-math functions are used for lib.rs arithmetic where overflow checks would otherwise be
-#    (that is, in all cases except the few floor division operations)
+# workaround for known rust compiler bug
+# see https://github.com/rust-lang/rust/issues/78744
 [profile.release]
 overflow-checks = false
 

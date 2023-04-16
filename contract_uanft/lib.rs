@@ -479,9 +479,12 @@ pub mod uanft {
 
             let caller = self.env().caller();
 
-            // next token id
-            // (overflow impossible due to cap check)
-            self.last_token_id += 1;
+            // set next token id
+            match self.last_token_id.checked_add(1) {
+                Some(sum) => self.last_token_id = sum,
+                None => return Err(Error::Custom(
+                               format!("Overflow")))
+            };
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
@@ -513,8 +516,12 @@ pub mod uanft {
             recipient: AccountId,
         ) -> Result<(), Error> {
 
-            // next token id
-            self.last_token_id += 1;
+            // set next token id
+            match self.last_token_id.checked_add(1) {
+                Some(sum) => self.last_token_id = sum,
+                None => return Err(Error::Custom(
+                               format!("Overflow")))
+            };
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
@@ -545,8 +552,12 @@ pub mod uanft {
             price: Balance,
         ) -> Result<(), Error> {
 
-            // next token id
-            self.last_token_id += 1;
+            // set next token id
+            match self.last_token_id.checked_add(1) {
+                Some(sum) => self.last_token_id = sum,
+                None => return Err(Error::Custom(
+                               format!("Overflow")))
+            };
 
             // mint recipient
             let minter: AccountId = self.env().caller();
@@ -602,8 +613,12 @@ pub mod uanft {
 
             let caller = self.env().caller();
 
-            // next token id
-            self.last_token_id += 1;
+            // set next token id
+            match self.last_token_id.checked_add(1) {
+                Some(sum) => self.last_token_id = sum,
+                None => return Err(Error::Custom(
+                               format!("Overflow")))
+            };
 
             // make sure cap is not surpassed
             if self.last_token_id >= self.access.cap {
