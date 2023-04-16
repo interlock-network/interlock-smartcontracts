@@ -1517,21 +1517,21 @@ pub mod ilockmvp {
 
             // guard to check if port exists and if intention is to overwrite
             // * note: bool value is false by default
-            match self.app.ports.get(number) {
+            let _ = match self.app.ports.get(number) {
                 Some(_port) => {
                     if !overwrite {
                         return Err(OtherError::PortExists);
                     }
                 },
                 None => (),
-            }
+            };
 
             // guard to make sure cap is not greater than rewards on hand
             if cap > self.balances[REWARDS as usize] {
                 return Err(OtherError::CapTooLarge);
             }
 
-            // make sure interlocker is not zero address
+            // make sure owner is not zero address
             if owner == AccountId::from([0_u8; 32]) {
                 return Err(OtherError::IsZeroAddress)
             }
@@ -1563,6 +1563,11 @@ pub mod ilockmvp {
 
             // get application contract address
             let application: AccountId = self.env().caller();
+
+            // make sure operator is not zero address
+            if operator == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
 
             // make sure caller is a contract, return if not
             if !self.env().is_contract(&application) {
