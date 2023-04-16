@@ -395,9 +395,11 @@ pub mod uanft {
         fn get_locked_token_count(&self) -> u64;
 
         #[ink(message)]
+        #[modifiers(only_owner)]
         fn set_base_uri(&mut self, uri: String) -> Result<(), Error>;
 
         #[ink(message)]
+        #[modifiers(only_owner)]
         fn set_multiple_attributes(&mut self, token_id: Id, metadata: Vec<(String, String)>) -> Result<(), Error>;
 
         #[ink(message)]
