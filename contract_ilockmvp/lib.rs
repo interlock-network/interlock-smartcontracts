@@ -623,6 +623,10 @@ pub mod ilockmvp {
             let caller = self.env().caller();
             let allowance = self._allowance(&from, &caller);
 
+            if allowance < value {
+                return Err(PSP22Error::InsufficientAllowance)
+            }
+
             let _ = self._approve_from_to(from, caller, allowance - value)?;
             let _ = self._transfer_from_to(from, to, value, data)?;
 
