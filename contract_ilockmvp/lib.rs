@@ -513,6 +513,8 @@ pub mod ilockmvp {
         IsZeroAddress,
         /// - Returned if pool argument is out of bounds.
         PoolOutOfBounds,
+        /// - Returned if pool argument is out of bounds.
+        DivideByZero,
         /// - Custom contract error.
         Custom(String),
     }
@@ -1045,13 +1047,11 @@ pub mod ilockmvp {
             };
 
             // calculate payout amount
-            let payamount: Vec<Balance> = stakes.iter().map(|stake| {
-                let pool = &POOLS[stake.pool as usize];
-                stake.share / pool.vests as Balance
-            }).collect();
-
-            Ok(payamount)
+            stakes.iter().map(|stake| self.calculate_payout(stake)).collect()
         }
+
+
+
 
 
 
@@ -1111,11 +1111,11 @@ pub mod ilockmvp {
 
                     // calculate the payout owed
                     // ! no checked_div needed; pool.vests guaranteed to be nonzero
-                    let mut payout: Balance = stake.share / pool.vests as Balance;
+                    let mut payout: Balance = self.calculate_payout(stake)?;
 
                     // require that payout isn't repeatable for this month
                     // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
-                    let payments = stake.paid / payout;
+                    let payments = self.calculate_payments(stake)?;
                     if payments >= self.vest.monthspassed as u128 {
                         return Err(OtherError::PayoutTooEarly)
                     }
@@ -1826,6 +1826,34 @@ pub mod ilockmvp {
                 None => Default::default(),
             }
         }        
+
+        /// - This is a helper to perform checked_div match within iterator map.
+        pub fn calculate_payout(&self, stake: &StakeholderData) -> OtherResult<Balance> {
+
+            let pool = &POOLS[stake.pool as usize];
+
+            // divide total share by number of vests
+            let amount: Balance = match stake.share.checked_div(pool.vests as Balance) {
+                Some(quotient) => quotient,
+                None => return Err(OtherError::DivideByZero),
+            };
+
+            Ok(amount)
+        }
+
+        /// - This is a helper to perform checked_div match within iterator map.
+        pub fn calculate_payments(&self, stake: &StakeholderData) -> OtherResult<Balance> {
+
+            let payout: Balance = self.calculate_payout(stake)?;
+
+            // divide total paid by payamount to get number of payments made to date
+            let payments: Balance = match stake.paid.checked_div(payout) {
+                Some(quotient) => quotient,
+                None => return Err(OtherError::DivideByZero),
+            };
+
+            Ok(payments)
+        }
     
 ////////////////////////////////////////////////////////////////////////////
 //// testing helper ////////////////////////////////////////////////////////
