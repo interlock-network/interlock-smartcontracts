@@ -518,6 +518,8 @@ pub mod ilockmvp {
         DivideByZero,
         /// - Returned if port exists and no overwrite flag.
         PortExists,
+        /// - Returned if renounce ownership is called.
+        CannotRenounceOwnership,
         /// - Returned if port cap is larger than rewards pool.
         CapTooLarge,
         /// - Custom contract error.
@@ -747,6 +749,13 @@ pub mod ilockmvp {
             self.ownable.owner = newowner;
 
             Ok(())
+        }
+
+        /// - Nobody can renounce ownership..
+        #[ink(message)]
+        fn renounce_ownership(&mut self) -> Result<(), OwnableError> {
+
+            Ok(()) 
         }
     }
 
