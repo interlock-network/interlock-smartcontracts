@@ -75,6 +75,7 @@ pub mod ilockmvp {
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 13;                               // number of token pools
     pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
+    pub const MIN_SHARE: u128 = 1_000_000_000;
 
     /// - Token data.
     pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
@@ -934,8 +935,8 @@ pub mod ilockmvp {
             overwrite: bool,
         ) -> OtherResult<()> {
 
-            // make sure share is > 0
-            if share == 0 {
+            // make sure share is large enough to not round to zero on div
+            if share > MIN_SHARE as Balance {
                 return Err(OtherError::ShareTooSmall);
             }
 
