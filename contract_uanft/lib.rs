@@ -64,6 +64,7 @@ pub mod uanft {
                 PSP34Error,
             },
             psp22::psp22_external::PSP22,
+            pausable::*,
         },
     };
 
@@ -195,6 +196,10 @@ pub mod uanft {
         #[storage_field]
         ownable: ownable::Data,
 
+        /// - Openbrush pausable extensios.
+        #[storage_field]
+		pausable: pausable::Data,
+
         /// - Universal access NFT storage fields.
         #[storage_field]
         access: AccessData,
@@ -232,6 +237,13 @@ pub mod uanft {
         pub to: Option<AccountId>,
         pub id: Id,
         pub approved: bool,
+    }
+
+    /// - For Pausable functions that are only_owner.
+    impl From<PausableError> for Error {
+        fn from(error: PausableError) -> Self {
+            Error::Custom(format!("{:?}", error))
+        }
     }
 
     /// - Needed for Openbrush internal event emission implementations.
@@ -281,6 +293,7 @@ pub mod uanft {
         /// - Override transfer function to revoke access credentials if existent.
         /// - This also updates collection.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         fn transfer(
             &mut self,
             to: AccountId,
@@ -327,6 +340,7 @@ pub mod uanft {
         /// - Art Zero message.
         ///
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         fn burn(&mut self, account: AccountId, id: Id) -> Result<(), PSP34Error> {
             let caller = self.env().caller();
             let token_owner = self.owner_of(id.clone()).unwrap();
@@ -444,6 +458,7 @@ pub mod uanft {
         /// - This generic mint function is for Art Zero interface.
         #[ink(message)]
         #[modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn mint(
             &mut self,
         ) -> Result<(), Error> {
@@ -482,6 +497,7 @@ pub mod uanft {
         /// - This mints a universal access nft by Interlock Network to specific recipient.
         #[ink(message)]
         #[modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn mint_to(
             &mut self,
             recipient: AccountId,
@@ -518,6 +534,7 @@ pub mod uanft {
 
         /// - This mints a universal access nft to caller's self at token_price in terms of PSP22 token.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn self_mint(
             &mut self,
             price: Balance,
@@ -577,6 +594,7 @@ pub mod uanft {
         /// - This is a mint function for Art Zero interface.
         #[ink(message)]
         #[modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn mint_with_attributes(
             &mut self,
             metadata: Vec<(String, String)>,
@@ -636,6 +654,7 @@ pub mod uanft {
         /// - (Ie, transfer token from recipient to contract owner within PSP22 contract.)
         /// - Only operator may call.
         #[ink(message)]
+        #[openbrush::modifiers(when_not_paused)]
         pub fn call_socket(
             &mut self,
             address: AccountId,
