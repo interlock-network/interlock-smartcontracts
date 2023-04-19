@@ -331,7 +331,16 @@ pub mod uanft {
         }
     }
 
-    impl Ownable for Psp34Nft {}
+    impl Ownable for Psp34Nft {
+
+        /// - Nobody can renounce ownership.
+        #[ink(message)]
+        fn renounce_ownership(&mut self) -> Result<(), OwnableError> {
+
+            Ok(()) 
+        }
+    }
+
     impl PSP34Metadata for Psp34Nft {}
     impl PSP34Enumerable for Psp34Nft {}
 
