@@ -965,7 +965,6 @@ pub mod ilockmvp {
 //
 // 
 
-        // check
         /// - Function to order multisigtx transaction.
         #[ink(message)]
         pub fn order_multisigtx(
@@ -1028,7 +1027,6 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
         /// - A multisigtx signer calls this to sign.
         #[ink(message)]
         pub fn sign_multisigtx(
@@ -1088,7 +1086,6 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
         /// - This adds a signatory from the list of permitted signatories.
         #[ink(message)]
         pub fn add_signatory(
@@ -1143,7 +1140,6 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
         /// - This removes a signatory from the list of permitted signatories.
         #[ink(message)]
         pub fn remove_signatory(
@@ -1198,7 +1194,6 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
         /// - This changes signer threshold for approving multisigtx.
         #[ink(message)]
         pub fn change_threshold(
@@ -1252,17 +1247,6 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
-        /// - This gets the current signature threshold for multisigtx.
-        #[ink(message)]
-        pub fn threshold(
-            &self,
-        ) -> u8 {
-
-            self.threshold
-        }
-
-        // check
         /// - This modifies timelimit for a multisig transaction.
         #[ink(message)]
         pub fn change_multisigtxtimelimit(
@@ -1316,7 +1300,15 @@ pub mod ilockmvp {
             Ok(())
         }
 
-        // check
+        /// - This gets the current signature threshold for multisigtx.
+        #[ink(message)]
+        pub fn threshold(
+            &self,
+        ) -> u8 {
+
+            self.threshold
+        }
+
         /// - This gets the current timelimit for signatories to sign multisigtx.
         #[ink(message)]
         pub fn multisigtimelimit(
@@ -1326,7 +1318,6 @@ pub mod ilockmvp {
             self.timelimit
         }
 
-        // check
         /// - This gets a list of current accounts permitted to sign multisigtx.
         #[ink(message)]
         pub fn signatories(
@@ -1336,7 +1327,6 @@ pub mod ilockmvp {
             Ok(self.signatories.iter().map(|sig| *sig ).collect())
         }
 
-        // check
         /// - This gets number of signatories permitted to sign multisigtx.
         #[ink(message)]
         pub fn signatory_count(
@@ -1346,7 +1336,6 @@ pub mod ilockmvp {
             self.signatories.len() as u8
         }
 
-        // check
         /// - This gets current number of signatures for multisigtx.
         #[ink(message)]
         pub fn signature_count(
@@ -1356,7 +1345,6 @@ pub mod ilockmvp {
             self.multisigtx.signatures.len() as u8
         }
 
-        // check
         /// - This gets a list of all signers so far on a multisigtx.
         #[ink(message)]
         pub fn check_signatures(
@@ -1455,13 +1443,11 @@ pub mod ilockmvp {
         /// - This function ensures Interlock cannot rush the vesting schedule.
         /// - This function must be called before the next round of token distributions.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn check_time(
             &mut self,
         ) -> OtherResult<()> {
     
             let caller: AccountID = AccountID { address: self.env().caller() };
-            let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
             if !self.signatories.contains(&caller) {
