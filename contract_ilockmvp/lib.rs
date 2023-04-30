@@ -75,6 +75,7 @@ pub mod ilockmvp {
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 13;                               // number of token pools
     pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
+    pub const MULTISIG_TIME: Timestamp = 86400_000;                 // milliseconds in 30 days
     pub const MIN_SHARE: u128 = 1_000_000_000;
 
     /// - Token data.
@@ -125,9 +126,45 @@ pub mod ilockmvp {
     pub const PROCEEDS: u8          = 11;
     pub const CIRCULATING: u8       = 12;
 
+    /// - Multisig functions.
+    pub const TRANSFER_OWNERSHIP: u8    = 0;
+    pub const UNPAUSE: u8               = 1;
+    pub const CREATE_PORT: u8           = 2;
+    pub const ADD_SIGNATORY: u8         = 3;
+    pub const REMOVE_SIGNATORY: u8      = 4;
+    pub const CHANGE_TIMELIMIT: u8      = 5;
+    pub const CHANGE_THRESHOLD: u8      = 6;
+    pub const UPDATE_CONTRACT: u8       = 7;
+
 ////////////////////////////////////////////////////////////////////////////
 //// structured data ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+    /// This is a type wrapper to implement Default method
+    /// on AccountId type. Ink 4 stable eliminated AccountId Default
+    /// (which was zero address, that has known private key)
+    /// ...we only really need this because Openbrush contract
+    ///    relies on deriving Default for contract storage, and
+    ///    our AccesData struct contains AccountId.
+    #[derive(scale::Encode, scale::Decode, Copy, Clone, Debug, PartialEq)]
+    #[cfg_attr(
+        feature = "std",
+        derive(
+            Eq,
+            scale_info::TypeInfo,
+            ink::storage::traits::StorageLayout,
+        )
+    )]
+    pub struct AccountID {
+        address: AccountId,
+    }
+    impl Default for AccountID {
+        fn default() -> AccountID {
+            AccountID {
+                address: AccountId::from([1_u8;32]),
+            }
+        }
+    }
 
     /// - This is upgradable storage for the token rewarding feature of this
     /// PSP22 contract.
@@ -330,7 +367,7 @@ pub mod ilockmvp {
                 locked: true,
                 paid: 0,
                 collected: 0,
-                owner: AccountId::from([1_u8;32]),
+                owner: AccountId::from([1_u8; 32]),
             }
         }
     }
@@ -383,6 +420,65 @@ pub mod ilockmvp {
         }
     }
 
+    /// - TransactionData struct contains all pertinent information for multisigtx transaction
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout,
+        )
+    )]
+    pub struct Transaction {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Which signatory ordered the multisigtx tx?
+        pub orderer: AccountID,
+
+        /// - What signatures have been collected?
+        pub signatures: Vec<Signature>,
+
+        /// - Which multisigtx function is being called?
+        pub function: u8,
+
+        /// - What is the timestamp on current transaction?
+        pub time: Timestamp,
+
+        /// - Was transaction completed?
+        pub ready: bool,
+    }
+
+    /// - TransactionData struct contains all pertinent information for multisigtx transaction
+    #[derive(scale::Encode, scale::Decode, Clone, Copy, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout,
+        )
+    )]
+    pub struct Signature {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Who signed this signature?
+        pub signer: AccountID,
+
+        /// - What is the timestamp on current transaction?
+        pub time: Timestamp,
+    }
+
+
+
     /// - ILOCKmvp struct contains overall storage data for contract
     #[ink(storage)]
     #[derive(Default, Storage)]
@@ -415,9 +511,21 @@ pub mod ilockmvp {
         #[storage_field]
         pub vest: VestData,
 
-        /// - ILOCK connecting application contract info
+        /// - ILOCK connecting application contract info.
         #[storage_field]
         pub app: AppData,
+
+        /// - Struct to track any multisigtx transactions in order.
+        pub multisigtx: Transaction,
+        
+        /// - Vector of signatories.
+        pub signatories: Vec<AccountID>,
+        
+        /// - Multisig threshold..
+        pub threshold: u8,
+
+        /// - Multisig time limit.
+        pub timelimit: Timestamp,
 
         /// - ILOCK token pool balances.
         pub balances: [Balance; POOL_COUNT],
@@ -518,10 +626,32 @@ pub mod ilockmvp {
         DivideByZero,
         /// - Returned if port exists and no overwrite flag.
         PortExists,
-        /// - Returned if renounce ownership is called.
-        CannotRenounceOwnership,
         /// - Returned if port cap is larger than rewards pool.
         CapTooLarge,
+        /// - Returned if multisigtx transaction does not exist for called function.
+        NoTransaction,
+        /// - Returned if multisigtx transaction was already completed.
+        TransactionAlreadyCompleted,
+        /// - Returned if multisigtx transaction was already and not being force reordered.
+        TransactionAlreadyOrdered,
+        /// - Returned if address does not have enough balance for port 1 self mint..
+        InsufficientBalance,
+        /// - Returned multisigtx transactionalready ordered by signatory.
+        AlreadyOrdered,
+        /// - Returned if specified multisigtx function is invalid.
+        InvalidFunction,
+        /// - Returned if caller is not signatory.
+        CallerNotSignatory,
+        /// - Returned if caller is ordering a second transaction in a row.
+        CannotReorder,
+        /// - Returned if function spacified by signer does not match order.
+        WrongFunction,
+        /// - Returned if multisigtx is too old.
+        TransactionStale,
+        /// - Returned if there are not enough signatures to call function.
+        NotEnoughSignatures,
+        /// - Returned if signer already signed.
+        AlreadySigned,
         /// - Custom contract error.
         Custom(String),
     }
@@ -717,44 +847,20 @@ pub mod ilockmvp {
 
     impl Ownable for ILOCKmvp {
         
-        /// - Override default transfer ownership function.
-        /// - On transfer, also transfer old owner balance to new owner.
-        /// - That is, transfer noncirculating tokens to new owner.
+        /// - Nobody can transfer ownership..does nothing.
+        /// - Transfer ownership implemented before update_contract() with multisigtx
         #[ink(message)]
-        fn transfer_ownership(
-            &mut self,
-            newowner: AccountId
-        ) -> Result<(), OwnableError> {
+        fn transfer_ownership(&mut self, _newowner: AccountId) -> Result<(), OwnableError> {
 
-            let oldowner = self.ownable.owner;
-            
-            // only-owner modifier not present in this scope
-            if oldowner != self.env().caller() {
-
-                return Err(OwnableError::CallerIsNotOwner);
-            }
-            let oldbalance: Balance = self.balance_of(oldowner);
-
-            // transfer all remaining owner tokens (pools) to new owner
-            let mut newbalance: Balance = self.psp22.balance_of(newowner);
-            match newbalance.checked_add(oldbalance) {
-                Some(sum) => newbalance = sum,
-                None => (), // case not possible
-            };
-            self.psp22.balances.insert(&newowner, &newbalance);
-
-            // deduct tokens from owners account
-            self.psp22.balances.insert(&oldowner, &0);
-
-            self.ownable.owner = newowner;
-
+            // do nothing
             Ok(())
         }
 
-        /// - Nobody can renounce ownership..
+        /// - Nobody can renounce ownership..does nothing.
         #[ink(message)]
         fn renounce_ownership(&mut self) -> Result<(), OwnableError> {
 
+            // do nothing
             Ok(()) 
         }
     }
@@ -819,6 +925,7 @@ pub mod ilockmvp {
         /// - Constructor to initialize contract.
         #[ink(constructor)]
         pub fn new_token(
+            timelimit: Timestamp,
         ) -> Self {
 
             // create contract
@@ -840,6 +947,7 @@ pub mod ilockmvp {
             contract._mint_to(caller, SUPPLY_CAP)
                     .expect("Failed to mint the initial supply");
             contract._init_with_owner(caller);
+            contract.timelimit = timelimit;
 
             // create initial pool balances
             for pool in 0..POOL_COUNT {
@@ -852,6 +960,422 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
+/////// multisigtx /////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//
+// 
+
+        // check
+        /// - Function to order multisigtx transaction.
+        #[ink(message)]
+        pub fn order_multisigtx(
+            &mut self,
+            function: String,
+        ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if the signing period has already begun, orderer
+            if thistime - self.multisigtx.time < self.timelimit {
+
+                return Err(OtherError::TransactionAlreadyOrdered);
+            }
+
+            // this is important to prevent corrupted key from 'freezing out'
+            // other signatories' ability to order transaction
+            if thistime - self.multisigtx.time >= self.timelimit
+                && caller == self.multisigtx.orderer {
+
+                return Err(OtherError::CannotReorder);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // set transaction function
+            self.multisigtx.function = function;
+
+            // set transaction order time
+            self.multisigtx.time = thistime;
+
+            // construct signature
+            let signature: Signature = Signature {
+                signer: caller,
+                time: thistime,
+            };
+
+            // add first signature to multisigtx transaction order
+            self.multisigtx.signatures = Vec::new();
+            self.multisigtx.signatures.push(signature);
+
+            Ok(())
+        }
+
+        // check
+        /// - A multisigtx signer calls this to sign.
+        #[ink(message)]
+        pub fn sign_multisigtx(
+            &mut self,
+            function: String,
+        ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // cannot duplicate signature
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::AlreadySigned);
+            }
+
+            // construct signature
+            let signature: Signature = Signature {
+                signer: caller,
+                time: thistime,
+            };
+
+            self.multisigtx.signatures.push(signature);
+
+            Ok(())
+        }
+
+        // check
+        /// - This adds a signatory from the list of permitted signatories.
+        #[ink(message)]
+        pub fn add_signatory(
+            &mut self,
+            signatory:AccountId,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+            let signatory: AccountID = AccountID { address: signatory };
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            self.signatories.push(signatory);
+
+            Ok(())
+        }
+
+        // check
+        /// - This removes a signatory from the list of permitted signatories.
+        #[ink(message)]
+        pub fn remove_signatory(
+            &mut self,
+            signatory: AccountId,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+            let signatory: AccountID = AccountID { address: signatory };
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            self.signatories.retain(|&account| account != signatory);
+
+            Ok(())
+        }
+
+        // check
+        /// - This changes signer threshold for approving multisigtx.
+        #[ink(message)]
+        pub fn change_threshold(
+            &mut self,
+            threshold: u8,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            self.threshold = threshold;
+
+            Ok(())
+        }
+
+        // check
+        /// - This gets the current signature threshold for multisigtx.
+        #[ink(message)]
+        pub fn threshold(
+            &self,
+        ) -> u8 {
+
+            self.threshold
+        }
+
+        // check
+        /// - This modifies timelimit for a multisig transaction.
+        #[ink(message)]
+        pub fn change_multisigtxtimelimit(
+            &mut self,
+            timelimit: Timestamp,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            self.timelimit = timelimit;
+
+            Ok(())
+        }
+
+        // check
+        /// - This gets the current timelimit for signatories to sign multisigtx.
+        #[ink(message)]
+        pub fn multisigtimelimit(
+            &self,
+        ) -> Timestamp {
+
+            self.timelimit
+        }
+
+        // check
+        /// - This gets a list of current accounts permitted to sign multisigtx.
+        #[ink(message)]
+        pub fn signatories(
+            &mut self,
+        ) -> OtherResult<Vec<AccountID>> {
+            
+            Ok(self.signatories.iter().map(|sig| *sig ).collect())
+        }
+
+        // check
+        /// - This gets number of signatories permitted to sign multisigtx.
+        #[ink(message)]
+        pub fn signatory_count(
+            &self,
+        ) -> u8 {
+
+            self.signatories.len() as u8
+        }
+
+        // check
+        /// - This gets current number of signatures for multisigtx.
+        #[ink(message)]
+        pub fn signature_count(
+            &self,
+        ) -> u8 {
+
+            self.multisigtx.signatures.len() as u8
+        }
+
+        // check
+        /// - This gets a list of all signers so far on a multisigtx.
+        #[ink(message)]
+        pub fn check_signatures(
+            &self,
+        ) -> OtherResult<Vec<Signature>> {
+
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // if multisigtx is too old, then it doesn't matter who signed
+            if thistime - self.multisigtx.time > self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            Ok(self.multisigtx.signatures.iter().map(|sig| *sig ).collect())
+        }
+
+
+////////////////////////////////////////////////////////////////////////////
 /////// pausability ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -860,7 +1384,7 @@ pub mod ilockmvp {
         #[openbrush::modifiers(only_owner)]
         pub fn pause(
             &mut self,
-        ) -> Result<(), OtherError> {
+        ) -> OtherResult<()> {
 
             self._pause()
         }
@@ -870,19 +1394,50 @@ pub mod ilockmvp {
         #[openbrush::modifiers(only_owner)]
         pub fn unpause(
             &mut self,
-        ) -> Result<(), OtherError> {
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
 
             self._unpause()
-        }
-
-        /// - Function unpauses contract.
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn switch_pause(
-            &mut self,
-        ) -> Result<(), OtherError> {
-
-            self._switch_pause()
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1489,14 +2044,133 @@ pub mod ilockmvp {
 //// portability and extensibility  ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+        #[ink(message)]
+        pub fn transfer_ownership(
+            &mut self,
+            newowner: AccountId,
+            function: String,
+        ) -> Result<(), OtherError> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
+
+            // make sure interlocker is not zero address
+            if newowner == AccountId::from([0_u8; 32]) {
+
+                return Err(OtherError::IsZeroAddress);
+            }
+
+            let oldowner = self.ownable.owner;
+
+            // only-owner modifier not present in this scope
+            if oldowner != self.env().caller() {
+
+                return Err(OtherError::CallerNotOwner);
+            }
+            let oldbalance: Balance = self.balance_of(oldowner);
+
+            // transfer all remaining owner tokens (pools) to new owner
+            let mut newbalance: Balance = self.psp22.balance_of(newowner);
+            match newbalance.checked_add(oldbalance) {
+                Some(sum) => newbalance = sum,
+                None => (), // case not possible
+            };
+            self.psp22.balances.insert(&newowner, &newbalance);
+
+            // deduct tokens from owners account
+            self.psp22.balances.insert(&oldowner, &0);
+
+            self.ownable.owner = newowner;
+
+            Ok(())
+        }
+
         /// - Modifies the code which is used to execute calls to this contract address.
         /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
             &mut self,
-            code_hash: [u8; 32]
-        ) -> PSP22Result<()> {
+            code_hash: [u8; 32],
+            function: String, 
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
 
             // takes code hash of updates contract and modifies preexisting logic to match
             ink::env::set_code_hash(&code_hash).unwrap_or_else(|err| {
@@ -1523,7 +2197,48 @@ pub mod ilockmvp {
             number: u16,
             owner: AccountId,
             overwrite: bool,
+            function: String,
         ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisigtx.signatures.len() < self.threshold as usize {
+
+                return Err(OtherError::NotEnoughSignatures);
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisigtx.time >= self.timelimit {
+
+                return Err(OtherError::TransactionStale);
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "CREATE_PORT"           => CREATE_PORT,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(OtherError::InvalidFunction),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisigtx.function {
+
+                return Err(OtherError::WrongFunction);
+            }
 
             // guard to check if port exists and if intention is to overwrite
             // * note: bool value is false by default
@@ -1705,6 +2420,12 @@ pub mod ilockmvp {
                 // rewards pool
                 0 => { 
 
+                    // verify address has enough tokens for uanft self mint
+                    if self.balance_of(address) < amount {
+
+                        return Err(OtherError::InsufficientBalance);
+                    }
+
                     // deduct cost of uanft from minter's account
                     let mut minterbalance: Balance = self.psp22.balance_of(address);
                     match minterbalance.checked_sub(amount) {
@@ -1736,6 +2457,12 @@ pub mod ilockmvp {
                 // This socket call is for a UANFT self-mint operation that is taxed by Interlock
                 // but mint ILOCK proceeds go to socket operator instead of Interlock
                 1 => {
+
+                    // verify address has enough tokens for uanft self mint
+                    if self.balance_of(address) < amount {
+
+                        return Err(OtherError::InsufficientBalance);
+                    }
 
                     // deduct cost of uanft from minter's account
                     let mut minterbalance: Balance = self.psp22.balance_of(address);
