@@ -1380,18 +1380,25 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 
         /// - Function pauses contract.
+        /// - Any signatory may call.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn pause(
             &mut self,
         ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
 
             self._pause()
         }
 
         /// - Function unpauses contract.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn unpause(
             &mut self,
             function: String,
@@ -1452,6 +1459,15 @@ pub mod ilockmvp {
         pub fn check_time(
             &mut self,
         ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
 
             // test to see if current time falls beyond time for next payout
             if self.env().block_timestamp() > self.vest.nextpayout {
@@ -2187,7 +2203,6 @@ pub mod ilockmvp {
         /// - Each port tracks amount rewarded, tax collected, if it is locked or not, owner.
         /// - A locked port may only be registered by the Interlock Network foundation.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn create_port(
             &mut self,
             codehash: Hash,
