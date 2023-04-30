@@ -420,6 +420,31 @@ pub mod ilockmvp {
         }
     }
 
+    /// - This is upgradable storage for the application connection feature of this
+    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
+    pub const MULTISIG_KEY: u32 = openbrush::storage_unique_key!(MultisigData);
+    #[derive(Default)]
+    #[openbrush::upgradeable_storage(MULTISIG_KEY)]
+    pub struct MultisigData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Stanging transaction
+        pub tx: Transaction,
+
+        /// - Vector of signatories.
+        pub signatories: Vec<AccountID>,
+        
+        /// - Multisig threshold..
+        pub threshold: u8,
+
+        /// - Multisig time limit.
+        pub timelimit: Timestamp,
+
+        /// - Expand storage related to the multisig functionality.
+        pub _reserved: Option<()>,
+    }
     /// - TransactionData struct contains all pertinent information for multisigtx transaction
     #[derive(scale::Encode, scale::Decode, Clone, Default)]
     #[cfg_attr(
@@ -515,17 +540,9 @@ pub mod ilockmvp {
         #[storage_field]
         pub app: AppData,
 
-        /// - Struct to track any multisigtx transactions in order.
-        pub multisigtx: Transaction,
-        
-        /// - Vector of signatories.
-        pub signatories: Vec<AccountID>,
-        
-        /// - Multisig threshold..
-        pub threshold: u8,
-
-        /// - Multisig time limit.
-        pub timelimit: Timestamp,
+        /// - ILOCK multisig contract info.
+        #[storage_field]
+        pub multisig: MultisigData,
 
         /// - ILOCK token pool balances.
         pub balances: [Balance; POOL_COUNT],
@@ -947,7 +964,7 @@ pub mod ilockmvp {
             contract._mint_to(caller, SUPPLY_CAP)
                     .expect("Failed to mint the initial supply");
             contract._init_with_owner(caller);
-            contract.timelimit = timelimit;
+            contract.multisig.timelimit = timelimit;
 
             // create initial pool balances
             for pool in 0..POOL_COUNT {
@@ -963,7 +980,18 @@ pub mod ilockmvp {
 /////// multisigtx /////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 //
-// 
+// Workflow:
+//
+// 1) signatory orders multisig transaction via order_multisigtx()
+//      ...this signatory's order is considered the first signature
+// 2) other signatories sign multisig transaction via sign_multisigtx()
+// 3) any signatory may check the number of signatures
+// 4) when signature count threshold is met, then any signatory may call specified function
+//
+// - all signatories must agree on the function they are signing for (ie, the multisigtx ordered)
+// - to prevent case where corrupted signatory exists, no signatory may order a multisigtx
+//   consecutively. This is to prevent corrupted signatory from jamming up the multisig process
+//
 
         /// - Function to order multisigtx transaction.
         #[ink(message)]
@@ -976,21 +1004,21 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if the signing period has already begun, orderer
-            if thistime - self.multisigtx.time < self.timelimit {
+            if thistime - self.multisig.tx.time < self.multisig.timelimit {
 
                 return Err(OtherError::TransactionAlreadyOrdered);
             }
 
             // this is important to prevent corrupted key from 'freezing out'
             // other signatories' ability to order transaction
-            if thistime - self.multisigtx.time >= self.timelimit
-                && caller == self.multisigtx.orderer {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit
+                && caller == self.multisig.tx.orderer {
 
                 return Err(OtherError::CannotReorder);
             }
@@ -1009,10 +1037,10 @@ pub mod ilockmvp {
             };
 
             // set transaction function
-            self.multisigtx.function = function;
+            self.multisig.tx.function = function;
 
             // set transaction order time
-            self.multisigtx.time = thistime;
+            self.multisig.tx.time = thistime;
 
             // construct signature
             let signature: Signature = Signature {
@@ -1021,8 +1049,8 @@ pub mod ilockmvp {
             };
 
             // add first signature to multisigtx transaction order
-            self.multisigtx.signatures = Vec::new();
-            self.multisigtx.signatures.push(signature);
+            self.multisig.tx.signatures = Vec::new();
+            self.multisig.tx.signatures.push(signature);
 
             Ok(())
         }
@@ -1038,7 +1066,7 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
@@ -1058,19 +1086,19 @@ pub mod ilockmvp {
 
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
 
             // cannot duplicate signature
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::AlreadySigned);
             }
@@ -1081,7 +1109,7 @@ pub mod ilockmvp {
                 time: thistime,
             };
 
-            self.multisigtx.signatures.push(signature);
+            self.multisig.tx.signatures.push(signature);
 
             Ok(())
         }
@@ -1099,19 +1127,19 @@ pub mod ilockmvp {
             let signatory: AccountID = AccountID { address: signatory };
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -1130,12 +1158,12 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
 
-            self.signatories.push(signatory);
+            self.multisig.signatories.push(signatory);
 
             Ok(())
         }
@@ -1153,19 +1181,19 @@ pub mod ilockmvp {
             let signatory: AccountID = AccountID { address: signatory };
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -1184,12 +1212,12 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
 
-            self.signatories.retain(|&account| account != signatory);
+            self.multisig.signatories.retain(|&account| account != signatory);
 
             Ok(())
         }
@@ -1206,19 +1234,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -1237,12 +1265,12 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
 
-            self.threshold = threshold;
+            self.multisig.threshold = threshold;
 
             Ok(())
         }
@@ -1259,19 +1287,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -1290,12 +1318,12 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
 
-            self.timelimit = timelimit;
+            self.multisig.timelimit = timelimit;
 
             Ok(())
         }
@@ -1306,7 +1334,7 @@ pub mod ilockmvp {
             &self,
         ) -> u8 {
 
-            self.threshold
+            self.multisig.threshold
         }
 
         /// - This gets the current timelimit for signatories to sign multisigtx.
@@ -1315,7 +1343,7 @@ pub mod ilockmvp {
             &self,
         ) -> Timestamp {
 
-            self.timelimit
+            self.multisig.timelimit
         }
 
         /// - This gets a list of current accounts permitted to sign multisigtx.
@@ -1324,7 +1352,7 @@ pub mod ilockmvp {
             &mut self,
         ) -> OtherResult<Vec<AccountID>> {
             
-            Ok(self.signatories.iter().map(|sig| *sig ).collect())
+            Ok(self.multisig.signatories.iter().map(|sig| *sig ).collect())
         }
 
         /// - This gets number of signatories permitted to sign multisigtx.
@@ -1333,7 +1361,7 @@ pub mod ilockmvp {
             &self,
         ) -> u8 {
 
-            self.signatories.len() as u8
+            self.multisig.signatories.len() as u8
         }
 
         /// - This gets current number of signatures for multisigtx.
@@ -1342,7 +1370,7 @@ pub mod ilockmvp {
             &self,
         ) -> u8 {
 
-            self.multisigtx.signatures.len() as u8
+            self.multisig.tx.signatures.len() as u8
         }
 
         /// - This gets a list of all signers so far on a multisigtx.
@@ -1354,12 +1382,12 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // if multisigtx is too old, then it doesn't matter who signed
-            if thistime - self.multisigtx.time > self.timelimit {
+            if thistime - self.multisig.tx.time > self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
 
-            Ok(self.multisigtx.signatures.iter().map(|sig| *sig ).collect())
+            Ok(self.multisig.tx.signatures.iter().map(|sig| *sig ).collect())
         }
 
 
@@ -1377,7 +1405,7 @@ pub mod ilockmvp {
             let caller: AccountID = AccountID { address: self.env().caller() };
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
@@ -1396,19 +1424,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -1427,7 +1455,7 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
@@ -1450,7 +1478,7 @@ pub mod ilockmvp {
             let caller: AccountID = AccountID { address: self.env().caller() };
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
@@ -2057,19 +2085,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -2088,7 +2116,7 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
@@ -2138,19 +2166,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -2169,7 +2197,7 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
@@ -2205,19 +2233,19 @@ pub mod ilockmvp {
             let thistime: Timestamp = self.env().block_timestamp();
 
             // make sure caller is designated multisigtx account
-            if !self.signatories.contains(&caller) {
+            if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
             }
 
             // if enough signatures had not been supplied, revert
-            if self.multisigtx.signatures.len() < self.threshold as usize {
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
 
                 return Err(OtherError::NotEnoughSignatures);
             }
 
             // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisigtx.time >= self.timelimit {
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
 
                 return Err(OtherError::TransactionStale);
             }
@@ -2236,7 +2264,7 @@ pub mod ilockmvp {
             };
 
             // signer must know they are signing for the right function
-            if function != self.multisigtx.function {
+            if function != self.multisig.tx.function {
 
                 return Err(OtherError::WrongFunction);
             }
