@@ -63,7 +63,6 @@ pub mod uanft {
                 Internal,
                 PSP34Error,
             },
-            psp22::psp22_external::PSP22,
             pausable::*,
         },
     };
@@ -104,7 +103,7 @@ pub mod uanft {
     /// ...we only really need this because Openbrush contract
     ///    relies on deriving Default for contract storage, and
     ///    our AccesData struct contains AccountId.
-    #[derive(scale::Encode, scale::Decode, Clone, Debug)]
+    #[derive(scale::Encode, scale::Decode, Copy, Clone, Debug)]
     #[cfg_attr(
         feature = "std",
         derive(
@@ -123,6 +122,88 @@ pub mod uanft {
                 address: AccountId::from([1_u8;32]),
             }
         }
+    }
+
+    /// - This is upgradable storage for the multisig feature of this
+    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
+    pub const MULTISIG_KEY: u32 = openbrush::storage_unique_key!(MultisigData);
+    #[derive(Default)]
+    #[openbrush::upgradeable_storage(MULTISIG_KEY)]
+    pub struct MultisigData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Stanging transaction
+        pub tx: Transaction,
+
+        /// - Vector of signatories.
+        pub signatories: Vec<AccountID>,
+        
+        /// - Multisig threshold..
+        pub threshold: u8,
+
+        /// - Multisig time limit.
+        pub timelimit: Timestamp,
+
+        /// - Expand storage related to the multisig functionality.
+        pub _reserved: Option<()>,
+    }
+    /// - TransactionData struct contains all pertinent information for multisigtx transaction
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout,
+        )
+    )]
+
+    pub struct Transaction {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Which signatory ordered the multisigtx tx?
+        pub orderer: AccountID,
+
+        /// - What signatures have been collected?
+        pub signatures: Vec<Signature>,
+
+        /// - Which multisigtx function is being called?
+        pub function: u8,
+
+        /// - What is the timestamp on current transaction?
+        pub time: Timestamp,
+
+        /// - Was transaction completed?
+        pub ready: bool,
+    }
+    /// - TransactionData struct contains all pertinent information for multisigtx transaction
+    #[derive(scale::Encode, scale::Decode, Clone, Copy, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout,
+        )
+    )]
+    pub struct Signature {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Who signed this signature?
+        pub signer: AccountID,
+
+        /// - What is the timestamp on current transaction?
+        pub time: Timestamp,
     }
 
     /// - This is upgradable storage for the access features for this
@@ -573,15 +654,8 @@ pub mod uanft {
                 return Err(Error::Custom(
                        format!("Current NFT price greater than agreed sale price of {:?}.", price)))
             }
-            
-            // make sure mint recipient can afford the PSP22 token price
-            let recipient_balance: Balance = self.app.token_instance.balance_of(minter);
-            if recipient_balance < price {
-                return Err(Error::Custom(
-                       format!("Minter cannot affort NFT at current price of {:?}.", price)))
-            }
 
-            // if can afford, initiate PSP22 token transfer to contract operator now
+            // now connect to ilockmvp to transfer ILOCK of 'price' from minter to ilockmvp owner
             let _ = self.call_socket(minter, price, Vec::new());
 
             // mint next id
@@ -739,9 +813,14 @@ pub mod uanft {
         pub fn contract_hash(
             &self,
             application: AccountId,
-        ) -> Hash {
+        ) -> Result<Hash, PSP34Error> {
 
-            self.env().code_hash(&application).unwrap()
+            match self.env().code_hash(&application) {
+
+                Ok(hash) => Ok(hash),
+                Err(_error) => Err(PSP34Error::Custom(
+                        format!("Not valid contract.").into_bytes())),
+            }
         }
 
         /// - Art Zero helper function.
