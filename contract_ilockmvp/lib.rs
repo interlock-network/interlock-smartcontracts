@@ -420,7 +420,7 @@ pub mod ilockmvp {
         }
     }
 
-    /// - This is upgradable storage for the application connection feature of this
+    /// - This is upgradable storage for the multisig feature of this
     /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
     pub const MULTISIG_KEY: u32 = openbrush::storage_unique_key!(MultisigData);
     #[derive(Default)]
@@ -477,7 +477,6 @@ pub mod ilockmvp {
         /// - Was transaction completed?
         pub ready: bool,
     }
-
     /// - TransactionData struct contains all pertinent information for multisigtx transaction
     #[derive(scale::Encode, scale::Decode, Clone, Copy, Default)]
     #[cfg_attr(
@@ -943,6 +942,7 @@ pub mod ilockmvp {
         #[ink(constructor)]
         pub fn new_token(
             timelimit: Timestamp,
+            signatory: AccountId,
         ) -> Self {
 
             // create contract
@@ -950,6 +950,18 @@ pub mod ilockmvp {
                 
             // define owner as caller
             let caller = contract.env().caller();
+
+            // define first two signatory
+            let firstsignatory: AccountID = AccountID { address: caller };
+            let secondsignatory: AccountID = AccountID { address: signatory };
+
+            // push first two signatories
+            contract.multisig.signatories.push(firstsignatory);
+            contract.multisig.signatories.push(secondsignatory);
+
+            // multisig defaults
+            contract.multisig.timelimit = timelimit;
+            contract.multisig.threshold = 2;
 
             // set initial data
             contract.vest.monthspassed = 0;
@@ -964,7 +976,6 @@ pub mod ilockmvp {
             contract._mint_to(caller, SUPPLY_CAP)
                     .expect("Failed to mint the initial supply");
             contract._init_with_owner(caller);
-            contract.multisig.timelimit = timelimit;
 
             // create initial pool balances
             for pool in 0..POOL_COUNT {
@@ -1122,6 +1133,11 @@ pub mod ilockmvp {
             function: String,
         ) -> OtherResult<()> {
     
+            // make sure signatory is not zero address
+            if signatory == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
             let caller: AccountID = AccountID { address: self.env().caller() };
             let thistime: Timestamp = self.env().block_timestamp();
             let signatory: AccountID = AccountID { address: signatory };
@@ -1175,6 +1191,11 @@ pub mod ilockmvp {
             signatory: AccountId,
             function: String,
         ) -> OtherResult<()> {
+
+            // make sure signatory is not zero address
+            if signatory == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
     
             let caller: AccountID = AccountID { address: self.env().caller() };
             let thistime: Timestamp = self.env().block_timestamp();
@@ -2129,11 +2150,6 @@ pub mod ilockmvp {
 
             let oldowner = self.ownable.owner;
 
-            // only-owner modifier not present in this scope
-            if oldowner != self.env().caller() {
-
-                return Err(OtherError::CallerNotOwner);
-            }
             let oldbalance: Balance = self.balance_of(oldowner);
 
             // transfer all remaining owner tokens (pools) to new owner
@@ -2155,7 +2171,6 @@ pub mod ilockmvp {
         /// - Modifies the code which is used to execute calls to this contract address.
         /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
             &mut self,
             code_hash: [u8; 32],

@@ -74,6 +74,15 @@ pub mod uanft {
         ILOCKmvpRef,
     };
 
+    /// - Multisig functions.
+    pub const TRANSFER_OWNERSHIP: u8    = 0;
+    pub const UNPAUSE: u8               = 1;
+    pub const ADD_SIGNATORY: u8         = 2;
+    pub const REMOVE_SIGNATORY: u8      = 3;
+    pub const CHANGE_TIMELIMIT: u8      = 4;
+    pub const CHANGE_THRESHOLD: u8      = 5;
+    pub const UPDATE_CONTRACT: u8       = 6;
+
     #[openbrush::wrapper]
     pub type Psp34Ref = dyn PSP34 + PSP34Metadata;
 
@@ -103,11 +112,10 @@ pub mod uanft {
     /// ...we only really need this because Openbrush contract
     ///    relies on deriving Default for contract storage, and
     ///    our AccesData struct contains AccountId.
-    #[derive(scale::Encode, scale::Decode, Copy, Clone, Debug)]
+    #[derive(scale::Encode, scale::Decode, Copy, Clone, Debug, PartialEq)]
     #[cfg_attr(
         feature = "std",
         derive(
-            PartialEq,
             Eq,
             scale_info::TypeInfo,
             ink::storage::traits::StorageLayout,
@@ -417,6 +425,15 @@ pub mod uanft {
     }
 
     impl Ownable for Psp34Nft {
+        
+        /// - Nobody can transfer ownership from this implementation..calling does nothing.
+        /// - Transfer ownership implemented before update_contract() with multisigtx
+        #[ink(message)]
+        fn transfer_ownership(&mut self, _newowner: AccountId) -> Result<(), OwnableError> {
+
+            // do nothing
+            Ok(())
+        }
 
         /// - Nobody can renounce ownership.
         #[ink(message)]
@@ -495,6 +512,9 @@ pub mod uanft {
         fn get_owner(&self) -> AccountId;
     }
 
+    /// - Convenience Result Type
+    pub type OtherResult<T> = core::result::Result<T, Error>;
+
     impl Psp34Nft {
 
         /// - Function for internal _emit_event implementations.
@@ -565,6 +585,501 @@ pub mod uanft {
 
             contract
         }
+
+////////////////////////////////////////////////////////////////////////////
+/////// multisigtx /////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//
+// Workflow:
+//
+// 1) signatory orders multisig transaction via order_multisigtx()
+//      ...this signatory's order is considered the first signature
+// 2) other signatories sign multisig transaction via sign_multisigtx()
+// 3) any signatory may check the number of signatures
+// 4) when signature count threshold is met, then any signatory may call specified function
+//
+// - all signatories must agree on the function they are signing for (ie, the multisigtx ordered)
+// - to prevent case where corrupted signatory exists, no signatory may order a multisigtx
+//   consecutively. This is to prevent corrupted signatory from jamming up the multisig process
+//
+
+        /// - Function to order multisigtx transaction.
+        #[ink(message)]
+        pub fn order_multisigtx(
+            &mut self,
+            function: String,
+        ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if the signing period has already begun, orderer
+            if thistime - self.multisig.tx.time < self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionAlreadyOrdered")));
+            }
+
+            // this is important to prevent corrupted key from 'freezing out'
+            // other signatories' ability to order transaction
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit
+                && caller == self.multisig.tx.orderer {
+
+                return Err(Error::Custom(format!("CannotReorder")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // set transaction function
+            self.multisig.tx.function = function;
+
+            // set transaction order time
+            self.multisig.tx.time = thistime;
+
+            // construct signature
+            let signature: Signature = Signature {
+                signer: caller,
+                time: thistime,
+            };
+
+            // add first signature to multisigtx transaction order
+            self.multisig.tx.signatures = Vec::new();
+            self.multisig.tx.signatures.push(signature);
+
+            Ok(())
+        }
+
+        /// - A multisigtx signer calls this to sign.
+        #[ink(message)]
+        pub fn sign_multisigtx(
+            &mut self,
+            function: String,
+        ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // cannot duplicate signature
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("AlreadySigned")));
+            }
+
+            // construct signature
+            let signature: Signature = Signature {
+                signer: caller,
+                time: thistime,
+            };
+
+            self.multisig.tx.signatures.push(signature);
+
+            Ok(())
+        }
+
+        /// - This adds a signatory from the list of permitted signatories.
+        #[ink(message)]
+        pub fn add_signatory(
+            &mut self,
+            signatory:AccountId,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            // make sure signatory is not zero address
+            if signatory == AccountId::from([0_u8; 32]) {
+
+                return Err(Error::Custom(format!("IsZeroAddress")));
+            }
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+            let signatory: AccountID = AccountID { address: signatory };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            self.multisig.signatories.push(signatory);
+
+            Ok(())
+        }
+
+        /// - This removes a signatory from the list of permitted signatories.
+        #[ink(message)]
+        pub fn remove_signatory(
+            &mut self,
+            signatory: AccountId,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            // make sure signatory is not zero address
+            if signatory == AccountId::from([0_u8; 32]) {
+
+                return Err(Error::Custom(format!("IsZeroAddress")));
+            }
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+            let signatory: AccountID = AccountID { address: signatory };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            self.multisig.signatories.retain(|&account| account != signatory);
+
+            Ok(())
+        }
+
+        /// - This changes signer threshold for approving multisigtx.
+        #[ink(message)]
+        pub fn change_threshold(
+            &mut self,
+            threshold: u8,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            self.multisig.threshold = threshold;
+
+            Ok(())
+        }
+
+        /// - This modifies timelimit for a multisig transaction.
+        #[ink(message)]
+        pub fn change_multisigtxtimelimit(
+            &mut self,
+            timelimit: Timestamp,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            self.multisig.timelimit = timelimit;
+
+            Ok(())
+        }
+
+        /// - This gets the current signature threshold for multisigtx.
+        #[ink(message)]
+        pub fn threshold(
+            &self,
+        ) -> u8 {
+
+            self.multisig.threshold
+        }
+
+        /// - This gets the current timelimit for signatories to sign multisigtx.
+        #[ink(message)]
+        pub fn multisigtimelimit(
+            &self,
+        ) -> Timestamp {
+
+            self.multisig.timelimit
+        }
+
+        /// - This gets a list of current accounts permitted to sign multisigtx.
+        #[ink(message)]
+        pub fn signatories(
+            &mut self,
+        ) -> OtherResult<Vec<AccountID>> {
+            
+            Ok(self.multisig.signatories.iter().map(|sig| *sig ).collect())
+        }
+
+        /// - This gets number of signatories permitted to sign multisigtx.
+        #[ink(message)]
+        pub fn signatory_count(
+            &self,
+        ) -> u8 {
+
+            self.multisig.signatories.len() as u8
+        }
+
+        /// - This gets current number of signatures for multisigtx.
+        #[ink(message)]
+        pub fn signature_count(
+            &self,
+        ) -> u8 {
+
+            self.multisig.tx.signatures.len() as u8
+        }
+
+        /// - This gets a list of all signers so far on a multisigtx.
+        #[ink(message)]
+        pub fn check_signatures(
+            &self,
+        ) -> OtherResult<Vec<Signature>> {
+
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // if multisigtx is too old, then it doesn't matter who signed
+            if thistime - self.multisig.tx.time > self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            Ok(self.multisig.tx.signatures.iter().map(|sig| *sig ).collect())
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// pausability ////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - Function pauses contract.
+        /// - Any signatory may call.
+        #[ink(message)]
+        pub fn pause(
+            &mut self,
+        ) -> OtherResult<()> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            self._pause()
+        }
+
+        /// - Function unpauses contract.
+        #[ink(message)]
+        pub fn unpause(
+            &mut self,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            self._unpause()
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// minting ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
         /// - This generic mint function is for Art Zero interface.
         #[ink(message)]
@@ -806,14 +1321,110 @@ pub mod uanft {
             }
         }
 
+        #[ink(message)]
+        pub fn transfer_ownership(
+            &mut self,
+            newowner: AccountId,
+            function: String,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
+
+            // make sure interlocker is not zero address
+            if newowner == AccountId::from([0_u8; 32]) {
+
+                return Err(Error::Custom(format!("IsZeroAddress")));
+            }
+
+            self.ownable.owner = newowner;
+
+            Ok(())
+        }
+
         /// - Modifies the code which is used to execute calls to this contract address.
         /// - This upgrades the token contract logic while using old state.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         pub fn update_contract(
             &mut self,
-            code_hash: [u8; 32]
-        ) -> Result<(), PSP34Error> {
+            code_hash: [u8; 32],
+            function: String, 
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+            let thistime: Timestamp = self.env().block_timestamp();
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
+
+            // if enough signatures had not been supplied, revert
+            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
+
+                return Err(Error::Custom(format!("NotEnoughSignatures")));
+            }
+
+            // if multisigtx is too old, then signature does not matter
+            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
+
+                return Err(Error::Custom(format!("TransactionStale")));
+            }
+
+            // get function index
+            let function: u8 = match function.as_str() {
+                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
+                "UNPAUSE"               => UNPAUSE,
+                "ADD_SIGNATORY"         => ADD_SIGNATORY,
+                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
+                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
+                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
+                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
+                _ => return Err(Error::Custom(format!("InvalidFunction"))),
+            };
+
+            // signer must know they are signing for the right function
+            if function != self.multisig.tx.function {
+
+                return Err(Error::Custom(format!("WrongFunction")));
+            }
 
             // takes code hash of updates contract and modifies preexisting logic to match
             ink::env::set_code_hash(&code_hash).unwrap_or_else(|err| {
