@@ -289,6 +289,10 @@ pub mod uanft {
         #[storage_field]
         app: AppData,
 
+        /// - ILOCK multisig contract info.
+        #[storage_field]
+        multisig: MultisigData,
+
         /// - Art zero storage fields.
         last_token_id: u64,
         attribute_count: u32,
@@ -507,11 +511,20 @@ pub mod uanft {
             cap: u64,
             price: Balance,
             token_address: AccountId,
+            timelimit: Timestamp,
+            signatory: AccountId,
         ) -> Self {
             
             // create the contract
             let mut contract = Self::default();
-                
+                                
+            // define owner as caller
+            let caller = contract.env().caller();
+
+            // define first two signatory
+            let firstsignatory: AccountID = AccountID { address: caller };
+            let secondsignatory: AccountID = AccountID { address: signatory };
+
             // set attributes
             contract._set_attribute(
                 Id::U8(0),
@@ -529,12 +542,20 @@ pub mod uanft {
                 class.into_bytes(),
             );
 
+            // push first two signatories
+            contract.multisig.signatories.push(firstsignatory);
+            contract.multisig.signatories.push(secondsignatory);
+
+            // multisig defaults
+            contract.multisig.timelimit = timelimit;
+            contract.multisig.threshold = 2;
+
             // assign caller as owner
-            contract._init_with_owner(contract.env().caller());
+            contract._init_with_owner(caller);
 
             // create a reference to the deployed PSP22 ILOCK token contract
             contract.app.token_instance = ink::env::call::FromAccountId::from_account_id(token_address);
-            contract.app.operator.address = Self::env().caller();
+            contract.app.operator.address = caller;
 
             // set cap
             contract.access.cap = cap;
