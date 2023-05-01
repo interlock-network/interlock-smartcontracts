@@ -541,6 +541,10 @@ pub mod uanft {
             // define owner as caller
             let caller = contract.env().caller();
 
+            if caller == signatory {
+                panic!("caller is signatory");
+            }
+
             // define first two signatory
             let firstsignatory: AccountID = AccountID { address: caller };
             let secondsignatory: AccountID = AccountID { address: signatory };
@@ -692,7 +696,6 @@ pub mod uanft {
                 _ => return Err(Error::Custom(format!("InvalidFunction"))),
             };
 
-
             // signer must know they are signing for the right function
             if function != self.multisig.tx.function {
 
@@ -705,8 +708,8 @@ pub mod uanft {
                 return Err(Error::Custom(format!("TransactionStale")));
             }
 
-            // cannot duplicate signature
-            if !self.multisig.signatories.contains(&caller) {
+            // make sure signatory has not already signed for the transaction
+            if self.multisig.tx.signatures.iter().any(|sig| sig.signer == caller) {
 
                 return Err(Error::Custom(format!("AlreadySigned")));
             }
@@ -745,6 +748,13 @@ pub mod uanft {
 
                 return Err(Error::Custom(format!("CallerNotSignatory")));
             }
+
+            // make sure caller is designated multisigtx account
+            if self.multisig.signatories.contains(&signatory) {
+
+                return Err(Error::Custom(format!("AlreadySignatory")));
+            }
+
 
             // if enough signatures had not been supplied, revert
             if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {

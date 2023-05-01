@@ -668,6 +668,8 @@ pub mod ilockmvp {
         NotEnoughSignatures,
         /// - Returned if signer already signed.
         AlreadySigned,
+        /// - Returned if signatory to add is already in vector.
+        AlreadySignatory,
         /// - Custom contract error.
         Custom(String),
     }
@@ -951,6 +953,10 @@ pub mod ilockmvp {
             // define owner as caller
             let caller = contract.env().caller();
 
+            if caller == signatory {
+                panic!("caller is signatory");
+            }
+
             // define first two signatory
             let firstsignatory: AccountID = AccountID { address: caller };
             let secondsignatory: AccountID = AccountID { address: signatory };
@@ -1108,8 +1114,7 @@ pub mod ilockmvp {
                 return Err(OtherError::TransactionStale);
             }
 
-            // cannot duplicate signature
-            if !self.multisig.signatories.contains(&caller) {
+            if self.multisig.tx.signatures.iter().any(|sig| sig.signer == caller) {
 
                 return Err(OtherError::AlreadySigned);
             }
@@ -1143,6 +1148,12 @@ pub mod ilockmvp {
             let signatory: AccountID = AccountID { address: signatory };
 
             // make sure caller is designated multisigtx account
+            if self.multisig.signatories.contains(&signatory) {
+
+                return Err(OtherError::AlreadySignatory);
+            }
+
+            // make sure signatory is not already in vector
             if !self.multisig.signatories.contains(&caller) {
 
                 return Err(OtherError::CallerNotSignatory);
