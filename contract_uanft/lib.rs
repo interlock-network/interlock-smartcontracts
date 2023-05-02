@@ -532,7 +532,8 @@ pub mod uanft {
             price: Balance,
             token_address: AccountId,
             timelimit: Timestamp,
-            signatory: AccountId,
+            signatory_2: AccountId,
+            signatory_3: AccountId,
         ) -> Self {
             
             // create the contract
@@ -541,13 +542,19 @@ pub mod uanft {
             // define owner as caller
             let caller = contract.env().caller();
 
-            if caller == signatory {
+            if caller == signatory_2 || caller == signatory_3 {
                 panic!("caller is signatory");
             }
 
-            // define first two signatory
+            // define first three signatory
             let firstsignatory: AccountID = AccountID { address: caller };
-            let secondsignatory: AccountID = AccountID { address: signatory };
+            let secondsignatory: AccountID = AccountID { address: signatory_2 };
+            let thirdsignatory: AccountID = AccountID { address: signatory_3 };
+
+            // push first two signatories
+            contract.multisig.signatories.push(firstsignatory);
+            contract.multisig.signatories.push(secondsignatory);
+            contract.multisig.signatories.push(thirdsignatory);
 
             // set attributes
             contract._set_attribute(
@@ -565,10 +572,6 @@ pub mod uanft {
                 String::from("class").into_bytes(),
                 class.into_bytes(),
             );
-
-            // push first two signatories
-            contract.multisig.signatories.push(firstsignatory);
-            contract.multisig.signatories.push(secondsignatory);
 
             // multisig defaults
             contract.multisig.timelimit = timelimit;
@@ -977,6 +980,14 @@ pub mod uanft {
         pub fn signatories(
             &mut self,
         ) -> OtherResult<Vec<AccountID>> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
             
             Ok(self.multisig.signatories.iter().map(|sig| *sig ).collect())
         }
@@ -1002,10 +1013,17 @@ pub mod uanft {
         /// - This gets a list of all signers so far on a multisigtx.
         #[ink(message)]
         pub fn check_signatures(
-            &self,
+            &mut self,
         ) -> OtherResult<Vec<Signature>> {
 
             let thistime: Timestamp = self.env().block_timestamp();
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(Error::Custom(format!("CallerNotSignatory")));
+            }
 
             // if multisigtx is too old, then it doesn't matter who signed
             if thistime - self.multisig.tx.time > self.multisig.timelimit {

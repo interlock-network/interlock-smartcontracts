@@ -944,7 +944,8 @@ pub mod ilockmvp {
         #[ink(constructor)]
         pub fn new_token(
             timelimit: Timestamp,
-            signatory: AccountId,
+            signatory_2: AccountId,
+            signatory_3: AccountId,
         ) -> Self {
 
             // create contract
@@ -953,17 +954,19 @@ pub mod ilockmvp {
             // define owner as caller
             let caller = contract.env().caller();
 
-            if caller == signatory {
+            if caller == signatory_2 || caller == signatory_3 {
                 panic!("caller is signatory");
             }
 
-            // define first two signatory
+            // define first three signatory
             let firstsignatory: AccountID = AccountID { address: caller };
-            let secondsignatory: AccountID = AccountID { address: signatory };
+            let secondsignatory: AccountID = AccountID { address: signatory_2 };
+            let thirdsignatory: AccountID = AccountID { address: signatory_3 };
 
             // push first two signatories
             contract.multisig.signatories.push(firstsignatory);
             contract.multisig.signatories.push(secondsignatory);
+            contract.multisig.signatories.push(thirdsignatory);
 
             // multisig defaults
             contract.multisig.timelimit = timelimit;
@@ -1114,6 +1117,7 @@ pub mod ilockmvp {
                 return Err(OtherError::TransactionStale);
             }
 
+            // make sure signatory has not already signed for the transaction
             if self.multisig.tx.signatures.iter().any(|sig| sig.signer == caller) {
 
                 return Err(OtherError::AlreadySigned);
@@ -1383,6 +1387,14 @@ pub mod ilockmvp {
         pub fn signatories(
             &mut self,
         ) -> OtherResult<Vec<AccountID>> {
+
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
             
             Ok(self.multisig.signatories.iter().map(|sig| *sig ).collect())
         }
@@ -1408,10 +1420,17 @@ pub mod ilockmvp {
         /// - This gets a list of all signers so far on a multisigtx.
         #[ink(message)]
         pub fn check_signatures(
-            &self,
+            &mut self,
         ) -> OtherResult<Vec<Signature>> {
 
             let thistime: Timestamp = self.env().block_timestamp();
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
 
             // if multisigtx is too old, then it doesn't matter who signed
             if thistime - self.multisig.tx.time > self.multisig.timelimit {
