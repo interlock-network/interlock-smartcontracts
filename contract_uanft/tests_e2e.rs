@@ -57,9 +57,15 @@ async fn happy_self_mint(
 
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+    let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
     // spin up ILOCK PSP22 token contract
-    let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token();
+    let ilock_constructor = ilockmvp::ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account.clone(),
+        bob_account.clone(),
+        );
+
     let ilock_contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), ilock_constructor, 0, None)
         .await.expect("instantiate failed").account_id;
@@ -72,6 +78,9 @@ async fn happy_self_mint(
         10_000,
         0,
         ilock_contract_acct_id,
+        200_000,
+        charlie_account.clone(),
+        bob_account.clone(),
     );
     let uanft_contract_acct_id = client
         .instantiate("uanft", &ink_e2e::alice(), uanft_constructor, 0, None)
@@ -88,11 +97,11 @@ async fn happy_self_mint(
     let get_hash_msg = build_message::<Psp34NftRef>(uanft_contract_acct_id.clone())
         .call(|contract| contract.contract_hash(uanft_contract_acct_id.clone()));
     let application_hash = client
-        .call_dry_run(&ink_e2e::alice(), &get_hash_msg, 0, None).await.return_value();
+        .call_dry_run(&ink_e2e::alice(), &get_hash_msg, 0, None).await.return_value().unwrap();
 
     // create a dummy port for PORT 0 on ILOCK token contract
     let create_port_msg = build_message::<ilockmvp::ILOCKmvpRef>(ilock_contract_acct_id.clone())
-        .call(|contract| contract.create_port(application_hash, 0, 0, false, 0, alice_account.clone() ));
+        .call(|contract| contract.create_port(application_hash, 0, 0, false, 0, alice_account.clone(), false, "CREATE_PORT".to_string()));
     let _create_port_result = client
         .call(&ink_e2e::alice(), create_port_msg, 0, None).await;
 

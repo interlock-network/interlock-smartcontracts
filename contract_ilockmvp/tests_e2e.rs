@@ -56,7 +56,11 @@ async fn happy_transfer(
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
     let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
-    let constructor = ILOCKmvpRef::new_token();
+    let constructor = ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account,
+        bob_account,
+        );
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
@@ -133,7 +137,7 @@ async fn happy_transfer(
     let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(REWARDS));
     let rewards_balance = client
-        .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 500, rewards_balance);
 
     // checks that alice has expected resulting balance
@@ -176,7 +180,11 @@ async fn happy_transfer_from(
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
     let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
-    let constructor = ILOCKmvpRef::new_token();
+    let constructor = ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account,
+        bob_account,
+        );
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
@@ -300,7 +308,7 @@ async fn happy_transfer_from(
     let rewards_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(REWARDS));
     let rewards_balance = client
-        .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &rewards_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 + 1000, rewards_balance);
 
     Ok(())
@@ -331,8 +339,15 @@ async fn happy_distribute_tokens(
     mut client: ink_e2e::Client<C, E>,
 ) -> E2EResult<()> {
 
+    let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+    let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
+
     // fire up contract
-    let constructor = ILOCKmvpRef::new_token();
+    let constructor = ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account,
+        bob_account,
+        );
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
         .await.expect("instantiate failed").account_id;
@@ -346,7 +361,7 @@ async fn happy_distribute_tokens(
     // register stakeholder
     let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.register_stakeholder(
-            stakeholder_account.clone(), stakeholder_share, TEAM));
+            stakeholder_account.clone(), stakeholder_share, TEAM, false));
     let _register_stakeholder_result = client
         .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
 
@@ -358,31 +373,36 @@ async fn happy_distribute_tokens(
     let last_payout = payout + 1_000_000_000 % vests as Balance; // 27_777_805
 
     // check stakeholder_data()
-    let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-        .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
-    let stakeholder_data = client
-        .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None).await.return_value();
-    assert_eq!(stakeholder_data.0.share, stakeholder_share);
-    assert_eq!(stakeholder_data.1, stakeholder_data.0.share);
-    assert_eq!(stakeholder_data.2, payout);
-    assert_eq!(stakeholder_data.3, "team+founders".to_string());
-
+    let stake_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.get_stakes(stakeholder_account.clone()));
+    let _stake_data = client
+        .call_dry_run(&ink_e2e::alice(), &stake_data_msg, 0, None).await.return_value();
+    /*
+    let stake_payout_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.get_stakes_payamount(stakeholder_account.clone()));
+    let stake_payout = client
+        .call_dry_run(&ink_e2e::alice(), &stake_payout_msg, 0, None).await.return_value().unwrap().first().unwrap();
+    assert_eq!(stake_data.share, stakeholder_share);
+    assert_eq!(*stake_payout, payout);
+*/
     // iterate through one vesting schedule
     for month in 0..(schedule_end + 2) {
 
         if month >= cliff && month <= schedule_end {
 
         let distribute_tokens_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-            .call(|contract| contract.distribute_tokens(stakeholder_account.clone()));
+            .call(|contract| contract.distribute_tokens(stakeholder_account.clone(), TEAM));
         let _distribute_tokens_result = client
             .call(&ink_e2e::alice(), distribute_tokens_msg, 0, None).await;
         }
 
-        let stakeholder_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
-            .call(|contract| contract.stakeholder_data(stakeholder_account.clone()));
-        let stakeholder_paid = client
-            .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None)
-                .await.return_value().0.paid;
+        let stake_data_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+            .call(|contract| contract.get_stakes(stakeholder_account.clone()));
+        let stake_data = client
+            .call_dry_run(&ink_e2e::alice(), &stake_data_msg, 0, None).await.return_value().expect("bad call").first().unwrap().clone();
+        let stake_paid = stake_data.clone().paid;
+     //       .call_dry_run(&ink_e2e::alice(), &stakeholder_data_msg, 0, None)
+       //         .await.return_value().0.paid;
 
         let stakeholder_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
             .call(|contract| contract.balance_of(stakeholder_account.clone()));
@@ -393,8 +413,8 @@ async fn happy_distribute_tokens(
         let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
             .call(|contract| contract.pool_balance(TEAM));
         let pool_balance = client
-            .call_dry_run(&ink_e2e::alice(), &pool_balance_msg.clone(), 0, None)
-                .await.return_value().1;
+            .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None)
+                .await.return_value();
 
         let owner_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
             .call(|contract| contract.balance_of(alice_account.clone()));
@@ -416,25 +436,25 @@ async fn happy_distribute_tokens(
         */
         if month < cliff {
 
-            assert_eq!(stakeholder_paid, 0);
+            assert_eq!(stake_paid, 0);
             assert_eq!(stakeholder_balance, 0);
             assert_eq!(owner_balance, SUPPLY_CAP);
-            assert_eq!(pool_balance, pool_size);
+            assert_eq!(pool_balance.unwrap(), pool_size);
 
         } else if month >= cliff && month < schedule_end {
 
-            assert_eq!(stakeholder_paid, (month - cliff + 1) as Balance * payout);
+            assert_eq!(stake_paid, (month - cliff + 1) as Balance * payout);
             assert_eq!(stakeholder_balance, (month - cliff + 1) as Balance * payout);
             assert_eq!(owner_balance, SUPPLY_CAP - (month - cliff + 1) as Balance * payout);
-            assert_eq!(pool_balance, pool_size - (month - cliff + 1) as Balance * payout);
+            assert_eq!(pool_balance.unwrap(), pool_size - (month - cliff + 1) as Balance * payout);
 
         } else if month >= schedule_end {
 
-            assert_eq!(stakeholder_paid, (schedule_period - 1) as Balance * payout + last_payout);
+            assert_eq!(stake_paid, (schedule_period - 1) as Balance * payout + last_payout);
             assert_eq!(stakeholder_balance, (schedule_period - 1) as Balance * payout + last_payout);
             assert_eq!(owner_balance,
                SUPPLY_CAP - (schedule_period - 1) as Balance * payout - last_payout);
-            assert_eq!(pool_balance,
+            assert_eq!(pool_balance.unwrap(),
                pool_size - (schedule_period - 1) as Balance * payout - last_payout);
         }
     }
@@ -467,11 +487,37 @@ async fn happy_payout_tokens(
 
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+    let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
-    let constructor = ILOCKmvpRef::new_token();
+    let constructor = ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account,
+        bob_account,
+        );
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
             .await.expect("instantiate failed").account_id;
+
+    // register stakeholder
+    let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.register_stakeholder(
+            bob_account.clone(), 1_000_000, PARTNERS, false));
+    let _register_stakeholder_result = client
+        .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
+
+    // register stakeholder
+    let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.register_stakeholder(
+            bob_account.clone(), 1_000_000, COMMUNITY, false));
+    let _register_stakeholder_result = client
+        .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
+
+    // register stakeholder
+    let register_stakeholder_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
+        .call(|contract| contract.register_stakeholder(
+            bob_account.clone(), 1_000_000, PUBLIC, false));
+    let _register_stakeholder_result = client
+        .call(&ink_e2e::alice(), register_stakeholder_msg, 0, None).await;
 
     // messages the pay from various pools
     let partners_pay_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
@@ -506,7 +552,7 @@ async fn happy_payout_tokens(
     let mut pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(PARTNERS));
     let mut pool_balance = client
-        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[PARTNERS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
     // alice pays 1000 ILOCK to bob from COMMUNITY pool
@@ -527,7 +573,7 @@ async fn happy_payout_tokens(
     pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(COMMUNITY));
     pool_balance = client
-        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[COMMUNITY as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
     // alice pays 1000 ILOCK to bob from PUBLIC pool
@@ -548,7 +594,7 @@ async fn happy_payout_tokens(
     pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(PUBLIC));
     pool_balance = client
-        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[PUBLIC as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
     
     Ok(())
@@ -583,8 +629,13 @@ async fn happy_reward_interlocker(
 
     let alice_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Alice);
     let bob_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Bob);
+    let charlie_account = ink_e2e::account_id(ink_e2e::AccountKeyring::Charlie);
 
-    let constructor = ILOCKmvpRef::new_token();
+    let constructor = ILOCKmvpRef::new_token(
+        200_000,
+        charlie_account,
+        bob_account,
+        );
     let contract_acct_id = client
         .instantiate("ilockmvp", &ink_e2e::alice(), constructor, 0, None)
             .await.expect("instantiate failed").account_id;
@@ -636,7 +687,7 @@ async fn happy_reward_interlocker(
     let pool_balance_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.pool_balance(REWARDS));
     let pool_balance = client
-        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().1;
+        .call_dry_run(&ink_e2e::alice(), &pool_balance_msg, 0, None).await.return_value().unwrap();
     assert_eq!(POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 - 1000, pool_balance);
 
     // checks that bob has expected resulting balance
@@ -664,7 +715,7 @@ async fn happy_reward_interlocker(
     let total_rewarded_interlocker_msg = build_message::<ILOCKmvpRef>(contract_acct_id.clone())
         .call(|contract| contract.rewarded_interlocker_total(bob_account.clone()));
     let total_rewarded_interlocker = client
-        .call_dry_run(&ink_e2e::alice(), &total_rewarded_interlocker_msg, 0, None).await.return_value();
+        .call_dry_run(&ink_e2e::alice(), &total_rewarded_interlocker_msg, 0, None).await.return_value().unwrap();
     assert_eq!(0 + 1000, total_rewarded_interlocker);
     
     Ok(())

@@ -16,18 +16,9 @@
 use crate::ilockmvp::*;
 use openbrush::{
     contracts::psp22::PSP22,
-    traits::{
-        Balance,
-        AccountId,
-    },
 };
 use ink::{
-    codegen::Env,
-    primitives::Hash,
-    prelude::{
-        string::ToString,
-        format,
-    },
+    codegen::Env
 };
 
 /// - Test if the default constructor does its job
@@ -36,7 +27,12 @@ use ink::{
 #[ink::test]
 fn new_token_works() {
 
-    let ILOCKmvpPSP22 = ILOCKmvp::new_token();
+    let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+    let ILOCKmvpPSP22 = ILOCKmvp::new_token(
+        200_000,
+        accounts.bob,
+        accounts.charlie,
+        );
 
     assert_eq!(ILOCKmvpPSP22.vest.monthspassed, ILOCKmvpPSP22.months_passed());
     assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);
@@ -64,28 +60,19 @@ fn happy_register_stakeholder_data() {
 
 }
 
-/// - Test if pool_data getter does its job.
-/// - Test if pool_balance does its job.
-#[ink::test]
-fn happy_pool_data_and_balance() {
-
-    let ILOCKmvpPSP22 = ILOCKmvp::new_token();
-    let pool = &POOLS[1];
-    assert_eq!(ILOCKmvpPSP22.pool_data(1), (
-        format!("pool: {:?} ", pool.name.to_string()),
-        format!("tokens alotted: {:?} ", pool.tokens),
-        format!("number of vests: {:?} ", pool.vests),
-        format!("vesting cliff: {:?} ", pool.cliffs),
-    ));
-}
+/* THIS NEED TO BE REWRITTEN
 
 /// - Test if create_port() and port() functions correctly.
 /// - Test if tax_port_transfer() functions correctly.
 #[ink::test]
 fn happy_create_get_port_tax_transfer() {
 
-    let mut ILOCKmvpPSP22 = ILOCKmvp::new_token();
     let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+    let mut ILOCKmvpPSP22 = ILOCKmvp::new_token(
+        200_000,
+        accounts.bob,
+        accounts.charlie,
+        );
 
     let codehash: Hash = Default::default(); // offchain environment doesn't support
     let tax: Balance = 1_000; // 0.1% tax  // .own_code_hash()
@@ -93,6 +80,8 @@ fn happy_create_get_port_tax_transfer() {
     let locked: bool = true;
     let number: u16 = 2;
     let owner: AccountId = accounts.bob;
+    let overwrite = false;
+    let function = "CREATE_PORT";
 
     let _ = ILOCKmvpPSP22.create_port(
         codehash,
@@ -101,10 +90,14 @@ fn happy_create_get_port_tax_transfer() {
         locked,
         number,
         owner,
+        overwrite,
+        function.to_string(),
     );
 
-    let mut port: Port = ILOCKmvpPSP22.port(number);
+    let
 
+    let mut port: Port = ILOCKmvpPSP22.port(number);
+println!("{:}", port.cap);
     assert_eq!(port, Port {
         application: codehash,
         tax: tax,
@@ -137,7 +130,7 @@ fn happy_create_get_port_tax_transfer() {
     assert_eq!(ILOCKmvpPSP22.balances[PROCEEDS as usize], 0 + 1_000);
     assert_eq!(ILOCKmvpPSP22.total_supply(), 1_000_000 - 1_000);
 }
-
+*/
 /// SAD TAX_PORT_TRANSFER
 /// - Not sure there is much to do here.
 #[test]

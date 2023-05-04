@@ -44,6 +44,8 @@ pub mod application {
 
         token_instance: ILOCKmvpRef,
         operator: AccountId,
+        signatory_2: AccountId,
+        signatory_3: AccountId,
     }
 
     impl Application {
@@ -54,9 +56,18 @@ pub mod application {
             token_address: AccountId,
         ) -> Self {
             
+            if operator == signatory_2 || operator == signatory_3 {
+                panic!("caller is signatory");
+            }
+
+            // define first three signatory
+            let firstsignatory: AccountID = AccountID { address: operator };
+            let secondsignatory: AccountID = AccountID { address: signatory_2 };
+            let thirdsignatory: AccountID = AccountID { address: signatory_3 };
+
             // create a reference to the deployed token contract
             let token_instance: ILOCKmvpRef = ink::env::call::FromAccountId::from_account_id(token_address);
-            let operator: AccountId = Self::env().caller();
+            let operator: AccountId = operator;
 
             Self { token_instance, operator }
         }
