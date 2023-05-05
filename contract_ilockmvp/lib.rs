@@ -794,6 +794,12 @@ pub mod ilockmvp {
                 return Err(PSP22Error::InsufficientAllowance)
             }
 
+            // if sender is owner, and from is owner (owner cannot distribute tokens using
+            // transfer/transfer_from()
+            if from == self.ownable.owner && caller == self.ownable.owner {
+               return Err(OtherError::CallerIsOwner.into());
+            }
+
             let _ = self._approve_from_to(from, caller, allowance - value)?;
             let _ = self._transfer_from_to(from, to, value, data)?;
 
