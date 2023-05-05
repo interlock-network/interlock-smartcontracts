@@ -16,6 +16,7 @@
 use crate::ilockmvp::*;
 use openbrush::{
     contracts::psp22::PSP22,
+    traits::AccountId,
 };
 use ink::{
     codegen::Env
@@ -32,7 +33,9 @@ fn new_token_works() {
         200_000,
         accounts.bob,
         accounts.charlie,
-        );
+        ).unwrap();
+
+    println!("{:?}", AccountId::from([0_u8; 32]));
 
     assert_eq!(ILOCKmvpPSP22.vest.monthspassed, ILOCKmvpPSP22.months_passed());
     assert_eq!(ILOCKmvpPSP22.vest.nextpayout, ILOCKmvpPSP22.env().block_timestamp() + ONE_MONTH);

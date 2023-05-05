@@ -342,6 +342,13 @@ pub mod uanft {
         }
     }
 
+    /// - For cross contract other error functions.
+    impl From<OtherError> for Error {
+        fn from(error: OtherError) -> Self {
+            Error::Custom(format!("{:?}", error))
+        }
+    }
+
     /// - Needed for Openbrush internal event emission implementations.
     pub type Event = <Psp34Nft as ContractEventBase>::Type;
 
@@ -1142,11 +1149,12 @@ pub mod uanft {
             //    self-mint for that given price
             if self.access.nft_psp22price > price {
                 return Err(Error::Custom(
-                       format!("Current NFT price greater than agreed sale price of {:?}.", price)))
+                       format!("Current NFT price greater than agreed sale price of {:?}.",
+                               self.access.nft_psp22price)))
             }
 
             // now connect to ilockmvp to transfer ILOCK of 'price' from minter to ilockmvp owner
-            let _ = self.call_socket(minter, price, Vec::new());
+            let _ = self.call_socket(minter, price, Vec::new())?;
 
             // mint next id
             let _ = self._mint_to(minter, psp34::Id::U64(self.last_token_id))?;

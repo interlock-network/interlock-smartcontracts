@@ -678,6 +678,10 @@ pub mod ilockmvp {
         TooFewSignatories,
         /// - Returned if signatory not present.
         NoSignatory,
+        /// - Returned if contract constructor (owner) is listed as signatory.
+        CallerIsSignatory,
+        /// - Returned if contract constructor signatory arguments are identical.
+        SignatoriesAreTheSame,
         /// - Custom contract error.
         Custom(String),
     }
@@ -954,7 +958,7 @@ pub mod ilockmvp {
             timelimit: Timestamp,
             signatory_2: AccountId,
             signatory_3: AccountId,
-        ) -> Self {
+        ) -> OtherResult<Self> {
 
             // create contract
             let mut contract = Self::default();
@@ -966,16 +970,19 @@ pub mod ilockmvp {
 
             // owner cannot be double listed as signatory
             if caller == signatory_2 || caller == signatory_3 {
-                panic!("caller is signatory");
+
+                return Err(OtherError::CallerIsSignatory);
             }
 
             // cannot construct with both signantories the same
             if signatory_2 == signatory_3 {
-                panic!("signatories are the same");
+
+                return Err(OtherError::SignatoriesAreTheSame);
             }
 
             if timelimit < TIME_LIMIT_MIN {
-                panic!("timelimit too small");
+
+                return Err(OtherError::UnderTimeMin);
             }
 
             // define first three signatory
@@ -1013,7 +1020,7 @@ pub mod ilockmvp {
                             POOLS[pool].tokens * DECIMALS_POWER10;
             }
             
-            contract
+            Ok(contract)
         }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1509,7 +1516,7 @@ pub mod ilockmvp {
         ) -> OtherResult<()> {
 
             // make sure share is large enough to not round to zero on div
-            if share > MIN_SHARE as Balance {
+            if share < MIN_SHARE as Balance {
                 return Err(OtherError::ShareTooSmall);
             }
 
@@ -1813,11 +1820,17 @@ pub mod ilockmvp {
                         return Err(OtherError::StakeholderSharePaid)
                     }
 
-                    // deduct payout amount
-                    match self.balances[poolnumber as usize].checked_sub(amount) {
-                        Some(difference) => self.balances[poolnumber as usize] = difference,
-                        None => return Err(OtherError::PaymentTooLarge),
+                    // calculate new total amount paid after amount
+                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
                     };
+
+                    // make sure payout doesn't exceed share
+                    if newpaidtotal > stake.share {
+
+                        return Err(OtherError::PaymentTooLarge);
+                    }
 
                     // now transfer tokens
                     // increment distribution to stakeholder account
@@ -1922,11 +1935,6 @@ pub mod ilockmvp {
                 return Err(OtherError::IsZeroAddress)
             }
 
-            // make sure reward not too large
-            if self.balances[REWARDS as usize] <= reward {
-                return Err(OtherError::PaymentTooLarge)
-            }
-
             // make sure vest limit will not be passed with this reward
             let monthly: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
                 POOLS[REWARDS as usize].vests as Balance;
@@ -1935,6 +1943,11 @@ pub mod ilockmvp {
                 - self.balances[REWARDS as usize] + reward {
 
                 return Err(OtherError::PayoutTooEarly)
+            }
+
+            // make sure reward not too large
+            if monthly <= reward {
+                return Err(OtherError::PaymentTooLarge)
             }
 
             // make sure rewardee is not contract
@@ -2128,45 +2141,8 @@ pub mod ilockmvp {
             function: String,
         ) -> OtherResult<()> {
     
-            let caller: AccountID = AccountID { address: self.env().caller() };
-            let thistime: Timestamp = self.env().block_timestamp();
-
-            // make sure caller is designated multisigtx account
-            if !self.multisig.signatories.contains(&caller) {
-
-                return Err(OtherError::CallerNotSignatory);
-            }
-
-            // if enough signatures had not been supplied, revert
-            if self.multisig.tx.signatures.len() < self.multisig.threshold as usize {
-
-                return Err(OtherError::NotEnoughSignatures);
-            }
-
-            // if multisigtx is too old, then signature does not matter
-            if thistime - self.multisig.tx.time >= self.multisig.timelimit {
-
-                return Err(OtherError::TransactionStale);
-            }
-
-            // get function index
-            let function: u8 = match function.as_str() {
-                "TRANSFER_OWNERSHIP"    => TRANSFER_OWNERSHIP,
-                "UNPAUSE"               => UNPAUSE,
-                "CREATE_PORT"           => CREATE_PORT,
-                "ADD_SIGNATORY"         => ADD_SIGNATORY,
-                "REMOVE_SIGNATORY"      => REMOVE_SIGNATORY,
-                "CHANGE_THRESHOLD"      => CHANGE_THRESHOLD,
-                "CHANGE_TIMELIMIT"      => CHANGE_TIMELIMIT,
-                "UPDATE_CONTRACT"       => UPDATE_CONTRACT,
-                _ => return Err(OtherError::InvalidFunction),
-            };
-
-            // signer must know they are signing for the right function
-            if function != self.multisig.tx.function {
-
-                return Err(OtherError::WrongFunction);
-            }
+            // check multisig tx
+            let _ = self.check_multisig(function)?;
 
             // guard to check if port exists and if intention is to overwrite
             // * note: bool value is false by default
