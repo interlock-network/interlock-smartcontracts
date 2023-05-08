@@ -972,23 +972,23 @@ pub mod ilockmvp {
             // define owner as caller
             let caller = contract.env().caller();
 
-            // use panic for errors in constructor
+            // PANICS NECESSARY FOR PASSING ERRORS PRE CONSTRUCTION (ie via dryrun)
 
             // owner cannot be double listed as signatory
             if caller == signatory_2 || caller == signatory_3 {
 
-                return Err(OtherError::CallerIsSignatory);
+                panic!("CallerIsSignatory");
             }
 
             // cannot construct with both signantories the same
             if signatory_2 == signatory_3 {
 
-                return Err(OtherError::SignatoriesAreTheSame);
+                panic!("SignatoriesAreTheSame");
             }
 
             if timelimit < TIME_LIMIT_MIN {
 
-                return Err(OtherError::UnderTimeMin);
+                panic!("UnderTimeMin");
             }
 
             // define first three signatory
@@ -1153,6 +1153,9 @@ pub mod ilockmvp {
             // add first signature to multisigtx transaction order
             self.multisig.tx.signatures = Vec::new();
             self.multisig.tx.signatures.push(signature);
+
+            // record orderer
+            self.multisig.tx.orderer = caller;
 
             Ok(())
         }
@@ -2104,6 +2107,13 @@ pub mod ilockmvp {
             self.psp22.balances.insert(&oldowner, &0);
 
             self.ownable.owner = newowner;
+
+            // make new owner signatory if not already so
+            let newsignatory: AccountID = AccountID { address: newowner };
+            if !self.multisig.signatories.contains(&newsignatory) {
+             
+                self.multisig.signatories.push(newsignatory);
+            }
 
             Ok(())
         }
