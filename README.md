@@ -14,7 +14,7 @@ This is our primary PSP22 token contract, which contains provisions for rewardin
 
 #### [Universal Access NFT](./contract_uanft) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/)
 
-This is a PSP34 token contract that is capable of managing general access credentials, be them username/password pairs, API keys, two-factor authentication, and even applications such as traditional software licenses. This contract employs ink! 4, Openbrush 3, and is fully compatible with the Art Zero marketplace.
+This is a PSP34 token contract that is capable of managing general access to spaces services online such as API keys, two-factor authentication, and even applications such as traditional software licenses. This contract employs ink! 4, Openbrush 3, and is fully compatible with the Art Zero marketplace.
 
 #### [Port/Socket Application Template](./contract_application) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_application/docs/application/)
 
