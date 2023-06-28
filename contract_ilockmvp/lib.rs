@@ -14,7 +14,7 @@
 //!
 //! #### To build, run:
 //!
-//! cargo +nightly contract build
+//! cargo +nightly-2023-02-07 contract build
 //!
 //! #### To build docs, run:
 //!
