@@ -476,7 +476,7 @@ pub mod ilockmvp {
         pub time: Timestamp,
 
         /// - Was transaction completed?
-        pub ready: bool,
+        pub complete: bool,
     }
     /// - TransactionData struct contains all pertinent information for multisigtx transaction
     #[derive(scale::Encode, scale::Decode, Clone, Copy, Default, Debug)]
@@ -682,6 +682,8 @@ pub mod ilockmvp {
         CallerIsSignatory,
         /// - Returned if contract constructor signatory arguments are identical.
         SignatoriesAreTheSame,
+        /// - Returned if multisig transaction has already been called.
+        TransactionAlreadyCalled,
         /// - Custom contract error.
         Custom(String),
     }
@@ -1048,7 +1050,7 @@ pub mod ilockmvp {
 
         /// - Helper function for checking signature count
         pub fn check_multisig(
-            &self,
+            &mut self,
             function: String,
         ) -> OtherResult<()> {
 
@@ -1091,6 +1093,16 @@ pub mod ilockmvp {
 
                 return Err(OtherError::WrongFunction);
             }
+
+            // transaction must not have already been completed
+            if self.multisig.tx.complete {
+
+                return Err(OtherError::TransactionAlreadyCalled);
+            }
+
+            // making it this far means that function is ready to call
+            // ...if called function fails, then tx will need to be reordered
+            self.multisig.tx.complete = true;
 
             Ok(())
         }
@@ -1156,6 +1168,9 @@ pub mod ilockmvp {
 
             // record orderer
             self.multisig.tx.orderer = caller;
+
+            // reset completion flag
+            self.multisig.tx.complete = false;
 
             Ok(())
         }
