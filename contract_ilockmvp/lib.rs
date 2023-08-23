@@ -1124,15 +1124,15 @@ pub mod ilockmvp {
             }
 
             // if the signing period has already begun, orderer
-            if thistime - self.multisig.tx.time < self.multisig.timelimit {
+            if thistime - self.multisig.tx.time < self.multisig.timelimit &&
+                !self.multisig.tx.complete {
 
                 return Err(OtherError::TransactionAlreadyOrdered);
             }
 
             // this is important to prevent corrupted key from 'freezing out'
             // other signatories' ability to order transaction
-            if thistime - self.multisig.tx.time >= self.multisig.timelimit
-                && caller == self.multisig.tx.orderer {
+            if caller == self.multisig.tx.orderer {
 
                 return Err(OtherError::CannotReorder);
             }

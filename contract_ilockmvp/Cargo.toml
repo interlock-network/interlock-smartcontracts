@@ -15,12 +15,12 @@ license = "GNU GENERAL PUBLIC LICENSE"
 overflow-checks = false
 
 [dependencies]
-ink = { version = "4.0", default-features = false}
+ink = { version = "~4.0.0", default-features = false}
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
 
-openbrush = { tag = "3.0.0", git = "https://github.com/727-Ventures/openbrush-contracts", default-features = false, features = ["psp22", "ownable", "pausable"] }
+openbrush = { tag = "3.0.0", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp22", "ownable", "pausable"] }
 
 [dev-dependencies]
 ink_e2e = { version = "4.0" }
