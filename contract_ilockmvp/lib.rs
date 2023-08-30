@@ -651,7 +651,7 @@ pub mod ilockmvp {
         /// - Returned if multisigtx transaction was already and not being force reordered.
         TransactionAlreadyOrdered,
         /// - Returned if address does not have enough balance for port 1 self mint..
-        InsufficientBalance,
+        InsufficientIlockBalance,
         /// - Returned multisigtx transactionalready ordered by signatory.
         AlreadyOrdered,
         /// - Returned if specified multisigtx function is invalid.
@@ -2358,7 +2358,7 @@ pub mod ilockmvp {
                     // verify address has enough tokens for uanft self mint
                     if self.balance_of(address) < amount {
 
-                        return Err(OtherError::InsufficientBalance);
+                        return Err(OtherError::InsufficientIlockBalance);
                     }
 
                     // deduct cost of uanft from minter's account
@@ -2396,7 +2396,7 @@ pub mod ilockmvp {
                     // verify address has enough tokens for uanft self mint
                     if self.balance_of(address) < amount {
 
-                        return Err(OtherError::InsufficientBalance);
+                        return Err(OtherError::InsufficientIlockBalance);
                     }
 
                     // deduct cost of uanft from minter's account
