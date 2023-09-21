@@ -31,18 +31,6 @@ interface IERC20 {
 		address indexed spender,
 		uint256 value );
 
-    		// This event is triggered whenever a call to #claim succeeds.
-    	event Claimed(
-		uint256 index,
-		address account,
-		uint256 share,
-		uint256 pool );	
-
-	event MoreDepositNeeded(
-		address depositor,
-		uint256 owed );
-
-
     	/**
      	* getter methods
      	**/

@@ -22,11 +22,10 @@
  * by listening to said events.
  **/
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "./IERC20.sol";
-import "./POOL.sol";
-import "./Messenger.sol";
+import "./ILOCKpool.sol";
 
 contract ERC20ILOCK is IERC20 {
 
@@ -47,19 +46,8 @@ contract ERC20ILOCK is IERC20 {
 	uint256 private _DECIMAL = 10 ** _decimals;
 
 		// pools
-	string[12] public poolNames = [
-		"earlyvc",
-		"ps1",
-		"ps2",
-		"ps3",
-		"team",
-		"ov",
-		"advise",
-		"reward",
-		"founder",
-		"partner",
-		"white",
-		"public" ];
+	string[1] public poolNames = ["lock"];
+
 	uint8 constant private _poolNumber = 12;
 
 		// keeping track of pools
@@ -96,39 +84,9 @@ contract ERC20ILOCK is IERC20 {
 	uint256 private _totalSupply = 1000000000 * _DECIMAL;
 	address private _owner;
 
-		// tracking time
-	uint256 public nextPayout;
-	uint8 public monthsPassed; 
-
 		// keeping track of irreversible actions
 	bool public TGEtriggered = false;
-	bool public supplySplit = false;
 
-		// relevant token contract addresses, and other
-	IERC20 USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); // USD tether
-	IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // wrapped ETH
-
-		// these are prices at TGE, meant to verify investors have contributed what they owe
-	uint256 public priceUSDT;
-	uint256 public priceWETH;
-	uint256 public priceETH;
-
-
-	event MoreDepositNeeded(
-		address depositor,
-		uint256 owed );
-
-	event SentTokens(
-		address from,
-		bytes32 pubkeyTo,
-		uint256 amount );
-
-	event ReceivedTokens(
-		bytes32 pubkeyFrom,
-		address to,
-		uint256 amount );
-
-	
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
@@ -162,7 +120,7 @@ contract ERC20ILOCK is IERC20 {
 					poolMembers_[i] ) );
 
 		// establish pool to lock bridged tokens in
-		tokenlockPool = address(new POOL());
+		tokenlockPool = address(new ILOCKpool());
 		_balances[tokenlockPool] = 0;
 		
 		}
