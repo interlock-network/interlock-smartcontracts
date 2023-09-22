@@ -355,102 +355,9 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 
-
-	bytes32 public merkleRoot;
-
-    	// This is a packed array of booleans.
-    mapping(uint256 => uint256) public claimedBitMap;
-
-/*************************************************/
-
-		// sets serverside Merkle root
-	function setMerkleRoot(
-		bytes32 newRoot
-	) public isOwner {
-
-		merkleRoot = newRoot;
-	}
-
-/*************************************************/
-
-		 // returning boolean to indicate whether or member has alreaduy claimed stake
-		// searches claimedBitMap for bitflag representing claimed boolean
-   	function isClaimed(
-		uint256 index
-	) public view returns (bool) {
-
-        	uint256 claimedWordIndex = index / 256;
-        	uint256 claimedBitIndex = index % 256;
-        	uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        	uint256 mask = (1 << claimedBitIndex);
-        	return claimedWord & mask == mask;
-    	}
-
-/*************************************************/
-
-		// flip bit corresponding to index to indicate member has claimed stake
-    	function _setClaimed(
-		uint256 index
-	) private {
-        	uint256 claimedWordIndex = index / 256;
-        	uint256 claimedBitIndex = index % 256;
-        	claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
-    	}
-
-/*************************************************/
-
-		// member claims stake to tokens and transfers month's batch to member
-	function claimWallet(
-		uint256 index,
-		address account,
-		uint256 share,
-		uint256 owes,
-		uint256 poolnumber,
-		bytes32[] calldata merkleProof
-	) public {
-
-		// see if we need to update time
-		_checkTime();
-
-        	require(
-			!isClaimed(index),
-			"MerkleDistributor: stake already claimed");
-
-        	// verify the merkle proof
-        	bytes32 node = keccak256(abi.encodePacked(index, account, share, owes, poolnumber));
-        	require(
-			_verify(merkleProof, merkleRoot, node),
-			"MerkleDistributor: invalid proof");
-
-        	// mark it claimed
-        	_setClaimed(index);
-
-		// setup member entry
-		_members[account].share = share;
-		_members[account].pool = uint8(poolnumber);
-		_members[account].cliff = pool[poolnumber].cliff;
-		_members[account].paid = 0;
-		_members[account].payouts = 0;
-		_members[account].owes = owes;
-
-	
-        	emit Claimed(
-			index,
-			account,
-			share,
-			poolnumber);
-    	}
-
-/*************************************************/
-
 		// claim stake for vest periods accumulated
 	function claimStake(
 	) public returns (bool) {
-
-		// member must have claimed wallet
-		require(
-			_members[msg.sender].share != 0,
-			"member has not claimed wallet, or claim is fully collected");
 
 		// see if we need to update time
 		_checkTime();
@@ -512,59 +419,6 @@ contract ERC20ILOCK is IERC20 {
 		
 		return true;
 	}	
-
-/*************************************************/
-
-     		   // sibling hashes on the branch from the leaf to the root of the tree
-		  // each pair of pre-images are assumed to be sorted
-		 // a `proof` must be provided, containing pair of leaves 
-		// returns true if a `leaf` can be proved to be a part of a Merkle tree
-    	function _verify(
-        	bytes32[] memory proof,
-        	bytes32 root,
-        	bytes32 leaf
-    	) private pure returns (bool) {
-
-        	return processProof(proof, leaf) == root;
-    	}
-
-/*************************************************/
-
-		 // a `proof` is valid if and only if the rebuilt hash matches the root of the tree
-		// returns the rebuilt hash obtained by traversing a Merkle tree up
-    	function processProof(
-		bytes32[] memory proof,
-		bytes32 leaf
-	) private pure returns (bytes32) {
-
-        	bytes32 computedHash = leaf;
-        	for (uint256 i = 0; i < proof.length; i++) {
-            		bytes32 proofElement = proof[i];
-            		if (computedHash <= proofElement) {
-                		// Hash(current computed hash + current element of the proof)
-                		computedHash = _efficientHash(computedHash, proofElement);
-            		} else {
-                		// Hash(current element of the proof + current computed hash)
-                		computedHash = _efficientHash(proofElement, computedHash);
-            		}
-        	}
-        	return computedHash;
-    	}
-
-/*************************************************/
-
-		// takes hash of two elements
-    	function _efficientHash(
-		bytes32 a,
-		bytes32 b
-	) private pure returns (bytes32 value) {
-
-        	assembly {
-            		mstore(0x00, a)
-            		mstore(0x20, b)
-            		value := keccak256(0x00, 0x40)
-        	}
-    	}
 
 /***************************************************************************/
 /***************************************************************************/
