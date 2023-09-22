@@ -22,11 +22,10 @@
  * by listening to said events.
  **/
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "./IERC20.sol";
-import "./POOL.sol";
-import "./Messenger.sol";
+import "./ILOCKpool.sol";
 
 contract ERC20ILOCK is IERC20 {
 
@@ -45,6 +44,7 @@ contract ERC20ILOCK is IERC20 {
 		// divisibility factor
 	uint8 private _decimals = 18;
 	uint256 private _DECIMAL = 10 ** _decimals;
+	uint256 private _cap = 1000000000;
 
 		// pools
 	string[12] public poolNames = [
@@ -75,15 +75,14 @@ contract ERC20ILOCK is IERC20 {
 	address public tokenlockPool;
 
 		// keeping track of members
-	struct MemberStatus {
-		uint256 owes;
+	struct Stakeholder {
 		uint256 paid;
 		uint256 share;
 		address account;
 		uint8 cliff;
 		uint8 pool;
 		uint8 payouts; }
-	mapping(address => MemberStatus) private _members;
+	mapping(address => Stakeholder[]) private _members;
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -93,7 +92,7 @@ contract ERC20ILOCK is IERC20 {
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "ILOCK";
-	uint256 private _totalSupply = 1000000000 * _DECIMAL;
+	uint256 private _totalSupply = 0;
 	address private _owner;
 
 		// tracking time
@@ -103,16 +102,6 @@ contract ERC20ILOCK is IERC20 {
 		// keeping track of irreversible actions
 	bool public TGEtriggered = false;
 	bool public supplySplit = false;
-
-		// relevant token contract addresses, and other
-	IERC20 USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); // USD tether
-	IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // wrapped ETH
-
-		// these are prices at TGE, meant to verify investors have contributed what they owe
-	uint256 public priceUSDT;
-	uint256 public priceWETH;
-	uint256 public priceETH;
-
 
 	event MoreDepositNeeded(
 		address depositor,
@@ -148,7 +137,6 @@ contract ERC20ILOCK is IERC20 {
 		uint32[_poolNumber] memory poolMembers_
 	) {
 		_owner = msg.sender;
-		_balances[address(this)] = 0; 
 
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
@@ -162,8 +150,11 @@ contract ERC20ILOCK is IERC20 {
 					poolMembers_[i] ) );
 
 		// establish pool to lock bridged tokens in
-		tokenlockPool = address(new POOL());
+		tokenlockPool = address(new ILOCKpool());
 		_balances[tokenlockPool] = 0;
+
+		// mint
+		_balances[address(this)] = _totalSupply;
 		
 		}
 	}
@@ -256,6 +247,7 @@ contract ERC20ILOCK is IERC20 {
 		require(
 			TGEtriggered == false,
 			"TGE already happened");
+
 		// mint
 		_balances[address(this)] = _totalSupply;
 		_approve(
@@ -410,7 +402,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// transfer and make sure it succeeds
 		require(
-			_transfer(pools[_members[msg.sender].pool], msg.sender, payout),
+			_approve(pools[_members[msg.sender].pool], msg.sender, payout),
 			"stake claim transfer failed");
 
 		// update member state
@@ -599,6 +591,7 @@ that change...)
 
 SETTING ALLOWANCE TO ZERO FIRST IS SILLY, BECAUSE YOU CAN STILL FRONTRUN THAT
 TRANSACTION, AND SAID TRANSACTION IS INDISTINGUISHABLE FROM AN HONEST TRANSACTION.
+SHOUTING SHOUTING SHOUTING!
 
 /*************************************************/
 
@@ -844,83 +837,6 @@ TRANSACTION, AND SAID TRANSACTION IS INDISTINGUISHABLE FROM AN HONEST TRANSACTIO
 			payAvailable
 		);
 	}
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-	/***
-	* wormhole
-	**/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-	Messenger wormhole = new Messenger();
-
-/*************************************************/
-
-		 // locks tokens in tokenlockPool account
-		// sends message to wormhole guardians/bridge
-	function sendToken(
-		uint256 amount,
-		bytes32 pubkey
-	) public returns (uint64 sequence) {
-
-		// condition amount to truncate and floor at 128 bits
-		// 
-		amount = uint128(amount);
-	
-		// condition message here
-		// (68 byte message = 16B amount + 20B sender address + 32B sender pubkey)
-		bytes memory message = abi.encode(amount, msg.sender, pubkey);
-		
-		// send message to transfer token
-		sequence = 0;
-		sequence = wormhole.sendMsg(message);
-		
-		// make sure message was properly sent
-		require(
-			sequence != 0,
-			"token bridge transfer failed"
-		);
-		
-		// now move token amount from member balance to locked-pool
-		_balances[msg.sender] -= amount
-		_balances[tokenlockPool] += amount;
-
-		emit SentTokens(msg.sender, pubkey, amount);
-
-	}
-
-/*************************************************/
-
-	function receiveToken(
-		bytes memory encodedMessage
-	) public returns (string message) {
-	
-		// verify message is legit and decode
-		message = wormhole.receiveEncodedMsg(encodedMessage);
-
-		// extract message contents from message string
-		uint128 amount = uint128(message[0:15]);
-		address account = address(message[16:35]);
-		bytes32 pubkey = bytes32(message[36:77]);
-
-		// adjust account balances
-		_balances[msg.sender] += amount;
-		_balances[tokenlockPool] -= amount;
-
-		// make sure token transfer is authorized by function caller
-		require(
-			account == msg.sender,
-			"recipient must be sender"
-		);
-
-		emit ReceivedTokens(pubkey, msg.sender, amount);
-	}
-
-/*************************************************/
-
 }
 
 /***************************************************************************/
