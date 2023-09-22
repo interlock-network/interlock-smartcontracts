@@ -71,6 +71,8 @@ contract ERC20ILOCK is IERC20 {
 		uint32 members; }
 	PoolData[] public pool;
 	address[] public pools;
+	mapping(address => bool) private ispool;
+	mapping(address => uint8) private poolint;
 
 	address public tokenlockPool;
 
@@ -225,8 +227,9 @@ contract ERC20ILOCK is IERC20 {
 			"supply split already happened");
 		// create pool accounts and initiate
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new POOL());
+			address Pool = address(new ILOCKpool());
 			pools.push(Pool);
+			poolexists(Pool) = true;
 			_balances[Pool] = 0;
 		}
 		// this must never happen again...
@@ -275,29 +278,6 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/						
-			
-		// distribute tokens to pools on schedule
-	function _poolDistribution(
-	) public {
-
-		// iterate through pools
-		for (uint8 i = 0; i < _poolNumber; i++) {
-			if (pool[i].cliff <= monthsPassed &&
-				monthsPassed < (_members[pools[i]].cliff + pool[i].vests)) {
-				// transfer month's distribution to pools
-				transferFrom(
-					address(this),
-					pools[i],
-					pool[i].tokens/pool[i].vests );
-				_approve(
-					pools[i],
-					msg.sender,
-					pool[i].tokens/pool[i].vests);
-			}
-		}
-	}
-
-/*************************************************/
 
 		// makes sure that distributions do not happen too early
 	function _checkTime(
@@ -307,7 +287,6 @@ contract ERC20ILOCK is IERC20 {
 		if (block.timestamp > nextPayout) {
 			nextPayout += 30 days;
 			monthsPassed++;
-			_poolDistribution;
 			return true;
 		}
 
@@ -352,7 +331,7 @@ contract ERC20ILOCK is IERC20 {
 		Stake[] data
 	) public noZero(stakeholder) returns (bool) {
 
-		// validate inputs
+		// validate input
 		require(
 			data != [],
 			"no stake provided for stakeholder");
@@ -386,6 +365,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// claim stake for vest periods accumulated
 	function claimStake(
+		uint8 stake
 	) public returns (bool) {
 
 		// see if we need to update time
@@ -543,8 +523,7 @@ contract ERC20ILOCK is IERC20 {
 
 		_transfer(owner, to, amount);
 
-		return true;
-    }
+		return true; }
 
 
 		     // emitting Approval, reverting on failure
@@ -564,6 +543,7 @@ contract ERC20ILOCK is IERC20 {
 		_transfer(from, to, amount);
 		return true; }
 
+
 		// internal implementation of transfer() above
 	function _transfer(
 		address from,
@@ -577,8 +557,7 @@ contract ERC20ILOCK is IERC20 {
 		emit Transfer(from, to, amount);
 		_afterTokenTransfer(from, to, amount);
 
-        return true;
-    }
+        return true; }
 
 /*************************************************/
 
@@ -612,7 +591,7 @@ contract ERC20ILOCK is IERC20 {
 		uint256 amount
 	) internal isEnough(allowance(owner, spender), amount) {
 		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);}}
+			_approve(owner, spender, allowance(owner, spender) - amount);} }
 
 /*************************************************
 
