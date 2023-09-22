@@ -47,7 +47,8 @@ contract ERC20ILOCK is IERC20 {
 	uint256 private _cap = 1000000000;
 
 		// pools
-	string[12] public poolNames = [
+	uint8 constant private _poolNumber = 13;
+	string[_poolNumber] public poolNames = [
 		"earlyvc",
 		"ps1",
 		"ps2",
@@ -59,8 +60,8 @@ contract ERC20ILOCK is IERC20 {
 		"founder",
 		"partner",
 		"white",
-		"public" ];
-	uint8 constant private _poolNumber = 12;
+		"public",
+		"lock" ];
 
 		// keeping track of pools
 	struct PoolData {
@@ -103,21 +104,6 @@ contract ERC20ILOCK is IERC20 {
 		// keeping track of irreversible actions
 	bool public TGEtriggered = false;
 	bool public supplySplit = false;
-
-	event MoreDepositNeeded(
-		address depositor,
-		uint256 owed );
-
-	event SentTokens(
-		address from,
-		bytes32 pubkeyTo,
-		uint256 amount );
-
-	event ReceivedTokens(
-		bytes32 pubkeyFrom,
-		address to,
-		uint256 amount );
-
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -149,16 +135,7 @@ contract ERC20ILOCK is IERC20 {
 					monthlyPayments_[i],
 					poolCliffs_[i],
 					poolMembers_[i] ) );
-
-		// establish pool to lock bridged tokens in
-		tokenlockPool = address(new ILOCKpool());
-		_balances[tokenlockPool] = 0;
-
-		// mint
-		_balances[address(this)] = _totalSupply;
-		
-		}
-	}
+		} }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -177,8 +154,7 @@ contract ERC20ILOCK is IERC20 {
 			msg.sender == _owner,
 			"only owner can call"
 		);
-		_;
-	}
+		_; }
 
 /*************************************************/
 
@@ -190,8 +166,7 @@ contract ERC20ILOCK is IERC20 {
 			_address != address(0),
 			"zero address where it shouldn't be"
 		);
-		_;
-	}
+		_; }
 
 /*************************************************/
 
@@ -204,97 +179,57 @@ contract ERC20ILOCK is IERC20 {
             		_available >= _amount,
 			"not enough tokens available"
 		);
-		_;
-	}
+		_; }
 
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* setup methods
+	* TGE
 	**/
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
-
-		// creates account for each pool
-	function splitSupply(
-	) public onlyOwner {
-		
-		// guard
-		require(
-			supplySplit == false,
-			"supply split already happened");
-		// create pool accounts and initiate
-		for (uint8 i = 0; i < _poolNumber; i++) {
-			address Pool = address(new ILOCKpool());
-			pools.push(Pool);
-			poolexists(Pool) = true;
-			_balances[Pool] = 0;
-		}
-		// this must never happen again...
-		supplySplit = true;
-	}
-
-/*************************************************/
 
 		// generates all the tokens
 	function triggerTGE(
 	) public onlyOwner {
 
-		// guards
-		require(
-			supplySplit == true,
-			"supply not split");
 		require(
 			TGEtriggered == false,
 			"TGE already happened");
 
-		// mint
-		_balances[address(this)] = _totalSupply;
-		_approve(
-			address(this),
-			msg.sender,
-			_totalSupply);
-		emit Transfer(
-			address(0),
-			address(this),
-			_totalSupply);
+		// create pool accounts and initiate
+		for (uint8 i = 0; i < _poolNumber; i++) {
+			
+			// generate pools and mint to
+			address Pool = address(new ILOCKpool());
+			pools.push(Pool);
+			uint256 balance = pool[i].tokens;
+			_balances[Pool] = balance;
+
+			emit Transfer(
+				address(0),
+				Pool,
+				balance);
+			}
+
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
-		// apply the initial round of token distributions
-		_poolDistribution();
+
 		// this must never happen again...
-		TGEtriggered = true;
-	}
+		TGEtriggered = true; }
 
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* payout methods
+	* ownership methods
 	**/
 /***************************************************************************/
 /***************************************************************************/
-/***************************************************************************/						
-
-		// makes sure that distributions do not happen too early
-	function _checkTime(
-	) internal returns (bool) {
-
-		// test time
-		if (block.timestamp > nextPayout) {
-			nextPayout += 30 days;
-			monthsPassed++;
-			return true;
-		}
-
-		// not ready
-		return false;
-	}
-
-/*************************************************/
+/***************************************************************************/					
 
 		// changes the contract owner
 	function changeOwner(
@@ -314,6 +249,23 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
+		// makes sure that distributions do not happen too early
+	function _checkTime(
+	) internal returns (bool) {
+
+		// test time
+		if (block.timestamp > nextPayout) {
+			nextPayout += 30 days;
+			monthsPassed++;
+			return true;
+		}
+
+		// not ready
+		return false;
+	}
+
+/*************************************************/
 
 		// register stakeholder
 	function registerStake(
@@ -345,6 +297,8 @@ contract ERC20ILOCK is IERC20 {
 		_stakes(stakeholder).push(data);
 
 		return true; }
+
+/*************************************************/
 
 		// claim stake for vest periods accumulated
 	function claimStake(
@@ -499,6 +453,7 @@ contract ERC20ILOCK is IERC20 {
 
 		return true; }
 
+/*************************************************/
 
 		     // emitting Approval, reverting on failure
 		    // where msg.sender allowance w/`from` must be >= amount
@@ -517,6 +472,7 @@ contract ERC20ILOCK is IERC20 {
 		_transfer(from, to, amount);
 		return true; }
 
+/*************************************************/
 
 		// internal implementation of transfer() above
 	function _transfer(
@@ -546,6 +502,8 @@ contract ERC20ILOCK is IERC20 {
 		_approve(owner, spender, amount);
 		return true; }
 
+/*************************************************/
+
 		// internal implementation of approve() above 
 	function _approve(
 		address owner,
@@ -554,6 +512,8 @@ contract ERC20ILOCK is IERC20 {
 	) internal virtual noZero(owner) noZero(spender) {
 		_allowances[owner][spender] = amount;
 		emit Approval(owner, spender, amount); }
+
+/*************************************************/
 
 		   // emitting Approval if finite, reverting on failure 
 		  // will do nothing if infinite allowance
@@ -566,8 +526,6 @@ contract ERC20ILOCK is IERC20 {
 	) internal isEnough(allowance(owner, spender), amount) {
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);} }
-
-/*************************************************
 
 /*
 NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
@@ -692,8 +650,7 @@ SHOUTING SHOUTING SHOUTING!
 			paidOut,
 			payRemaining,
 			payAvailable
-		);
-	}
+		); }
 }
 
 /***************************************************************************/
