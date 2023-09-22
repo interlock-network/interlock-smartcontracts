@@ -592,6 +592,7 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************
 
+/*
 NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
 
 THIS ATTACK CAN ONLY BE MITIGATED CLIENT-SIDE, BECAUSE IT IS LITERALLY
@@ -605,34 +606,7 @@ that change...)
 SETTING ALLOWANCE TO ZERO FIRST IS SILLY, BECAUSE YOU CAN STILL FRONTRUN THAT
 TRANSACTION, AND SAID TRANSACTION IS INDISTINGUISHABLE FROM AN HONEST TRANSACTION.
 SHOUTING SHOUTING SHOUTING!
-
-/*************************************************/
-
-		   // emitting Transfer, reverting on failure
-		  // where `account` must have >= burn amount
-		 // where `account` cannot = zero address
-		// decreases token supply by deassigning from account
-	function _burn(
-		address account,
-		uint256 amount
-	) internal noZero(account) isEnough(_balances[account], amount) {
-		_beforeTokenTransfer(
-			account,
-			address(0),
-			amount);
-		unchecked {
-			_balances[account] = _balances[account] - amount;
-		}
-		_totalSupply -= amount;
-		emit Transfer(
- 			account,
-			address(0),
-			amount);
-		_afterTokenTransfer(
-			account,
-			address(0),
-			amount);
-	}
+*/
 
 /*************************************************/
 
