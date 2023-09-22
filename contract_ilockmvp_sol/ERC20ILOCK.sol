@@ -171,7 +171,7 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 
 		// only allows owner to call
-	modifier isOwner(
+	modifier onlyOwner(
 	) {
 		require(
 			msg.sender == _owner,
@@ -219,7 +219,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// creates account for each pool
 	function splitSupply(
-	) public isOwner {
+	) public onlyOwner {
 		
 		// guard
 		require(
@@ -240,7 +240,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// generates all the tokens
 	function triggerTGE(
-	) public isOwner {
+	) public onlyOwner {
 
 		// guards
 		require(
@@ -309,7 +309,7 @@ contract ERC20ILOCK is IERC20 {
 		// changes the contract owner
 	function changeOwner(
 		address newOwner
-	) public isOwner {
+	) public onlyOwner {
 
 		// reassign
 		_owner = newOwner;
@@ -326,42 +326,35 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 
 		// register stakeholder
-	function registerStakeholder(
+	function registerStake(
 		address stakeholder,
-		Stake[] data
-	) public noZero(stakeholder) returns (bool) {
+		Stake data
+	) public noZero(stakeholder) onlyOwner returns (bool) {
 
 		// validate input
 		require(
 			data != [],
 			"no stake provided for stakeholder");
-		for (uint8 i = 0; i < data.length; i++) {
-			require(
-				data[i].paid == 0,
-				"amount paid must be zero");
-			require(
-				data[i].cliff <= pools[pool].cliff,
-				"cliff exceeds pool cliff");
-			require(
-				data[i].share >= pools[pool].vests,
-				"share is too small");
-			require(
-				data[i].pool < _poolNumber,
-				"invalid pool number");
-			require(
-				data[i].payouts == 0,
-				"payouts at this point muzt be zero");
-		}	
+		require(
+			data.paid == 0,
+			"amount paid must be zero");
+		require(
+			data.cliff <= pools[pool].cliff,
+			"cliff exceeds pool cliff");
+		require(
+			data.share >= pools[pool].vests,
+			"share is too small");
+		require(
+			data.pool < _poolNumber,
+			"invalid pool number");
+		require(
+			data.payouts == 0,
+			"payouts at this point muzt be zero");
 
-		// create stakes or append additional stakes
-		if _stakes(stakeholder) == [] {
-			_stakes(stakeholder) = data;
-		} else {
-			_stakes(stakeholder).push(data);
-		}
+		// create stake or append
+		_stakes(stakeholder).push(data);
 
-		return true
-	}
+		return true; }
 
 		// claim stake for vest periods accumulated
 	function claimStake(
@@ -423,8 +416,7 @@ contract ERC20ILOCK is IERC20 {
 		_members[msg.sender].payouts += payments;
 		_members[msg.sender].paid += payout;
 		
-		return true;
-	}	
+		return true; }	
 
 /***************************************************************************/
 /***************************************************************************/
@@ -440,8 +432,7 @@ contract ERC20ILOCK is IERC20 {
 	function name(
 	) public view override returns (string memory) {
 
-		return _name;
-	}
+		return _name; }
 
 /*************************************************/
 
@@ -449,8 +440,7 @@ contract ERC20ILOCK is IERC20 {
 	function symbol(
 	) public view override returns (string memory) {
 
-		return _symbol;
-	}
+		return _symbol; }
 
 /*************************************************/
 
@@ -458,8 +448,7 @@ contract ERC20ILOCK is IERC20 {
 	function decimals(
 	) public view override returns (uint8) {
 
-		return _decimals;
-	}
+		return _decimals; }
 
 /*************************************************/
 
@@ -467,8 +456,7 @@ contract ERC20ILOCK is IERC20 {
 	function totalSupply(
 	) public view override returns (uint256) {
 
-		return _totalSupply;
-	}
+		return _totalSupply; }
 
 /*************************************************/
 
@@ -477,8 +465,7 @@ contract ERC20ILOCK is IERC20 {
 		address account
 	) public view override returns (uint256) {
 
-		return _balances[account];
-	}
+		return _balances[account]; }
 
 /*************************************************/
 
@@ -487,17 +474,17 @@ contract ERC20ILOCK is IERC20 {
 		address owner,
 		address spender
 	) public view virtual override returns (uint256) {
+
 		return _allowances[owner][spender]; }
 
 /*************************************************/
 
 		// gets total tokens paid out in circulation
-	function circulation(
+	function reserve(
 	) public view returns (uint256) {
 
-		return _totalSupply - _balances[address(this)];
-	}
-
+		return _reserve; }
+ 
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
