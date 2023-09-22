@@ -293,16 +293,6 @@ contract ERC20ILOCK is IERC20 {
 		// not ready
 		return false;
 	}
-			
-/*************************************************/
-
-		// renders contract as ownerLESS
-	function disown(
-	) public isOwner {
-
-		//disown
-		_owner = address(0);
-	}
 
 /*************************************************/
 
