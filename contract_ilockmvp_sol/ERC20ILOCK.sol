@@ -72,12 +72,10 @@ contract ERC20ILOCK is IERC20 {
 		uint32 members; }
 	PoolData[] public pool;
 	address[] public pools;
-	mapping(address => bool) private ispool;
-	mapping(address => uint8) private poolint;
 
 	address public tokenlockPool;
 
-		// keeping track of members
+		// keeping track of stakes
 	struct Stake {
 		uint256 paid;
 		uint256 share;
@@ -95,6 +93,7 @@ contract ERC20ILOCK is IERC20 {
 	string private _name = "Interlock Network";
 	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 0;
+	uint256 private _reserve;
 	address private _owner;
 
 		// tracking time
@@ -213,10 +212,14 @@ contract ERC20ILOCK is IERC20 {
 				Pool,
 				balance);
 			}
+		_reserve = _cap * _DECIMAL
 
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
+
+		// approve owner to spend any tokens sent to this contract in future
+		require
 
 		// this must never happen again...
 		TGEtriggered = true; }
@@ -359,6 +362,10 @@ contract ERC20ILOCK is IERC20 {
 		// update member state
 		_members[msg.sender].payouts += payments;
 		_members[msg.sender].paid += payout;
+
+		// update total supply and reserve
+		_totalSupply =+ payout;
+		_reserve =- payout;
 		
 		return true; }	
 
@@ -423,12 +430,20 @@ contract ERC20ILOCK is IERC20 {
 
 /*************************************************/
 
-		// gets total tokens paid out in circulation
+		// gets total tokens remaining in pools
 	function reserve(
 	) public view returns (uint256) {
 
 		return _reserve; }
- 
+
+/*************************************************/
+
+		// gets token cap
+	function cap(
+	) public view returns (uint256) {
+
+		return _cap; }
+
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
@@ -498,6 +513,7 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) public override returns (bool) {
+
 		address owner = msg.sender;
 		_approve(owner, spender, amount);
 		return true; }
@@ -510,6 +526,7 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) internal virtual noZero(owner) noZero(spender) {
+
 		_allowances[owner][spender] = amount;
 		emit Approval(owner, spender, amount); }
 
@@ -524,8 +541,26 @@ contract ERC20ILOCK is IERC20 {
 		address spender,
 		uint256 amount
 	) internal isEnough(allowance(owner, spender), amount) {
+
 		unchecked {
 			_approve(owner, spender, allowance(owner, spender) - amount);} }
+
+/*************************************************/
+
+		  // emitting Approval, reverting on failure
+		 // (=> no allownance delta when TransferFrom)
+		// defines tokens available to spender from msg.sender
+	function approve_pool(
+		address spender,
+		uint256 amount,
+		uint8 poolnumber
+	) public onlyOwner returns (bool) {
+
+		address owner = msg.sender;
+		_approve(pools[poolnumber], spender, amount);
+
+		return true; }
+
 
 /*
 NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
