@@ -75,14 +75,13 @@ contract ERC20ILOCK is IERC20 {
 	address public tokenlockPool;
 
 		// keeping track of members
-	struct Stakeholder {
+	struct Stake {
 		uint256 paid;
 		uint256 share;
-		address account;
 		uint8 cliff;
 		uint8 pool;
 		uint8 payouts; }
-	mapping(address => Stakeholder[]) private _members;
+	mapping(address => Stake[]) private _stakes;
 
 		// core token balance and allowance mappings
 	mapping(address => uint256) private _balances;
@@ -341,11 +340,49 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* merkle distributor member validation methods
+	* stakeholder entry and distribution
 	**/
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
+		// register stakeholder
+	function registerStakeholder(
+		address stakeholder,
+		Stake[] data
+	) public noZero(stakeholder) returns (bool) {
+
+		// validate inputs
+		require(
+			data != [],
+			"no stake provided for stakeholder");
+		for (uint8 i = 0; i < data.length; i++) {
+			require(
+				data[i].paid == 0,
+				"amount paid must be zero");
+			require(
+				data[i].cliff <= pools[pool].cliff,
+				"cliff exceeds pool cliff");
+			require(
+				data[i].share >= pools[pool].vests,
+				"share is too small");
+			require(
+				data[i].pool < _poolNumber,
+				"invalid pool number");
+			require(
+				data[i].payouts == 0,
+				"payouts at this point muzt be zero");
+		}	
+
+		// create stakes or append additional stakes
+		if _stakes(stakeholder) == [] {
+			_stakes(stakeholder) = data;
+		} else {
+			_stakes(stakeholder).push(data);
+		}
+
+		return true
+	}
 
 		// claim stake for vest periods accumulated
 	function claimStake(
