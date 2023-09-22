@@ -365,61 +365,58 @@ contract ERC20ILOCK is IERC20 {
 
 		// claim stake for vest periods accumulated
 	function claimStake(
-		uint8 stake
+		uint8 stakeint
 	) public returns (bool) {
 
 		// see if we need to update time
 		_checkTime();
 
-		// make sure if investor, they have paid in
+		// make sure stake number exists
 		require(
-			_members[msg.sender].owes == 0,
-			"Investor has not paid in yet."
-		);
+			_stakes[msg.sender].length > stakeint,
+			"stake does not exist");
+		
+		Stake stake = _stakes[msg.sender][stakeint];
+		uint8 cliff = pool[stake.pool].cliff;
+		uint8 vests = pool[stake.pool].vests;
 
 		// number of payouts must not surpass number of vests
 		require(
-			_members[msg.sender].payouts < pool[_members[msg.sender].pool].vests,
+			stake.payouts < pool[stake.pool].vests,
 			"member already collected entire token share");
 
 		// make sure cliff has been surpassed
 		require(
-			monthsPassed >= pool[_members[msg.sender].pool].cliff,
+			monthsPassed >= pool[stake.pool].cliff,
 			"too soon -- cliff not yet passed");
 
 		
 		// determine the number of payments claimant has rights to
 		uint8 payments;
+
 		// when time has past vesting period, pay out remaining unclaimed payments
-		if (pool[_members[msg.sender].pool].cliff +
-		    pool[_members[msg.sender].pool].vests <= monthsPassed) {
+		if (cliff + vests <= monthsPassed) {
 			
-			payments = pool[_members[msg.sender].pool].vests -
-				   _members[msg.sender].payouts;
+			payments = vests - stake.payouts;
 
 		// don't count months past vests+cliff as payments
 		} else {
 
-			payments = 1 + monthsPassed -
-				   _members[msg.sender].payouts -
-				   pool[_members[msg.sender].pool].cliff;
+			payments = 1 + monthsPassed - stake.payouts - cliff;
 		}
 				
 		// use payments to calculate amount to pay out
-		uint256 payout = _members[msg.sender].share /
-				 pool[_members[msg.sender].pool].vests * payments;
+		uint256 payout = stake.share / vests * payments;
 
 		// if at final payment, add remainder of share to final payment
-		if (_members[msg.sender].share -
-			_members[msg.sender].paid - payout <
-			_members[msg.sender].share / pool[_members[msg.sender].pool].vests) {
-			payout += _members[msg.sender].share %
-				 	  pool[_members[msg.sender].pool].vests;
+		if (stake.share - stake.paid - payout < stake.share / vests) {
+			
+			payout += stake.share % vests;
 		}
 
 		// transfer and make sure it succeeds
 		require(
-			_approve(pools[_members[msg.sender].pool], msg.sender, payout),
+			_transfer(pools[stake.pool], msg.sender, payout),
 			"stake claim transfer failed");
 
 		// update member state
