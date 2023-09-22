@@ -365,7 +365,7 @@ contract ERC20ILOCK is IERC20 {
 
 		// claim stake for vest periods accumulated
 	function claimStake(
-		uint8 stakeint
+		uint8 stakenumber
 	) public returns (bool) {
 
 		// see if we need to update time
@@ -373,10 +373,10 @@ contract ERC20ILOCK is IERC20 {
 
 		// make sure stake number exists
 		require(
-			_stakes[msg.sender].length > stakeint,
+			_stakes[msg.sender].length > stakenumber,
 			"stake does not exist");
 		
-		Stake stake = _stakes[msg.sender][stakeint];
+		Stake stake = _stakes[msg.sender][stakenumber];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
@@ -649,28 +649,29 @@ SHOUTING SHOUTING SHOUTING!
 		  // get amount paid so far to member
 		 // get amount investor still needs to pay in before claiming tokens
 		// get time remaining until next payout ready
-	function vestingStatus(
-		address vestee
+	function claimStatus(
+		uint8 stakenumber
 	) public view returns (
 		uint256 timeLeft,
-		uint256 stillOwes,
 		uint256 paidOut,
 		uint256 payRemaining,
 		uint256 payAvailable
 	) {
 
+		Stake stake = _stakes[msg.sender][stakenumber];
+		uint8 cliff = pool[stake.pool].cliff;
+		uint8 vests = pool[stake.pool].vests;
+
 		// compute the time left until the next payment is available
 		// if months passed beyond last payment, stop counting
-		if (monthsPassed >= pool[_members[vestee].pool].vests +
-				    pool[_members[vestee].pool].cliff) {
+		if (monthsPassed >= vests + cliff) {
 			
 			timeLeft = 0;
 
 		// when cliff hasn't been surpassed, include that time into countdown
-		} else if (monthsPassed < pool[_members[vestee].pool].cliff) {
+		} else if (monthsPassed < cliff) {
 			
-			timeLeft = (pool[_members[vestee].pool].cliff -
-				    monthsPassed - 1) * 30 days +
+			timeLeft = (cliff - monthsPassed - 1) * 30 days +
 				    nextPayout - block.timestamp;
 
 		// during vesting period, timeleft is only time til next month's payment
@@ -679,49 +680,38 @@ SHOUTING SHOUTING SHOUTING!
 			timeLeft = nextPayout - block.timestamp;
 		}
 
-		// how much does investor still owe before claiming share
-		stillOwes = _members[vestee].owes;
-
 		// how much has member already claimed
-		paidOut = _members[vestee].paid;
+		paidOut = stake.paid;
 
 		// how much does member have yet to collect, after vesting complete
-		payRemaining = _members[vestee].share - _members[vestee].paid;
+		payRemaining = stake.share - paidOut;
 
 		// computer the pay available to claim at current moment
 		// if months passed are inbetween cliff and end of vesting period
-		if (monthsPassed >= pool[_members[vestee].pool].cliff &&
-		    monthsPassed < pool[_members[vestee].pool].cliff +
-				   pool[_members[vestee].pool].vests) {
+		if (monthsPassed >= cliff && monthsPassed < cliff + vests) {
 			
-			payAvailable = (1 + monthsPassed -
-					pool[_members[vestee].pool].cliff -
-					_members[vestee].payouts) *
-			      	       (_members[vestee].share / pool[_members[vestee].pool].vests);
+			payAvailable = (1 + monthsPassed - cliff - stake.payouts) *
+			      	       (stake.share / vests);
 
 		// until time reaches cliff, no pay is available
-		} else if (monthsPassed < pool[_members[vestee].pool].cliff ){
+		} else if (monthsPassed < cliff ){
 
 			payAvailable = 0;
 
 		// if time has passed cliff and vesting period, the entire remaining share is available
 		} else {
 
-			payAvailable = _members[vestee].share - _members[vestee].paid;
+			payAvailable = stake.share - paidOut;
 		}
 
 		// if at final payment, add remainder of share to final payment
-		if (_members[msg.sender].share - _members[msg.sender].paid - payAvailable <
-			_members[msg.sender].share / pool[_members[msg.sender].pool].vests &&
-			payAvailable > 0) {
+		if (stake.share - paidOut - payAvailable < stake.share / vests && payAvailable > 0) {
 			
-			payAvailable += _members[msg.sender].share %
-				 	pool[_members[msg.sender].pool].vests;
+			payAvailable += stake.share % vests;
 		}
 
 		return (
 			timeLeft,
-			stillOwes,
 			paidOut,
 			payRemaining,
 			payAvailable
