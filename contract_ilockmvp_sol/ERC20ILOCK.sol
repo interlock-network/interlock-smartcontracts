@@ -140,7 +140,7 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* modifiers
+	* modifiers"
 	**/
 /***************************************************************************/
 /***************************************************************************/
@@ -608,7 +608,7 @@ SHOUTING SHOUTING SHOUTING!
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* vesting and staking
+	* stakeholder getters
 	**/
 /***************************************************************************/
 /***************************************************************************/
@@ -619,7 +619,7 @@ SHOUTING SHOUTING SHOUTING!
 		  // get amount paid so far to member
 		 // get amount investor still needs to pay in before claiming tokens
 		// get time remaining until next payout ready
-	function claimStatus(
+	function stakeStatus(
 		uint8 stakenumber
 	) public view returns (
 		uint256 timeLeft,
@@ -687,6 +687,17 @@ SHOUTING SHOUTING SHOUTING!
 			payAvailable
 		); }
 }
+
+/*************************************************/
+
+		// returns array of stakes that particular stakeholder may claim
+	function getStakes(
+		address stakeholder
+	) public view returns (
+		Stake[] stakes
+	) {
+
+		return _stakes; }
 
 /***************************************************************************/
 /***************************************************************************/
