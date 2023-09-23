@@ -73,8 +73,6 @@ contract ERC20ILOCK is IERC20 {
 	PoolData[] public pool;
 	address[] public pools;
 
-	address public tokenlockPool;
-
 		// keeping track of stakes
 	struct Stake {
 		uint256 paid;
