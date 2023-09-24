@@ -62,6 +62,7 @@ contract ERC20ILOCK is IERC20 {
 		"white",
 		"public",
 		"lock" ];
+	uint8 constant private REWARDS = 5;
 
 		// keeping track of pools
 	struct PoolData {
@@ -86,12 +87,10 @@ contract ERC20ILOCK is IERC20 {
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
 
-
 		// basic token data
 	string private _name = "Interlock Network";
 	string private _symbol = "ILOCK";
 	uint256 private _totalSupply = 0;
-	uint256 private _reserve;
 	address private _owner;
 
 		// tracking time
@@ -100,7 +99,10 @@ contract ERC20ILOCK is IERC20 {
 
 		// keeping track of irreversible actions
 	bool public TGEtriggered = false;
-	bool public supplySplit = false;
+
+		// information about rewards
+	mapping(address => uint256) public rewardedInterlocker;
+	uint256 public rewardedTotal;
 	
 /***************************************************************************/
 /***************************************************************************/
@@ -210,7 +212,6 @@ contract ERC20ILOCK is IERC20 {
 				Pool,
 				balance);
 			}
-		_reserve = _cap * _DECIMAL
 
 		// start the clock for time vault pools
 		nextPayout = block.timestamp + 30 days;
@@ -363,7 +364,6 @@ contract ERC20ILOCK is IERC20 {
 
 		// update total supply and reserve
 		_totalSupply =+ payout;
-		_reserve =- payout;
 		
 		return true; }	
 
@@ -432,7 +432,7 @@ contract ERC20ILOCK is IERC20 {
 	function reserve(
 	) public view returns (uint256) {
 
-		return _reserve; }
+		return _cap * _DECIMAL - _totalSupply; }
 
 /*************************************************/
 
@@ -684,7 +684,6 @@ SHOUTING SHOUTING SHOUTING!
 			payRemaining,
 			payAvailable
 		); }
-}
 
 /*************************************************/
 
@@ -696,6 +695,54 @@ SHOUTING SHOUTING SHOUTING!
 	) {
 
 		return _stakes[stakeholder]; }
+
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* rewards
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+		// issues reward to specified interlocker
+	function rewardInterlocker(
+		address interlocker,
+		uint256 amount
+	) public onlyOwner noZero(interlocker) returns (bool) {
+
+		// validate amount
+		uint256 tokens = pool[REWARDS].tokens;
+		uint256 vests = pool[REQARDS].vests
+		uint256 monthly = tokens / vests;
+		uint256 currentcap = (monthsPassed + 1) * monthly;
+		require(
+			currentcap >= tokens - balanceOf(pools[REWARDS]) + amount,
+			"payout too early");
+		require(
+			monthly > amount,
+			"payout too large");
+
+		// increment interlocker token balance
+		_balances[interlocker] =+ amount;
+		// increment rewarded to interlocker
+		rewardedInterlocker[interlocker] =+ amount;
+		// increment total rewarded
+		rewardedTotal =+ amount
+		// decrement rewards pool token balance
+		_balances[pools[REWARDS]] =- amount;
+		// increment total supply
+		_totalSupply =+ amount;
+
+		emit Reward(
+			interlocker,
+			amount); }
+
+/*************************************************/
+
+}
 
 /***************************************************************************/
 /***************************************************************************/

@@ -8,7 +8,7 @@
 // blairmunroakusa
 // ...
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 /**
 * Interface of ERC20 standard + metadata as defined in the EIP.
@@ -19,29 +19,20 @@ interface IERC20 {
    	/**
      	* events
      	**/
-		// `value` may be zero.
+
     	event Transfer(
 		address indexed from,
 		address indexed to,
 		uint256 value );
 
-		// `value` is the new allowance.
     	event Approval(
 		address indexed owner,
 		address indexed spender,
 		uint256 value );
 
-    		// This event is triggered whenever a call to #claim succeeds.
-    	event Claimed(
-		uint256 index,
-		address account,
-		uint256 share,
-		uint256 pool );	
-
-	event MoreDepositNeeded(
-		address depositor,
-		uint256 owed );
-
+    	event Reward(
+		address indexed interlocker,
+		uint256 amount );
 
     	/**
      	* getter methods
