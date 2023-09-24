@@ -218,7 +218,11 @@ contract ERC20ILOCK is IERC20 {
 		monthsPassed = 0;
 
 		// approve owner to spend any tokens sent to this contract in future
-		require
+		_approve(
+			address(this),
+			msg.sender,
+			_cap * _DECIMAL);
+
 
 		// this must never happen again...
 		TGEtriggered = true; }
