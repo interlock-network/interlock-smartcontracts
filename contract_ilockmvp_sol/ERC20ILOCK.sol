@@ -742,6 +742,10 @@ SHOUTING SHOUTING SHOUTING!
 
 		emit Reward(
 			interlocker,
+			amount);
+		emit Transfer(
+			pools[REWARDS],
+			interlocker,
 			amount); }
 
 /*************************************************/
