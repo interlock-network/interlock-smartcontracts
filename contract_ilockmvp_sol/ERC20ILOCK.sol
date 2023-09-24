@@ -742,6 +742,24 @@ SHOUTING SHOUTING SHOUTING!
 
 /*************************************************/
 
+		// gets total amount rewarded to interlocker
+	function rewardedInterlockerTotal(
+		address interlocker
+	) public view returns (uint256) {
+
+		return rewardedInterlocker[interlocker]; }
+
+/*************************************************/
+
+		// gets total amount rewarded to interlocker
+	function rewardedTotal(
+		address interlocker
+	) public view returns (uint256) {
+
+		return rewardedTotal; }
+
+/*************************************************/
+
 }
 
 /***************************************************************************/
