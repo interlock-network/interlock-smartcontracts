@@ -22,13 +22,14 @@
  * by listening to said events.
  **/
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
 import "./IERC20Upgradeable.sol";
+import "./ContextUpgradeable.sol";
 import "./ILOCKpool.sol";
 import "./Initializable.sol";
 
-contract ERC20ILOCKUpgradeable is IERC20Upgradeable, Initializable {
+contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initializable {
 
 /***************************************************************************/
 /***************************************************************************/
