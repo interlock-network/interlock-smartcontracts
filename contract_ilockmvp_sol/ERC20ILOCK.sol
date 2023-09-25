@@ -26,6 +26,7 @@ pragma solidity ^0.8.20;
 
 import "./IERC20.sol";
 import "./ILOCKpool.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract ERC20ILOCK is IERC20 {
 
