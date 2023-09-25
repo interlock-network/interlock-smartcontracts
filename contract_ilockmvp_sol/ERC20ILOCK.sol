@@ -115,16 +115,14 @@ contract ERC20ILOCK is IERC20, Initializable {
 /***************************************************************************/
 /***************************************************************************/
 
-
-	function initialize() public initializer
 		 // owned by msg.sender
 		// initializes contract
-	constructor(
+	function initialize(
 		uint256[_poolNumber] memory poolTokens_,
 		uint8[_poolNumber] memory monthlyPayments_,
 		uint8[_poolNumber] memory poolCliffs_,
 		uint32[_poolNumber] memory poolMembers_
-	) {
+	) public initializer {
 		_owner = msg.sender;
 
 		// iterate through pools to create struct array
