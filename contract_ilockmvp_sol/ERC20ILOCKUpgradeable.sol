@@ -127,7 +127,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint8[_poolNumber] memory poolCliffs_,
 		uint32[_poolNumber] memory poolMembers_
 	) public initializer {
-		_owner = msg.sender;
+		_owner = _msgSender();
 
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
@@ -158,7 +158,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	modifier onlyOwner(
 	) {
 		require(
-			msg.sender == _owner,
+			_msgSender() == _owner,
 			"only owner can call"
 		);
 		_; }
@@ -228,7 +228,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// approve owner to spend any tokens sent to this contract in future
 		_approve(
 			address(this),
-			msg.sender,
+			_msgSender(),
 			_cap * _DECIMAL);
 
 
@@ -324,10 +324,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// make sure stake number exists
 		require(
-			_stakes[msg.sender].length > stakenumber,
+			_stakes[_msgSender()].length > stakenumber,
 			"stake does not exist");
 		
-		Stake stake = _stakes[msg.sender][stakenumber];
+		Stake stake = _stakes[_msgSender()][stakenumber];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
@@ -367,12 +367,12 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// transfer and make sure it succeeds
 		require(
-			_transfer(pools[stake.pool], msg.sender, payout),
+			_transfer(pools[stake.pool], _msgSender(), payout),
 			"stake claim transfer failed");
 
 		// update member state
-		_members[msg.sender].payouts += payments;
-		_members[msg.sender].paid += payout;
+		_members[_msgSender()].payouts += payments;
+		_members[_msgSender()].paid += payout;
 
 		// update total supply and reserve
 		_totalSupply =+ payout;
@@ -472,7 +472,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-		address owner = msg.sender;
+		address owner = _msgSender();
 
 		_transfer(owner, to, amount);
 
@@ -491,7 +491,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		address to,
 		uint256 amount
 	) public override returns (bool) {
-		address spender = msg.sender;		
+		address spender = _msgSender();		
 
 		_spendAllowance(from, spender, amount);
 		_transfer(from, to, amount);
@@ -524,7 +524,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint256 amount
 	) public override returns (bool) {
 
-		address owner = msg.sender;
+		address owner = _msgSender();
 		_approve(owner, spender, amount);
 		return true; }
 
@@ -566,7 +566,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint8 poolnumber
 	) public onlyOwner returns (bool) {
 
-		address owner = msg.sender;
+		address owner = _msgSender();
 		_approve(pools[poolnumber], spender, amount);
 
 		return true; }
@@ -638,7 +638,7 @@ SHOUTING SHOUTING SHOUTING!
 		uint256 payAvailable
 	) {
 
-		Stake stake = _stakes[msg.sender][stakenumber];
+		Stake stake = _stakes[_msgSender()][stakenumber];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
