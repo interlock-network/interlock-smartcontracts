@@ -24,11 +24,11 @@
 
 pragma solidity ^0.8.20;
 
-import "./IERC20.sol";
+import "./IERC20Upgradeable.sol";
 import "./ILOCKpool.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract ERC20ILOCK is IERC20, Initializable {
+contract ERC20ILOCKUpgradeable is IERC20Upgradeable, Initializable {
 
 /***************************************************************************/
 /***************************************************************************/
@@ -41,6 +41,9 @@ contract ERC20ILOCK is IERC20, Initializable {
 /***************************************************************************/
 
 	/** @dev **/
+
+		// issued upon reward distribution to interlocker
+    	event Reward(address indexed interlocker, uint256 amount );
 
 		// divisibility factor
 	uint8 constant private _decimals = 18;
