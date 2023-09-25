@@ -91,7 +91,7 @@ contract ERC20ILOCK is IERC20, Initializable {
 		// basic token data
 	string constant private _name = "Interlock Network";
 	string constant private _symbol = "ILOCK";
-	uint256 private _totalSupply = 0;
+	uint256 private _totalSupply;
 	address private _owner;
 
 		// tracking time
@@ -99,7 +99,7 @@ contract ERC20ILOCK is IERC20, Initializable {
 	uint8 public monthsPassed; 
 
 		// keeping track of irreversible actions
-	bool public TGEtriggered = false;
+	bool public TGEtriggered;
 
 		// information about rewards
 	mapping(address => uint256) public rewardedInterlocker;
@@ -135,7 +135,10 @@ contract ERC20ILOCK is IERC20, Initializable {
 					monthlyPayments_[i],
 					poolCliffs_[i],
 					poolMembers_[i] ) );
-		} }
+		} 
+
+		_totalSupply = 0;
+		TGEtriggered = false; }
 
 /***************************************************************************/
 /***************************************************************************/
