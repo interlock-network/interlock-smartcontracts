@@ -28,7 +28,7 @@ import "./IERC20.sol";
 import "./ILOCKpool.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract ERC20ILOCK is IERC20 {
+contract ERC20ILOCK is IERC20, Initializable {
 
 /***************************************************************************/
 /***************************************************************************/
@@ -43,13 +43,13 @@ contract ERC20ILOCK is IERC20 {
 	/** @dev **/
 
 		// divisibility factor
-	uint8 private _decimals = 18;
-	uint256 private _DECIMAL = 10 ** _decimals;
-	uint256 private _cap = 1000000000;
+	uint8 constant private _decimals = 18;
+	uint256 constant private _DECIMAL = 10 ** _decimals;
+	uint256 constant private _cap = 1000000000;
 
 		// pools
 	uint8 constant private _poolNumber = 13;
-	string[_poolNumber] public poolNames = [
+	string[_poolNumber] constant public poolNames = [
 		"earlyvc",
 		"ps1",
 		"ps2",
@@ -89,8 +89,8 @@ contract ERC20ILOCK is IERC20 {
 	mapping(address => mapping(address => uint256)) private _allowances;
 
 		// basic token data
-	string private _name = "Interlock Network";
-	string private _symbol = "ILOCK";
+	string constant private _name = "Interlock Network";
+	string constant private _symbol = "ILOCK";
 	uint256 private _totalSupply = 0;
 	address private _owner;
 
@@ -115,6 +115,8 @@ contract ERC20ILOCK is IERC20 {
 /***************************************************************************/
 /***************************************************************************/
 
+
+	function initialize() public initializer
 		 // owned by msg.sender
 		// initializes contract
 	constructor(
