@@ -26,7 +26,7 @@ pragma solidity ^0.8.20;
 
 import "./IERC20Upgradeable.sol";
 import "./ILOCKpool.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./Initializable.sol";
 
 contract ERC20ILOCKUpgradeable is IERC20Upgradeable, Initializable {
 
@@ -775,7 +775,7 @@ SHOUTING SHOUTING SHOUTING!
 
 /*************************************************/
 
-	uint256[45] private __gap;
+	uint256[100] private __gap;
 }
 
 /***************************************************************************/
