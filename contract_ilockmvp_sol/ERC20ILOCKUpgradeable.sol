@@ -46,12 +46,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// issued upon reward distribution to interlocker
     	event Reward(address indexed interlocker, uint256 amount );
 
-		// divisibility factor
+		// Constants (order doesn't matter for storage)
 	uint8 constant private _decimals = 18;
 	uint256 constant private _DECIMAL = 10 ** _decimals;
 	uint256 constant private _cap = 1000000000;
-
-		// pools
 	uint8 constant private _poolNumber = 13;
 	string[_poolNumber] constant public poolNames = [
 		"earlyvc",
