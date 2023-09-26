@@ -47,12 +47,13 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
     	event Reward(address indexed interlocker, uint256 amount );
 
 		// Constants (order doesn't matter for storage)
-	string constant private _name = "Interlock Network";
-	string constant private _symbol = "ILOCK";
-	uint8 constant private _decimals = 18;
-	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _decimals;
-	uint256 constant private _cap = 1_000_000_000;
-	uint8 constant private _poolNumber = 13;
+	string constant private _NAME = "Interlock Network";
+	string constant private _SYMBOL = "ILOCK";
+	uint8 constant private _DECIMALS = 18;
+	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
+	uint256 constant private _CAP = 1_000_000_000;
+	uint8 constant private _POOLCOUNT = 13;
+	uint256 constant private _MONTH = 30 days;
 	
 		// Grouped uint256 variables
 	uint256 private _totalSupply;
@@ -157,8 +158,8 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			cliff: 0,
 			name: "staking and rewards"
 		}) ]
-	uint8 constant private REWARDS = _poolNumber - 1;
-	uint256 constant private _vestingTokens;
+	uint8 constant private _REWARDS = _POOLCOUNT - 1;
+	uint256 private _vestingTokens;
 
 
 /***************************************************************************/
@@ -179,7 +180,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_owner = _msgSender();
 
 		// iterate through pools to create struct array
-		for (uint8 i = 0; i < _poolNumber; i++) {
+		for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
 			// here we are adding up tokens to make sure sum is correct
 			uint256 sumTokens += pool[i].tokens;
@@ -189,7 +190,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		}
 
 		require(
-			sumTokens == _cap,
+			sumTokens == _CAP,
 			"pool token amounts must add up cap");
 
 		_totalSupply = 0;
@@ -258,7 +259,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			"TGE already happened");
 
 		// create pool accounts and initiate
-		for (uint8 i = 0; i < _poolNumber; i++) {
+		for (uint8 i = 0; i < _POOLCOUNT; i++) {
 			
 			// generate pools and mint to
 			address Pool = address(new ILOCKpool());
@@ -280,7 +281,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_approve(
 			address(this),
 			_msgSender(),
-			_cap * _DECIMAL_MAGNITUDE);
+			_CAP * _DECIMAL_MAGNITUDE);
 
 
 		// this must never happen again...
@@ -352,7 +353,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			data.share >= pools[pool].vests,
 			"share is too small");
 		require(
-			data.pool < _poolNumber,
+			data.pool < _POOLCOUNT,
 			"invalid pool number");
 
 		// create stake or append
@@ -450,7 +451,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function name(
 	) public view override returns (string memory) {
 
-		return _name; }
+		return _NAME; }
 
 /*************************************************/
 
@@ -458,7 +459,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function symbol(
 	) public view override returns (string memory) {
 
-		return _symbol; }
+		return _SYMBOL; }
 
 /*************************************************/
 
@@ -466,7 +467,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function decimals(
 	) public view override returns (uint8) {
 
-		return _decimals; }
+		return _DECIMALS; }
 
 /*************************************************/
 
@@ -501,7 +502,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function reserve(
 	) public view returns (uint256) {
 
-		return _cap * _DECIMAL_MAGNITUDE - _totalSupply; }
+		return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
 
 /*************************************************/
 
@@ -509,7 +510,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function cap(
 	) public view returns (uint256) {
 
-		return _cap; }
+		return _CAP; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -788,12 +789,12 @@ SHOUTING SHOUTING SHOUTING!
 	) public onlyOwner noZero(interlocker) returns (bool) {
 
 		// validate amount
-		uint256 tokens = pool[REWARDS].tokens;
+		uint256 tokens = pool[_REWARDS].tokens;
 		uint256 vests = pool[REQARDS].vests
 		uint256 monthly = tokens / vests;
 		uint256 currentcap = (monthsPassed + 1) * monthly;
 		require(
-			currentcap >= tokens - balanceOf(pools[REWARDS]) + amount,
+			currentcap >= tokens - balanceOf(pools[_REWARDS]) + amount,
 			"payout too early");
 		require(
 			monthly > amount,
@@ -806,7 +807,7 @@ SHOUTING SHOUTING SHOUTING!
 		// increment total rewarded
 		rewardedTotal += amount
 		// decrement rewards pool token balance
-		_balances[pools[REWARDS]] -= amount;
+		_balances[pools[_REWARDS]] -= amount;
 		// increment total supply
 		_totalSupply += amount;
 
@@ -814,7 +815,7 @@ SHOUTING SHOUTING SHOUTING!
 			interlocker,
 			amount);
 		emit Transfer(
-			pools[REWARDS],
+			pools[_REWARDS],
 			interlocker,
 			amount); }
 
