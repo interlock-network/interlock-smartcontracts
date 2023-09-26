@@ -53,26 +53,12 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _decimals;
 	uint256 constant private _cap = 1_000_000_000;
 	uint8 constant private _poolNumber = 13;
-	string[_poolNumber] constant public _poolNames = [
-		"earlyvc",
-		"ps1",
-		"ps2",
-		"ps3",
-		"team",
-		"ov",
-		"advise",
-		"reward",
-		"founder",
-		"partner",
-		"white",
-		"public",
-		"lock" ];
 	uint8 constant private REWARDS = 5;
 	
 		// Grouped uint256 variables
 	uint256 private _totalSupply;
-	uint256 public nextPayout;
-	uint256 public rewardedTotal;
+	uint256 private _nextPayout;
+	uint256 private _rewardedTotal;
 
 		// Grouped address variables
 	address private _owner;
@@ -81,7 +67,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
 	mapping(address => Stake[]) private _stakes;
-	mapping(address => uint256) public rewardedInterlocker;
+	mapping(address => uint256) private _rewardedInterlocker;
 
 		// Dynamic arrays
 	PoolData[] public pool;
@@ -191,9 +177,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		_owner = _msgSender();
 
-		require(
-
-
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
 
@@ -289,7 +272,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			}
 
 		// start the clock for time vault pools
-		nextPayout = block.timestamp + 30 days;
+		_nextPayout = block.timestamp + 30 days;
 		monthsPassed = 0;
 
 		// approve owner to spend any tokens sent to this contract in future
@@ -336,11 +319,11 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	) internal returns (bool) {
 
 		// test time
-		if (block.timestamp > nextPayout) {
+		if (block.timestamp > _nextPayout) {
 			
-			uint256 deltaT = block.timestamp - nextPayout;
+			uint256 deltaT = block.timestamp - _nextPayout;
 			uint8 months = deltaT / 30 days + 1;
-			nextPayout += months * 30 days;
+			_nextPayout += months * 30 days;
 			monthsPassed += months;
 			return true;
 		}
@@ -725,12 +708,12 @@ SHOUTING SHOUTING SHOUTING!
 		} else if (monthsPassed < cliff) {
 			
 			timeLeft = (cliff - monthsPassed - 1) * 30 days +
-				    nextPayout - block.timestamp;
+				    _nextPayout - block.timestamp;
 
 		// during vesting period, timeleft is only time til next month's payment
 		} else {
 
-			timeLeft = nextPayout - block.timestamp;
+			timeLeft = _nextPayout - block.timestamp;
 		}
 
 		// how much has member already claimed
@@ -841,16 +824,15 @@ SHOUTING SHOUTING SHOUTING!
 		address interlocker
 	) public view returns (uint256) {
 
-		return rewardedInterlocker[interlocker]; }
+		return _rewardedInterlocker[interlocker]; }
 
 /*************************************************/
 
 		// gets total amount rewarded to interlocker
 	function rewardedTotal(
-		address interlocker
 	) public view returns (uint256) {
 
-		return rewardedTotal; }
+		return _rewardedTotal; }
 
 /*************************************************/
 
