@@ -71,11 +71,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// keeping track of pools
 	struct PoolData {
-		string name;
 		uint256 tokens;
 		uint8 vests;
 		uint8 cliff;
-		uint32 members; }
+		string name;}
 	PoolData[] public pool;
 	address[] public pools;
 
