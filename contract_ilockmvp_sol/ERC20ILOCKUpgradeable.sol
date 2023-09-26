@@ -50,7 +50,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	string constant private _name = "Interlock Network";
 	string constant private _symbol = "ILOCK";
 	uint8 constant private _decimals = 18;
-	uint256 constant private _DECIMAL = 10 ** _decimals;
+	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _decimals;
 	uint256 constant private _cap = 1000000000;
 	uint8 constant private _poolNumber = 13;
 	string[_poolNumber] constant public _poolNames = [
@@ -116,22 +116,20 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// initializes contract
 	function initialize(
 		uint256[_poolNumber] memory poolTokens_,
-		uint8[_poolNumber] memory monthlyPayments_,
+		uint8[_poolNumber] memory poolVests_,
 		uint8[_poolNumber] memory poolCliffs_,
-		uint32[_poolNumber] memory poolMembers_
 	) public initializer {
 		_owner = _msgSender();
 
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			poolTokens_[i] *= _DECIMAL;
+			poolTokens_[i] *= _DECIMAL_MAGNITUDE;
 			pool.push(
 				PoolData(
-					poolNames[i],
 					poolTokens_[i],
-					monthlyPayments_[i],
+					poolVests_[i],
 					poolCliffs_[i],
-					poolMembers_[i] ) );
+					poolNames_[i] ) );
 		} 
 
 		_totalSupply = 0;
@@ -222,7 +220,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_approve(
 			address(this),
 			_msgSender(),
-			_cap * _DECIMAL);
+			_cap * _DECIMAL_MAGNITUDE);
 
 
 		// this must never happen again...
@@ -443,7 +441,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function reserve(
 	) public view returns (uint256) {
 
-		return _cap * _DECIMAL - _totalSupply; }
+		return _cap * _DECIMAL_MAGNITUDE - _totalSupply; }
 
 /*************************************************/
 
