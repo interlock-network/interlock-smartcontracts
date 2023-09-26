@@ -187,9 +187,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		 // owned by msg.sender
 		// initializes contract
 	function initialize(
-		uint256[_poolNumber] memory poolTokens_,
-		uint8[_poolNumber] memory poolVests_,
-		uint8[_poolNumber] memory poolCliffs_,
 	) public initializer {
 
 		_owner = _msgSender();
@@ -199,14 +196,17 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
-			poolTokens_[i] *= _DECIMAL_MAGNITUDE;
-			pool.push(
-				PoolData(
-					poolTokens_[i],
-					poolVests_[i],
-					poolCliffs_[i],
-					poolNames_[i] ) );
-		} 
+
+			// here we are adding up tokens to make sure sum is correct
+			uint256 sumTokens += pool[i].tokens;
+
+			// in the same breath we convert token amounts to ERC20 format
+			pool[i].tokens *= _DECIMAL_MAGNITUDE;
+		}
+
+		require(
+			sumTokens == _cap,
+			"pool token amounts must add up cap");
 
 		_totalSupply = 0;
 		TGEtriggered = false; }
