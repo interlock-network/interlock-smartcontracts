@@ -47,6 +47,8 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
     	event Reward(address indexed interlocker, uint256 amount );
 
 		// Constants (order doesn't matter for storage)
+	string constant private _name = "Interlock Network";
+	string constant private _symbol = "ILOCK";
 	uint8 constant private _decimals = 18;
 	uint256 constant private _DECIMAL = 10 ** _decimals;
 	uint256 constant private _cap = 1000000000;
@@ -66,44 +68,40 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		"public",
 		"lock" ];
 	uint8 constant private REWARDS = 5;
+	
+		// Grouped uint256 variables
+	uint256 private _totalSupply;
+	uint256 public nextPayout;
+	uint256 public rewardedTotal;
 
-		// keeping track of pools
-	struct PoolData {
-		uint256 tokens;
-		uint8 vests;
-		uint8 cliff;
-		string name;}
+		// Grouped address variables
+	address private _owner;
+
+		// Mappings
+	mapping(address => uint256) private _balances;
+	mapping(address => mapping(address => uint256)) private _allowances;
+	mapping(address => Stake[]) private _stakes;
+	mapping(address => uint256) public rewardedInterlocker;
+
+		// Dynamic arrays
 	PoolData[] public pool;
 	address[] public pools;
 
-		// keeping track of stakes
-	struct Stake {
-		uint256 paid;
-		uint256 share;
-		uint8 pool; }
-	mapping(address => Stake[]) private _stakes;
-
-		// core token balance and allowance mappings
-	mapping(address => uint256) private _balances;
-	mapping(address => mapping(address => uint256)) private _allowances;
-
-		// basic token data
-	string constant private _name = "Interlock Network";
-	string constant private _symbol = "ILOCK";
-	uint256 private _totalSupply;
-	address private _owner;
-
-		// tracking time
-	uint256 public nextPayout;
-	uint8 public monthsPassed; 
-
-		// keeping track of irreversible actions
+		// Grouped smaller variables
 	bool public TGEtriggered;
+	uint8 public monthsPassed;
 
-		// information about rewards
-	mapping(address => uint256) public rewardedInterlocker;
-	uint256 public rewardedTotal;
-	
+	struct Stake {
+	    uint256 paid;
+	    uint256 share;
+	    uint8 pool; }
+
+	struct PoolData {
+	    uint256 tokens;
+	    uint8 vests;
+	    uint8 cliff;
+	    string name; }
+
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
