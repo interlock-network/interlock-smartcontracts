@@ -102,6 +102,78 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	    uint8 cliff;
 	    string name; }
 
+	PoolData[] public pool = [
+
+		PoolData({
+			tokens: 3703704,
+			vests: 3,
+			cliff: 1,
+			name: "community sale",
+		}),
+		PoolData({
+			tokens: 48626667,
+			vests: 18,
+			cliff: 1,
+			name: "presale 1"
+		}),
+		PoolData({
+			tokens: 33333333,
+			vests: 15,
+			cliff: 1,
+			name: "presale 2"
+		}),
+		PoolData({
+			tokens: 25714286,
+			vests: 12,
+			cliff: 1,
+			name: "presale 3"
+		}),
+		PoolData({
+			tokens: 28500000,
+			vests: 3,
+			cliff: 0,
+			name: "public sale"
+		}),
+		PoolData({
+			tokens: 200000000,
+			vests: 36,
+			cliff: 6,
+			name: "founders and team"
+		}),
+		PoolData({
+			tokens: 40000000,
+			vests: 24,
+			cliff: 1,
+			name: "outlier ventures"
+		}),
+		PoolData({
+			tokens: 25000000,
+			vests: 24,
+			cliff: 1,
+			name: "advisors"
+		}),
+		PoolData({
+			tokens: 300000000,
+			vests: 144,
+			cliff: 0,
+			name: "staking and rewards"
+		}),
+		PoolData({
+			tokens: 258122011,
+			vests: 84,
+			cliff: 0,
+			name: "foundation"
+		}),
+		PoolData({
+			tokens: 37000000,
+			vests: 12,
+			cliff: 1
+			name: "strategic partners and KOL"
+		}) ]
+
+
+
+
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
@@ -119,7 +191,11 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint8[_poolNumber] memory poolVests_,
 		uint8[_poolNumber] memory poolCliffs_,
 	) public initializer {
+
 		_owner = _msgSender();
+
+		require(
+
 
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _poolNumber; i++) {
