@@ -382,7 +382,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// make sure cliff has been surpassed
 		require(
-			monthsPassed >= pool[stake.pool].cliff,
+			monthsPassed >= cliff,
 			"too soon -- cliff not yet passed");
 
 		// number of payouts must not surpass number of vests
