@@ -51,7 +51,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	string constant private _symbol = "ILOCK";
 	uint8 constant private _decimals = 18;
 	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _decimals;
-	uint256 constant private _cap = 1000000000;
+	uint256 constant private _cap = 1_000_000_000;
 	uint8 constant private _poolNumber = 13;
 	string[_poolNumber] constant public _poolNames = [
 		"earlyvc",
@@ -105,67 +105,67 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	PoolData[] public pool = [
 
 		PoolData({
-			tokens: 3703704,
+			tokens: 3_703_704,
 			vests: 3,
 			cliff: 1,
 			name: "community sale",
 		}),
 		PoolData({
-			tokens: 48626667,
+			tokens: 48_626_667,
 			vests: 18,
 			cliff: 1,
 			name: "presale 1"
 		}),
 		PoolData({
-			tokens: 33333333,
+			tokens: 33_333_333,
 			vests: 15,
 			cliff: 1,
 			name: "presale 2"
 		}),
 		PoolData({
-			tokens: 25714286,
+			tokens: 25_714_286,
 			vests: 12,
 			cliff: 1,
 			name: "presale 3"
 		}),
 		PoolData({
-			tokens: 28500000,
+			tokens: 28_500_000,
 			vests: 3,
 			cliff: 0,
 			name: "public sale"
 		}),
 		PoolData({
-			tokens: 200000000,
+			tokens: 200_000_000,
 			vests: 36,
 			cliff: 6,
 			name: "founders and team"
 		}),
 		PoolData({
-			tokens: 40000000,
+			tokens: 40_000_000,
 			vests: 24,
 			cliff: 1,
 			name: "outlier ventures"
 		}),
 		PoolData({
-			tokens: 25000000,
+			tokens: 25_000_000,
 			vests: 24,
 			cliff: 1,
 			name: "advisors"
 		}),
 		PoolData({
-			tokens: 300000000,
+			tokens: 300_000_000,
 			vests: 144,
 			cliff: 0,
 			name: "staking and rewards"
 		}),
 		PoolData({
-			tokens: 258122011,
+			tokens: 258_122_011,
 			vests: 84,
 			cliff: 0,
 			name: "foundation"
 		}),
 		PoolData({
-			tokens: 37000000,
+			tokens: 37_000_000,
 			vests: 12,
 			cliff: 1
 			name: "strategic partners and KOL"
