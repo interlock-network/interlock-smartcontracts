@@ -629,37 +629,37 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		return true; }
 
+/*************************************************/
 
-/*
-NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
+		// allows client to safely execute approval facing double spend attack
+	function increaseAllowance(
+		address spender,
+		uint256 addedValue
+	) public virtual returns (bool) {
+        
+		address owner = _msgSender();
+        	_approve(owner, spender, allowance(owner, spender) + addedValue);
+        
+		return true; }
 
-This attack can only be mitigated clientside, or perhaps with a hide and reveal scheme.
+/*************************************************/
 
-Consider the two competing scenarios: Alice want to reduce Bob's allowance from 100 to 50..
+		// allows client to safely execute approval facing double spend attack
+	function decreaseAllowance(
+		address spender,
+		uint256 subtractedValue
+	) public virtual returns (bool) {
 
-### Scenario 1: Directly reducing the allowance
+        	address owner = _msgSender();
+        	uint256 currentAllowance = allowance(owner, spender);
+        	require(
+			currentAllowance >= subtractedValue,
+			"ERC20: decreased allowance below zero");
 
-1. Alice has approved Bob to spend 100 tokens.
-2. Alice decides to reduce Bob's allowance to 50 tokens and broadcasts the transaction.
-3. Bob observes the transaction and quickly spends the original 100 tokens before Alice's transaction is confirmed.
-4. Alice's transaction is confirmed, and Bob's allowance is set to 50 tokens.
-5. Bob now spends the 50 tokens.
-6. **Total tokens Bob spends: 150 tokens**
+        	unchecked {
+			_approve(owner, spender, currentAllowance - subtractedValue);}
 
-### Scenario 2: Setting allowance to zero first, then updating it
-
-1. Alice has approved Bob to spend 100 tokens.
-2. Alice decides to set Bob's allowance to 0 and broadcasts the transaction.
-3. Bob observes the transaction and quickly spends the original 100 tokens before Alice's transaction is confirmed.
-4. Alice's transaction is confirmed, and Bob's allowance is set to 0.
-5. Alice sets Bob's allowance to 50 tokens.
-6. Bob spends the 50 tokens.
-7. **Total tokens Bob spends: 150 tokens**
-
-In both scenarios, if Bob acts maliciously and in a timely manner, he can spend a total of 150 tokens, which is more than Alice intended in her updates.
-
-The key takeaway is that the "set allowance to zero first" technique doesn't address the frontrunning vulnerability inherent in the ERC-20 approval mechanism if the approved entity is malicious.
-*/
+		 return true; }
 
 /*************************************************/
 
