@@ -633,17 +633,32 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 /*
 NOTE REGARDING FRONTRUNNING DOUBLE WITHDRAWAL ATTACK:
 
-THIS ATTACK CAN ONLY BE MITIGATED CLIENT-SIDE, BECAUSE IT IS LITERALLY
-IMPOSSIBLE FOR A CONTRACT TO DISCERN BETWEEN AN HONEST WITHDRAWAL, AND
-A WITHDRAWAL IN BAD FAITH. (work it out, it is impossible. and in fact, 
-trying to mitigate against this attack on contract-side makes it possible for
-honest token holders to get screwed over if Alice coincidentally withdraws after Bob
-has changed his mind about her allowance, but before Bob gets the chance to implement
-that change...)
+This attack can only be mitigated clientside, or perhaps with a hide and reveal scheme.
 
-SETTING ALLOWANCE TO ZERO FIRST IS SILLY, BECAUSE YOU CAN STILL FRONTRUN THAT
-TRANSACTION, AND SAID TRANSACTION IS INDISTINGUISHABLE FROM AN HONEST TRANSACTION.
-SHOUTING SHOUTING SHOUTING!
+Consider the two competing scenarios: Alice want to reduce Bob's allowance from 100 to 50..
+
+### Scenario 1: Directly reducing the allowance
+
+1. Alice has approved Bob to spend 100 tokens.
+2. Alice decides to reduce Bob's allowance to 50 tokens and broadcasts the transaction.
+3. Bob observes the transaction and quickly spends the original 100 tokens before Alice's transaction is confirmed.
+4. Alice's transaction is confirmed, and Bob's allowance is set to 50 tokens.
+5. Bob now spends the 50 tokens.
+6. **Total tokens Bob spends: 150 tokens**
+
+### Scenario 2: Setting allowance to zero first, then updating it
+
+1. Alice has approved Bob to spend 100 tokens.
+2. Alice decides to set Bob's allowance to 0 and broadcasts the transaction.
+3. Bob observes the transaction and quickly spends the original 100 tokens before Alice's transaction is confirmed.
+4. Alice's transaction is confirmed, and Bob's allowance is set to 0.
+5. Alice sets Bob's allowance to 50 tokens.
+6. Bob spends the 50 tokens.
+7. **Total tokens Bob spends: 150 tokens**
+
+In both scenarios, if Bob acts maliciously and in a timely manner, he can spend a total of 150 tokens, which is more than Alice intended in her updates.
+
+The key takeaway is that the "set allowance to zero first" technique doesn't address the frontrunning vulnerability inherent in the ERC-20 approval mechanism if the approved entity is malicious.
 */
 
 /*************************************************/
