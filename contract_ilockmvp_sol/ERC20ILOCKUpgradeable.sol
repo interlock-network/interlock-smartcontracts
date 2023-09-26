@@ -403,20 +403,20 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		
 		uint256 newPaidBalance = stake.paid + payout;
 		uint256 remainingShare = stake.share - newPaidBalance;
-		uint8 thisPayments;
+		uint8 thesePayments;
 
 		// when time has past vesting period, pay out remaining unclaimed payments
 		if (cliff + vests <= monthsPassed) {
 			
-			thisPayments = vests - payments;
+			thesePayments = vests - payments;
 
 		// don't count months past vests+cliff as payments
 		} else {
 
-			thisPayments = 1 + monthsPassed - payments - cliff;
+			thesePayments = 1 + monthsPassed - payments - cliff;
 		}
 		// use payments to calculate amount to pay out
-		uint256 thisPayout = thisPayments * payout;
+		uint256 thisPayout = thesePayments * payout;
 
 		// if at final payment, add remainder of share to final payment
 		if (stake.share - stake.paid - thisPayout < stake.share / vests) {
