@@ -53,7 +53,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _decimals;
 	uint256 constant private _cap = 1_000_000_000;
 	uint8 constant private _poolNumber = 13;
-	uint8 constant private REWARDS = 5;
 	
 		// Grouped uint256 variables
 	uint256 private _totalSupply;
@@ -139,12 +138,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			name: "advisors"
 		}),
 		PoolData({
-			tokens: 300_000_000,
-			vests: 144,
-			cliff: 0,
-			name: "staking and rewards"
-		}),
-		PoolData({
 			tokens: 258_122_011,
 			vests: 84,
 			cliff: 0,
@@ -155,9 +148,17 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			vests: 12,
 			cliff: 1
 			name: "strategic partners and KOL"
+		}),
+
+	// do away with all below storage if straddling chains
+		PoolData({
+			tokens: 300_000_000,
+			vests: 144,
+			cliff: 0,
+			name: "staking and rewards"
 		}) ]
-
-
+	uint8 constant private REWARDS = _poolNumber - 1;
+	uint256 constant private _vestingTokens;
 
 
 /***************************************************************************/
