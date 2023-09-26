@@ -83,9 +83,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	struct Stake {
 		uint256 paid;
 		uint256 share;
-		uint8 cliff;
-		uint8 pool;
-		uint8 payouts; }
+		uint8 pool; }
 	mapping(address => Stake[]) private _stakes;
 
 		// core token balance and allowance mappings
@@ -295,17 +293,11 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			data.paid == 0,
 			"amount paid must be zero");
 		require(
-			data.cliff <= pools[pool].cliff,
-			"cliff exceeds pool cliff");
-		require(
 			data.share >= pools[pool].vests,
 			"share is too small");
 		require(
 			data.pool < _poolNumber,
 			"invalid pool number");
-		require(
-			data.payouts == 0,
-			"payouts at this point muzt be zero");
 
 		// create stake or append
 		_stakes(stakeholder).push(data);
@@ -331,51 +323,60 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
-		// number of payouts must not surpass number of vests
-		require(
-			stake.payouts < pool[stake.pool].vests,
-			"member already collected entire token share");
-
 		// make sure cliff has been surpassed
 		require(
 			monthsPassed >= pool[stake.pool].cliff,
 			"too soon -- cliff not yet passed");
 
+		// number of payouts must not surpass number of vests
+		require(
+			stake.paid < stake.share,
+			"member already collected entire token share");
 		
 		// determine the number of payments claimant has rights to
-		uint8 payments;
+		uint8 payout = stake.share / vests;
+
+		// and determine the number of payments claimant has received
+		uint8 payments = stake.paid / payout;
+
+		// even if cliff is passed, is it too soon for next payment?
+		require(
+			payments < monthsPassed,
+			"payout too early");
+		
+		uint256 newPaidBalance = stake.paid + payout;
+		uint256 remainingShare = stake.share - newPaidBalance;
+		uint8 thisPayments;
 
 		// when time has past vesting period, pay out remaining unclaimed payments
 		if (cliff + vests <= monthsPassed) {
 			
-			payments = vests - stake.payouts;
+			thisPayments = vests - payments;
 
 		// don't count months past vests+cliff as payments
 		} else {
 
-			payments = 1 + monthsPassed - stake.payouts - cliff;
+			thisPayments = 1 + monthsPassed - payments - cliff;
 		}
-				
 		// use payments to calculate amount to pay out
-		uint256 payout = stake.share / vests * payments;
+		uint256 thisPayout = thisPayments * payout;
 
 		// if at final payment, add remainder of share to final payment
-		if (stake.share - stake.paid - payout < stake.share / vests) {
+		if (stake.share - stake.paid - thisPayout < stake.share / vests) {
 			
-			payout += stake.share % vests;
+			thisPayout += stake.share % vests;
 		}
 
 		// transfer and make sure it succeeds
 		require(
-			_transfer(pools[stake.pool], _msgSender(), payout),
+			_transfer(pools[stake.pool], _msgSender(), thisPayout),
 			"stake claim transfer failed");
 
 		// update member state
-		_members[_msgSender()].payouts += payments;
-		_members[_msgSender()].paid += payout;
+		_members[_msgSender()].paid += thisPayout;
 
 		// update total supply and reserve
-		_totalSupply =+ payout;
+		_totalSupply =+ thisPayout;
 		
 		return true; }	
 
@@ -471,7 +472,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function transfer(
 		address to,
 		uint256 amount
-	) public override returns (bool) {
+	) public virtual override returns (bool) {
 		address owner = _msgSender();
 
 		_transfer(owner, to, amount);
@@ -490,7 +491,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		address from,
 		address to,
 		uint256 amount
-	) public override returns (bool) {
+	) public virtual override returns (bool) {
 		address spender = _msgSender();		
 
 		_spendAllowance(from, spender, amount);
@@ -522,7 +523,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function approve(
 		address spender,
 		uint256 amount
-	) public override returns (bool) {
+	) public virtual override returns (bool) {
 
 		address owner = _msgSender();
 		_approve(owner, spender, amount);
