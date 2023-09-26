@@ -53,7 +53,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	uint256 constant private _DECIMAL = 10 ** _decimals;
 	uint256 constant private _cap = 1000000000;
 	uint8 constant private _poolNumber = 13;
-	string[_poolNumber] constant public poolNames = [
+	string[_poolNumber] constant public _poolNames = [
 		"earlyvc",
 		"ps1",
 		"ps2",
