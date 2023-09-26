@@ -268,8 +268,11 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// test time
 		if (block.timestamp > nextPayout) {
-			nextPayout += 30 days;
-			monthsPassed++;
+			
+			uint256 deltaT = block.timestamp - nextPayout;
+			uint8 months = deltaT / 30 days + 1;
+			nextPayout += months * 30 days;
+			monthsPassed += months;
 			return true;
 		}
 
@@ -376,7 +379,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_members[_msgSender()].paid += thisPayout;
 
 		// update total supply and reserve
-		_totalSupply =+ thisPayout;
+		_totalSupply += thisPayout;
 		
 		return true; }	
 
@@ -744,15 +747,15 @@ SHOUTING SHOUTING SHOUTING!
 			"payout too large");
 
 		// increment interlocker token balance
-		_balances[interlocker] =+ amount;
+		_balances[interlocker] += amount;
 		// increment rewarded to interlocker
-		rewardedInterlocker[interlocker] =+ amount;
+		rewardedInterlocker[interlocker] += amount;
 		// increment total rewarded
-		rewardedTotal =+ amount
+		rewardedTotal += amount
 		// decrement rewards pool token balance
-		_balances[pools[REWARDS]] =- amount;
+		_balances[pools[REWARDS]] -= amount;
 		// increment total supply
-		_totalSupply =+ amount;
+		_totalSupply += amount;
 
 		emit Reward(
 			interlocker,
