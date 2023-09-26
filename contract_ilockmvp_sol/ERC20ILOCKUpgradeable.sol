@@ -664,15 +664,20 @@ SHOUTING SHOUTING SHOUTING!
 		// how much has member already claimed
 		paidOut = stake.paid;
 
+		// determine the number of payments claimant has rights to
+		uint8 payout = stake.share / vests;
+
+		// and determine the number of payments claimant has received
+		uint8 payments = paidOut / payout;
+
 		// how much does member have yet to collect, after vesting complete
 		payRemaining = stake.share - paidOut;
 
-		// computer the pay available to claim at current moment
+		// compute the pay available to claim at current moment
 		// if months passed are inbetween cliff and end of vesting period
 		if (monthsPassed >= cliff && monthsPassed < cliff + vests) {
 			
-			payAvailable = (1 + monthsPassed - cliff - stake.payouts) *
-			      	       (stake.share / vests);
+			payAvailable = (1 + monthsPassed - cliff - payments) * payout;
 
 		// until time reaches cliff, no pay is available
 		} else if (monthsPassed < cliff ){
@@ -686,7 +691,7 @@ SHOUTING SHOUTING SHOUTING!
 		}
 
 		// if at final payment, add remainder of share to final payment
-		if (stake.share - paidOut - payAvailable < stake.share / vests && payAvailable > 0) {
+		if (stake.share - paidOut - payAvailable < payout && payAvailable > 0) {
 			
 			payAvailable += stake.share % vests;
 		}
