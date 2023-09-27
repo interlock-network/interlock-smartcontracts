@@ -201,7 +201,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 /***************************************************************************/
 /***************************************************************************/
 	/**
-	* modifiers"
+	* modifiers
 	**/
 /***************************************************************************/
 /***************************************************************************/
@@ -297,7 +297,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/					
-
 		// changes the contract owner
 	function changeOwner(
 		address newOwner
@@ -306,6 +305,261 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// reassign
 		_owner = newOwner;
 	}
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* ERC20 getter methods
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+		// gets token name (Interlock Network)
+	function name(
+	) public view override returns (string memory) {
+
+		return _NAME; }
+
+/*************************************************/
+
+		// gets token symbol (ILOCK)
+	function symbol(
+	) public view override returns (string memory) {
+
+		return _SYMBOL; }
+
+/*************************************************/
+
+		// gets token decimal number
+	function decimals(
+	) public view override returns (uint8) {
+
+		return _DECIMALS; }
+
+/*************************************************/
+
+		// gets tokens minted
+	function totalSupply(
+	) public view override returns (uint256) {
+
+		return _totalSupply; }
+
+/*************************************************/
+
+		// gets account balance (tokens payable)
+	function balanceOf(
+		address account
+	) public view override returns (uint256) {
+
+		return _balances[account]; }
+
+/*************************************************/
+
+		// gets tokens spendable by spender from owner
+	function allowance(
+		address owner,
+		address spender
+	) public view virtual override returns (uint256) {
+
+		return _allowances[owner][spender]; }
+
+/*************************************************/
+
+		// gets total tokens remaining in pools
+	function reserve(
+	) public view returns (uint256) {
+
+		return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
+
+/*************************************************/
+
+		// gets token cap
+	function cap(
+	) public view returns (uint256) {
+
+		return _CAP; }
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+	/**
+	* ERC20 doer methods
+	**/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+		   // emitting Transfer, reverting on failure
+		  // where caller balanceOf must be >= amount
+		 // where `to` cannot = zero  address
+		// increases spender allowance
+	function transfer(
+		address to,
+		uint256 amount
+	) public virtual override returns (bool) {
+		address owner = _msgSender();
+
+		_transfer(owner, to, amount);
+
+		return true; }
+
+/*************************************************/
+
+		     // emitting Approval, reverting on failure
+		    // where msg.sender allowance w/`from` must be >= amount
+		   // where `from` balance must be >= amount
+		  // where `from` and `to` cannot = zero address
+		 // which does not update allowance if allowance = u256.max
+		// pays portion of spender's allowance with owner to recipient
+	function transferFrom(
+		address from,
+		address to,
+		uint256 amount
+	) public virtual override returns (bool) {
+		address spender = _msgSender();		
+
+		_spendAllowance(from, spender, amount);
+		_transfer(from, to, amount);
+		return true; }
+
+/*************************************************/
+
+		// internal implementation of transfer() above
+	function _transfer(
+		address from,
+		address to,
+		uint256 amount
+	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
+		_beforeTokenTransfer(from, to, amount);
+
+		uint256 fromBalance = _balances[from];
+		unchecked {
+			_balances[from] = fromBalance - amount;
+			_balances[to] += amount; }
+
+		emit Transfer(from, to, amount);
+
+		_afterTokenTransfer(from, to, amount);
+
+        return true; }
+
+/*************************************************/
+
+		  // emitting Approval, reverting on failure
+		 // (=> no allownance delta when TransferFrom)
+		// defines tokens available to spender from msg.sender
+	function approve(
+		address spender,
+		uint256 amount
+	) public virtual override returns (bool) {
+
+		address owner = _msgSender();
+		_approve(owner, spender, amount);
+		return true; }
+
+/*************************************************/
+
+		// internal implementation of approve() above 
+	function _approve(
+		address owner,
+		address spender,
+		uint256 amount
+	) internal virtual noZero(owner) noZero(spender) {
+
+		_allowances[owner][spender] = amount;
+		emit Approval(owner, spender, amount); }
+
+/*************************************************/
+
+		   // emitting Approval if finite, reverting on failure 
+		  // will do nothing if infinite allowance
+		 // used strictly internally
+		// deducts from spender's allowance with owner
+	function _spendAllowance(
+		address owner,
+		address spender,
+		uint256 amount
+	) internal virtual isEnough(allowance(owner, spender), amount) {
+	
+		uint256 currentAllowance = allowance(owner, spender);
+		if (currentAllowance != type(uint256).max) {
+			unchecked {
+				_approve(owner, spender, currentAllowance - amount);} }
+
+/*************************************************/
+
+		  // emitting Approval, reverting on failure
+		 // (=> no allownance delta when TransferFrom)
+		// defines tokens available to spender from msg.sender
+	function approve_pool(
+		address spender,
+		uint256 amount,
+		uint8 poolnumber
+	) public onlyOwner returns (bool) {
+
+		_approve(pools[poolnumber], spender, amount);
+
+		return true; }
+
+/*************************************************/
+
+		// allows client to safely execute approval facing double spend attack
+	function increaseAllowance(
+		address spender,
+		uint256 addedValue
+	) public virtual returns (bool) {
+        
+		address owner = _msgSender();
+        	_approve(owner, spender, allowance(owner, spender) + addedValue);
+        
+		return true; }
+
+/*************************************************/
+
+		// allows client to safely execute approval facing double spend attack
+	function decreaseAllowance(
+		address spender,
+		uint256 subtractedValue
+	) public virtual returns (bool) {
+
+        	address owner = _msgSender();
+        	uint256 currentAllowance = allowance(owner, spender);
+        	require(
+			currentAllowance >= subtractedValue,
+			"ERC20: decreased allowance below zero");
+
+        	unchecked {
+			_approve(owner, spender, currentAllowance - subtractedValue);}
+
+		 return true; }
+
+/*************************************************/
+
+		    // where `from` && `to` != zero account => to be regular xfer
+		   // where `from` = zero account => `amount` to be minted `to`
+		  // where `to` = zero account => `amount` to be burned `from`
+		 // where `from` && `to` = zero account => impossible
+		// hook that inserts behavior prior to transfer/mint/burn
+	function _beforeTokenTransfer(
+		address from,
+		address to,
+		uint256 amount
+	) internal virtual {}
+
+/*************************************************/
+
+		    // where `from` && `to` != zero account => was regular xfer
+		   // where `from` = zero account => `amount` was minted `to`
+		  // where `to` = zero account => `amount` was burned `from`
+		 // where `from` && `to` = zero account => impossible
+		// hook that inserts behavior prior to transfer/mint/burn
+	function _afterTokenTransfer(
+		address from,
+		address to,
+		uint256 amount
+	) internal virtual {}
 
 /***************************************************************************/
 /***************************************************************************/
@@ -452,256 +706,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_totalSupply += thisPayout;
 		
 		return true; }	
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-	/**
-	* ERC20 getter methods
-	**/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-		// gets token name (Interlock Network)
-	function name(
-	) public view override returns (string memory) {
-
-		return _NAME; }
-
-/*************************************************/
-
-		// gets token symbol (ILOCK)
-	function symbol(
-	) public view override returns (string memory) {
-
-		return _SYMBOL; }
-
-/*************************************************/
-
-		// gets token decimal number
-	function decimals(
-	) public view override returns (uint8) {
-
-		return _DECIMALS; }
-
-/*************************************************/
-
-		// gets tokens minted
-	function totalSupply(
-	) public view override returns (uint256) {
-
-		return _totalSupply; }
-
-/*************************************************/
-
-		// gets account balance (tokens payable)
-	function balanceOf(
-		address account
-	) public view override returns (uint256) {
-
-		return _balances[account]; }
-
-/*************************************************/
-
-		// gets tokens spendable by spender from owner
-	function allowance(
-		address owner,
-		address spender
-	) public view virtual override returns (uint256) {
-
-		return _allowances[owner][spender]; }
-
-/*************************************************/
-
-		// gets total tokens remaining in pools
-	function reserve(
-	) public view returns (uint256) {
-
-		return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
-
-/*************************************************/
-
-		// gets token cap
-	function cap(
-	) public view returns (uint256) {
-
-		return _CAP; }
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-	/**
-	* ERC20 doer methods
-	**/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-		   // emitting Transfer, reverting on failure
-		  // where caller balanceOf must be >= amount
-		 // where `to` cannot = zero  address
-		// increases spender allowance
-	function transfer(
-		address to,
-		uint256 amount
-	) public virtual override returns (bool) {
-		address owner = _msgSender();
-
-		_transfer(owner, to, amount);
-
-		return true; }
-
-/*************************************************/
-
-		     // emitting Approval, reverting on failure
-		    // where msg.sender allowance w/`from` must be >= amount
-		   // where `from` balance must be >= amount
-		  // where `from` and `to` cannot = zero address
-		 // which does not update allowance if allowance = u256.max
-		// pays portion of spender's allowance with owner to recipient
-	function transferFrom(
-		address from,
-		address to,
-		uint256 amount
-	) public virtual override returns (bool) {
-		address spender = _msgSender();		
-
-		_spendAllowance(from, spender, amount);
-		_transfer(from, to, amount);
-		return true; }
-
-/*************************************************/
-
-		// internal implementation of transfer() above
-	function _transfer(
-		address from,
-		address to,
-		uint256 amount
-	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) returns (bool) {
-		_beforeTokenTransfer(from, to, amount);
-		unchecked {
-			_balances[from] = _balances[from] - amount;}
-		_balances[to] += amount;
-		emit Transfer(from, to, amount);
-		_afterTokenTransfer(from, to, amount);
-
-        return true; }
-
-/*************************************************/
-
-		  // emitting Approval, reverting on failure
-		 // (=> no allownance delta when TransferFrom)
-		// defines tokens available to spender from msg.sender
-	function approve(
-		address spender,
-		uint256 amount
-	) public virtual override returns (bool) {
-
-		address owner = _msgSender();
-		_approve(owner, spender, amount);
-		return true; }
-
-/*************************************************/
-
-		// internal implementation of approve() above 
-	function _approve(
-		address owner,
-		address spender,
-		uint256 amount
-	) internal virtual noZero(owner) noZero(spender) {
-
-		_allowances[owner][spender] = amount;
-		emit Approval(owner, spender, amount); }
-
-/*************************************************/
-
-		   // emitting Approval if finite, reverting on failure 
-		  // will do nothing if infinite allowance
-		 // used strictly internally
-		// deducts from spender's allowance with owner
-	function _spendAllowance(
-		address owner,
-		address spender,
-		uint256 amount
-	) internal isEnough(allowance(owner, spender), amount) {
-
-		unchecked {
-			_approve(owner, spender, allowance(owner, spender) - amount);} }
-
-/*************************************************/
-
-		  // emitting Approval, reverting on failure
-		 // (=> no allownance delta when TransferFrom)
-		// defines tokens available to spender from msg.sender
-	function approve_pool(
-		address spender,
-		uint256 amount,
-		uint8 poolnumber
-	) public onlyOwner returns (bool) {
-
-		address owner = _msgSender();
-		_approve(pools[poolnumber], spender, amount);
-
-		return true; }
-
-/*************************************************/
-
-		// allows client to safely execute approval facing double spend attack
-	function increaseAllowance(
-		address spender,
-		uint256 addedValue
-	) public virtual returns (bool) {
-        
-		address owner = _msgSender();
-        	_approve(owner, spender, allowance(owner, spender) + addedValue);
-        
-		return true; }
-
-/*************************************************/
-
-		// allows client to safely execute approval facing double spend attack
-	function decreaseAllowance(
-		address spender,
-		uint256 subtractedValue
-	) public virtual returns (bool) {
-
-        	address owner = _msgSender();
-        	uint256 currentAllowance = allowance(owner, spender);
-        	require(
-			currentAllowance >= subtractedValue,
-			"ERC20: decreased allowance below zero");
-
-        	unchecked {
-			_approve(owner, spender, currentAllowance - subtractedValue);}
-
-		 return true; }
-
-/*************************************************/
-
-		    // where `from` && `to` != zero account => to be regular xfer
-		   // where `from` = zero account => `amount` to be minted `to`
-		  // where `to` = zero account => `amount` to be burned `from`
-		 // where `from` && `to` = zero account => impossible
-		// hook that inserts behavior prior to transfer/mint/burn
-	function _beforeTokenTransfer(
-		address from,
-		address to,
-		uint256 amount
-	) internal virtual {}
-
-/*************************************************/
-
-		    // where `from` && `to` != zero account => was regular xfer
-		   // where `from` = zero account => `amount` was minted `to`
-		  // where `to` = zero account => `amount` was burned `from`
-		 // where `from` && `to` = zero account => impossible
-		// hook that inserts behavior prior to transfer/mint/burn
-	function _afterTokenTransfer(
-		address from,
-		address to,
-		uint256 amount
-	) internal virtual {}
 
 /***************************************************************************/
 /***************************************************************************/
