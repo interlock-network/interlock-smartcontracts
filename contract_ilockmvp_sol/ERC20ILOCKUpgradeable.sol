@@ -389,7 +389,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// caller does not own stake
 		require(
-			isPresent,,
+			isPresent,
 			"caller does not own stake, or stake does not exist");
 
 		Stake stake = _stakes[_msgSender()][stakeIdentifier];
@@ -452,16 +452,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_totalSupply += thisPayout;
 		
 		return true; }	
-
-/*************************************************/
-
-		// gets token name (Interlock Network)
-	function getStakeIdentifiers(
-	) public view returns (bytes32[]) {
-
-		bytes32[] stakes = _stakeIdentifiers[_msgSender()];
-
-		return stakes; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -729,7 +719,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		 // get amount investor still needs to pay in before claiming tokens
 		// get time remaining until next payout ready
 	function stakeStatus(
-		uint8 stakenumber
+		uint8 stakeIdentifier
 	) public view returns (
 		uint256 timeLeft,
 		uint256 paidOut,
@@ -737,7 +727,21 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint256 payAvailable
 	) {
 
-		Stake stake = _stakes[_msgSender()][stakenumber];
+			// verify that caller owns stake
+		bytes32[] stakeIdentifiers = getStakeIdentifiers(_msgSender());
+
+		bool isPresent = false;
+		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
+			if (stakeIdentifiers[i] == stakeIdentifier) {
+				isPresent = true;
+		}}
+
+		// caller does not own stake
+		require(
+			isPresent,
+			"caller does not own stake, or stake does not exist");
+
+		Stake stake = _stakes[_msgSender()][stakeIdentifier];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
@@ -803,15 +807,13 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 /*************************************************/
 
-		// returns array of stakes that particular stakeholder may claim
-	function getStakes(
-		address stakeholder
-	) public view returns (
-		Stake[] stakes
-	) {
+		// gets stake identifiers for stakes owned by message caller
+	function getStakeIdentifiers(
+	) public view returns (bytes32[]) {
 
-		return _stakes[stakeholder]; }
+		bytes32[] stakeIdentifiers = _stakeIdentifiers[_msgSender()];
 
+		return stakeIdentifiers; }
 
 /***************************************************************************/
 /***************************************************************************/
