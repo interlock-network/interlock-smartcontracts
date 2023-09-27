@@ -371,7 +371,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// claim stake for vest periods accumulated
 	function claimStake(
-		uint8 stakenumber
+		bytes32 stakeIdentifier
 	) public returns (bool) {
 
 		// see if we need to update time
@@ -379,10 +379,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// make sure stake number exists
 		require(
-			_stakes[_msgSender()].length > stakenumber,
+			_stakes[_msgSender()][stakeIdentifier] != [],
 			"stake does not exist");
 		
-		Stake stake = _stakes[_msgSender()][stakenumber];
+		Stake stake = _stakes[_msgSender()][stakeIdentifier];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
@@ -436,7 +436,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			"stake claim transfer failed");
 
 		// update member state
-		_members[_msgSender()].paid += thisPayout;
+		_stakes[_msgSender()][stakeIdentifier].paid += thisPayout;
 
 		// update total supply and reserve
 		_totalSupply += thisPayout;
