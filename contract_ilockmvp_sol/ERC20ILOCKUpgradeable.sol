@@ -66,7 +66,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// Mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
-	mapping(address => Stake[]) private _stakes;
+	mapping(address => mapping(bytes32 => Stake)) private _stakes;
 	mapping(address => uint256) private _rewardedInterlocker;
 
 		// Dynamic arrays
@@ -342,7 +342,11 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		Stake data
 	) public noZero(stakeholder) onlyOwner returns (bool) {
 
+		bytes calldata identifier = bytes(stakeholder + data);
 		// validate input
+		require(
+			_stakes[stakeholder][identifier] != [],
+			"this stake already exists and cannot be edited");
 		require(
 			data != [],
 			"no stake provided for stakeholder");
@@ -356,8 +360,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			data.pool < _POOLCOUNT,
 			"invalid pool number");
 
-		// create stake or append
-		_stakes(stakeholder).push(data);
+		bytes32 stakeIdentifier = keccak256(identifier);
+
+		// create stake
+		_stakes[stakeholder][stakeIdentifier] = data;
 
 		return true; }
 
