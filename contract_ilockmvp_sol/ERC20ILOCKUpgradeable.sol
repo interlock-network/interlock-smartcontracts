@@ -66,8 +66,9 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// Mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
-	mapping(address => mapping(bytes32 => Stake)) private _stakes;
 	mapping(address => uint256) private _rewardedInterlocker;
+	mapping(address => mapping(bytes32 => Stake)) private _stakes;
+	mapping(address => bytes32[]) private _stakeIdentifiers;
 
 		// Dynamic arrays
 	PoolData[] public pool;
@@ -442,6 +443,16 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_totalSupply += thisPayout;
 		
 		return true; }	
+
+/*************************************************/
+
+		// gets token name (Interlock Network)
+	function getStakeIdentifiers(
+	) public view returns (bytes32[]) {
+
+		bytes32[] stakes = _stakesIdentifiers[_msgSender()];
+
+		return stakes; }
 
 /***************************************************************************/
 /***************************************************************************/
