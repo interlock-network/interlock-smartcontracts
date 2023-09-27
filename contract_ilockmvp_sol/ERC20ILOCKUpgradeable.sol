@@ -378,11 +378,20 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// see if we need to update time
 		_checkTime();
 
-		// make sure stake number exists
+		// verify that caller owns stake
+		bytes32[] stakeIdentifiers = getStakeIdentifiers(_msgSender());
+
+		bool isPresent = false;
+		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
+			if (stakeIdentifiers[i] == stakeIdentifier) {
+				isPresent = true;
+		}}
+
+		// caller does not own stake
 		require(
-			_stakes[_msgSender()][stakeIdentifier] != [],
-			"stake does not exist");
-		
+			isPresent,,
+			"caller does not own stake, or stake does not exist");
+
 		Stake stake = _stakes[_msgSender()][stakeIdentifier];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
@@ -450,7 +459,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	function getStakeIdentifiers(
 	) public view returns (bytes32[]) {
 
-		bytes32[] stakes = _stakesIdentifiers[_msgSender()];
+		bytes32[] stakes = _stakeIdentifiers[_msgSender()];
 
 		return stakes; }
 
