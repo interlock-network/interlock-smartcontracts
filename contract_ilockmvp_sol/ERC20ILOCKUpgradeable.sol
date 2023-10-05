@@ -55,12 +55,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	uint8 constant private _POOLCOUNT = 13;
 	uint256 constant private _MONTH = 30 days;
 	
-		// Grouped uint256 variables
 	uint256 private _totalSupply;
 	uint256 private _nextPayout;
 	uint256 private _rewardedTotal;
 
-		// Grouped address variables
 	address private _owner;
 
 		// Mappings
@@ -76,7 +74,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// Grouped smaller variables
 	bool public TGEtriggered;
-	uint8 public monthsPassed;
+	uint32 public monthsPassed;
 
 	struct Stake {
 	    uint256 paid;
@@ -726,6 +724,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint8 stakeIdentifier
 	) public view returns (
 		uint256 timeLeft,
+		uint256 share,
 		uint256 paidOut,
 		uint256 payRemaining,
 		uint256 payAvailable
@@ -804,6 +803,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		return (
 			timeLeft,
+			stake.share,
 			paidOut,
 			payRemaining,
 			payAvailable
@@ -885,9 +885,24 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 /*************************************************/
 
+
+	function testingIncrementMonth(
+	) public returns (uint32) {
+
+		monthsPassed += 1;
+		_nextPayout += _MONTH;
+
+		return monthsPassed; }
+
+
+
+
+
+
 	uint256[100] private __gap;
 }
 
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
