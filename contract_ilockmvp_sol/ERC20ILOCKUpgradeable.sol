@@ -822,68 +822,6 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
-	/**
-	* rewards
-	**/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-		// issues reward to specified interlocker
-	function rewardInterlocker(
-		address interlocker,
-		uint256 amount
-	) public onlyOwner noZero(interlocker) returns (bool) {
-
-		// validate amount
-		uint256 tokens = pool[_REWARDS].tokens;
-		uint256 vests = pool[REQARDS].vests
-		uint256 monthly = tokens / vests;
-		uint256 currentcap = (monthsPassed + 1) * monthly;
-		require(
-			currentcap >= tokens - balanceOf(pools[_REWARDS]) + amount,
-			"payout too early");
-		require(
-			monthly > amount,
-			"payout too large");
-
-		// increment interlocker token balance
-		_balances[interlocker] += amount;
-		// increment rewarded to interlocker
-		rewardedInterlocker[interlocker] += amount;
-		// increment total rewarded
-		rewardedTotal += amount
-		// decrement rewards pool token balance
-		_balances[pools[_REWARDS]] -= amount;
-		// increment total supply
-		_totalSupply += amount;
-
-		emit Reward(
-			interlocker,
-			amount);
-		emit Transfer(
-			pools[_REWARDS],
-			interlocker,
-			amount); }
-
-/*************************************************/
-
-		// gets total amount rewarded to interlocker
-	function rewardedInterlockerTotal(
-		address interlocker
-	) public view returns (uint256) {
-
-		return _rewardedInterlocker[interlocker]; }
-
-/*************************************************/
-
-		// gets total amount rewarded to interlocker
-	function rewardedTotal(
-	) public view returns (uint256) {
-
-		return _rewardedTotal; }
-
-/*************************************************/
 
 
 	function testingIncrementMonth(
