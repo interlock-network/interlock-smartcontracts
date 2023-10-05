@@ -727,7 +727,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint256 share,
 		uint256 paidOut,
 		uint256 payRemaining,
-		uint256 payAvailable
+		uint256 payAvailable,
+		uint8 vestingMonths,
+		uint8 monthsRemaining,
+		uint8 cliff
 	) {
 
 			// verify that caller owns stake
@@ -806,7 +809,10 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			stake.share,
 			paidOut,
 			payRemaining,
-			payAvailable
+			payAvailable,
+			vests,
+			cliff,
+			vests - cliff - monthsPassed
 		); }
 
 /*************************************************/
