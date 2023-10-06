@@ -608,6 +608,21 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		return true; }
 
+		 // that ensures we do not overwrite
+		// helper view function for validating registerStake input (stake existence)
+	function stakeExists(address stakeholder, bytes32 identifier) public view returns (bool) {
+
+		for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
+
+			if (_stakeIdentifiers[stakeholder][i] == identifier) {
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 /*************************************************/
 
 		// claim stake for vest periods accumulated
