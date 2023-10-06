@@ -84,68 +84,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	    uint256 cliff;
 	    string name; }
 
-	PoolData public pool = [
-
-		PoolData({
-			tokens: 3_703_704,
-			vests: 3,
-			cliff: 1,
-			name: "community sale"
-		}),
-		PoolData({
-			tokens: 48_626_667,
-			vests: 18,
-			cliff: 1,
-			name: "presale 1"
-		}),
-		PoolData({
-			tokens: 33_333_333,
-			vests: 15,
-			cliff: 1,
-			name: "presale 2"
-		}),
-		PoolData({
-			tokens: 25_714_286,
-			vests: 12,
-			cliff: 1,
-			name: "presale 3"
-		}),
-		PoolData({
-			tokens: 28_500_000,
-			vests: 3,
-			cliff: 0,
-			name: "public sale"
-		}),
-		PoolData({
-			tokens: 200_000_000,
-			vests: 36,
-			cliff: 6,
-			name: "founders and team"
-		}),
-		PoolData({
-			tokens: 40_000_000,
-			vests: 24,
-			cliff: 1,
-			name: "outlier ventures"
-		}),
-		PoolData({
-			tokens: 25_000_000,
-			vests: 24,
-			cliff: 1,
-			name: "advisors"
-		}),
-		PoolData({
-			tokens: 258_122_011,
-			vests: 84,
-			cliff: 0,
-			name: "foundation"
-		}),
-		PoolData({
-			tokens: 37_000_000,
-			vests: 12,
-			cliff: 1,
-			name: "strategic partners and KOL"
-		}) ];
+	PoolData[_POOLCOUNT] public pool;
 
 /***************************************************************************/
 /***************************************************************************/
@@ -164,6 +103,8 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		_owner = _msgSender();
 
+		_initializePools();
+
 		uint256 sumTokens;
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _POOLCOUNT; i++) {
@@ -181,6 +122,73 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		_totalSupply = 0;
 		TGEtriggered = false; }
+
+/*************************************************/
+
+	function _initializePools(
+	) internal {
+		
+		pool[0] = PoolData({
+			tokens: 3_703_704,
+			vests: 3,
+			cliff: 1,
+			name: "community sale"
+		});
+		pool[1] = PoolData({
+			tokens: 48_626_667,
+			vests: 18,
+			cliff: 1,
+			name: "presale 1"
+		});
+		pool[2] = PoolData({
+			tokens: 33_333_333,
+			vests: 15,
+			cliff: 1,
+			name: "presale 2"
+		});
+		pool[3] = PoolData({
+			tokens: 25_714_286,
+			vests: 12,
+			cliff: 1,
+			name: "presale 3"
+		});
+		pool[4] = PoolData({
+			tokens: 28_500_000,
+			vests: 3,
+			cliff: 0,
+			name: "public sale"
+		});
+		pool[5] = PoolData({
+			tokens: 200_000_000,
+			vests: 36,
+			cliff: 6,
+			name: "founders and team"
+		});
+		pool[6] = PoolData({
+			tokens: 40_000_000,
+			vests: 24,
+			cliff: 1,
+			name: "outlier ventures"
+		});
+		pool[7] = PoolData({
+			tokens: 25_000_000,
+			vests: 24,
+			cliff: 1,
+			name: "advisors"
+		});
+		pool[8] = PoolData({
+			tokens: 258_122_011,
+			vests: 84,
+			cliff: 0,
+			name: "foundation"
+		});
+		pool[9] = PoolData({
+			tokens: 37_000_000,
+			vests: 12,
+			cliff: 1,
+			name: "strategic partners and KOL"
+		}); }
+
 
 /***************************************************************************/
 /***************************************************************************/
