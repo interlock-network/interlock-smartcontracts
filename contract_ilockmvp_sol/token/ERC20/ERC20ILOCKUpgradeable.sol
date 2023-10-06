@@ -25,11 +25,13 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20Upgradeable.sol";
-import "./ContextUpgradeable.sol";
+import "./extensions/IERC20MetadataUpgradeable.sol";
+import "../../utils/ContextUpgradeable.sol";
 import "./ILOCKpool.sol";
-import "./Initializable.sol";
+import "../../proxy/utils/Initializable.sol";
+//import “https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol”;
 
-contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initializable {
+contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgradeable, IERC20MetadataUpgradeable {
 
 /***************************************************************************/
 /***************************************************************************/
@@ -61,20 +63,15 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 	address private _owner;
 
-		// Mappings
 	mapping(address => uint256) private _balances;
 	mapping(address => mapping(address => uint256)) private _allowances;
 	mapping(address => uint256) private _rewardedInterlocker;
 	mapping(address => mapping(bytes32 => Stake)) private _stakes;
 	mapping(address => bytes32[]) private _stakeIdentifiers;
 
-		// Dynamic arrays
-	PoolData[] public pool;
 	address[] public pools;
-
-		// Grouped smaller variables
 	bool public TGEtriggered;
-	uint32 public monthsPassed;
+	uint256 public monthsPassed;
 
 	struct Stake {
 	    uint256 paid;
@@ -93,7 +90,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			tokens: 3_703_704,
 			vests: 3,
 			cliff: 1,
-			name: "community sale",
+			name: "community sale"
 		}),
 		PoolData({
 			tokens: 48_626_667,
@@ -146,20 +143,9 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		PoolData({
 			tokens: 37_000_000,
 			vests: 12,
-			cliff: 1
+			cliff: 1,
 			name: "strategic partners and KOL"
-		}),
-
-	// do away with all below storage if straddling chains
-		PoolData({
-			tokens: 300_000_000,
-			vests: 144,
-			cliff: 0,
-			name: "staking and rewards"
-		}) ]
-	uint8 constant private _REWARDS = _POOLCOUNT - 1;
-	uint256 private _vestingTokens;
-
+		}) ];
 
 /***************************************************************************/
 /***************************************************************************/
@@ -178,11 +164,12 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		_owner = _msgSender();
 
+		uint256 sumTokens;
 		// iterate through pools to create struct array
 		for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
 			// here we are adding up tokens to make sure sum is correct
-			uint256 sumTokens += pool[i].tokens;
+			sumTokens += pool[i].tokens;
 
 			// in the same breath we convert token amounts to ERC20 format
 			pool[i].tokens *= _DECIMAL_MAGNITUDE;
@@ -439,9 +426,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		emit Transfer(from, to, amount);
 
-		_afterTokenTransfer(from, to, amount);
-
-        return true; }
+		_afterTokenTransfer(from, to, amount); }
 
 /*************************************************/
 
@@ -484,14 +469,14 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		uint256 currentAllowance = allowance(owner, spender);
 		if (currentAllowance != type(uint256).max) {
 			unchecked {
-				_approve(owner, spender, currentAllowance - amount);} }
+				_approve(owner, spender, currentAllowance - amount);} } }
 
 /*************************************************/
 
 		  // emitting Approval, reverting on failure
 		 // (=> no allownance delta when TransferFrom)
 		// defines tokens available to spender from msg.sender
-	function approve_pool(
+	function approvePool(
 		address spender,
 		uint256 amount,
 		uint8 poolnumber
@@ -577,8 +562,8 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		if (block.timestamp > _nextPayout) {
 			
 			uint256 deltaT = block.timestamp - _nextPayout;
-			uint8 months = deltaT / 30 days + 1;
-			_nextPayout += months * 30 days;
+			uint256 months = deltaT / 30 days + 1;
+			_nextPayout += _nextPayout + months * 30 days;
 			monthsPassed += months;
 			return true;
 		}
@@ -592,13 +577,16 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		// register stakeholder
 	function registerStake(
 		address stakeholder,
-		Stake data
+		Stake calldata data
 	) public noZero(stakeholder) onlyOwner returns (bool) {
 
-		bytes calldata identifier = bytes(stakeholder + data);
+		bytes32 identifier = keccak256(bytes.concat(bytes20(stakeholder), bytes20(stakeholder)));
+
+		Stake storage emptyStake;
+
 		// validate input
 		require(
-			_stakes[stakeholder][identifier] != [],
+			_stakes[stakeholder][identifier] != emptyStake,
 			"this stake already exists and cannot be edited");
 		require(
 			data != [],
@@ -631,7 +619,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		_checkTime();
 
 		// verify that caller owns stake
-		bytes32[] stakeIdentifiers = getStakeIdentifiers(_msgSender());
+		bytes32[] storage stakeIdentifiers = getStakeIdentifiers(_msgSender());
 
 		bool isPresent = false;
 		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
@@ -644,7 +632,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			isPresent,
 			"caller does not own stake, or stake does not exist");
 
-		Stake stake = _stakes[_msgSender()][stakeIdentifier];
+		Stake storage stake = _stakes[_msgSender()][stakeIdentifier];
 		uint8 cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
@@ -721,7 +709,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 		 // get amount investor still needs to pay in before claiming tokens
 		// get time remaining until next payout ready
 	function stakeStatus(
-		uint8 stakeIdentifier
+		bytes32 stakeIdentifier
 	) public view returns (
 		uint256 timeLeft,
 		uint256 share,
@@ -734,7 +722,7 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 	) {
 
 			// verify that caller owns stake
-		bytes32[] stakeIdentifiers = getStakeIdentifiers(_msgSender());
+		bytes32[] memory stakeIdentifiers = getStakeIdentifiers(_msgSender());
 
 		bool isPresent = false;
 		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
@@ -747,8 +735,8 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 			isPresent,
 			"caller does not own stake, or stake does not exist");
 
-		Stake stake = _stakes[_msgSender()][stakeIdentifier];
-		uint8 cliff = pool[stake.pool].cliff;
+		Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
+		cliff = pool[stake.pool].cliff;
 		uint8 vests = pool[stake.pool].vests;
 
 		// compute the time left until the next payment is available
@@ -819,9 +807,9 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 
 		// gets stake identifiers for stakes owned by message caller
 	function getStakeIdentifiers(
-	) public view returns (bytes32[]) {
+	) public view returns (bytes32[] calldata) {
 
-		bytes32[] stakeIdentifiers = _stakeIdentifiers[_msgSender()];
+		bytes32[] calldata stakeIdentifiers = _stakeIdentifiers[_msgSender()];
 
 		return stakeIdentifiers; }
 
@@ -849,4 +837,5 @@ contract ERC20ILOCKUpgradeable is IERC20Upgradeable, ContextUpgradeable, Initial
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
