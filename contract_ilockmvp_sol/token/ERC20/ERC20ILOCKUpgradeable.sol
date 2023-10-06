@@ -189,7 +189,6 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 			name: "strategic partners and KOL"
 		}); }
 
-
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
@@ -311,7 +310,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		// gets token name (Interlock Network)
 	function name(
-	) public view override returns (string memory) {
+	) public pure override returns (string memory) {
 
 		return _NAME; }
 
@@ -319,7 +318,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		// gets token symbol (ILOCK)
 	function symbol(
-	) public view override returns (string memory) {
+	) public pure override returns (string memory) {
 
 		return _SYMBOL; }
 
@@ -327,7 +326,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		// gets token decimal number
 	function decimals(
-	) public view override returns (uint8) {
+	) public pure override returns (uint8) {
 
 		return _DECIMALS; }
 
@@ -370,7 +369,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		// gets token cap
 	function cap(
-	) public view returns (uint256) {
+	) public pure returns (uint256) {
 
 		return _CAP; }
 
@@ -657,8 +656,6 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 			payments < monthsPassed,
 			"payout too early");
 		
-		uint256 newPaidBalance = stake.paid + payout;
-		uint256 remainingShare = stake.share - newPaidBalance;
 		uint256 thesePayments;
 
 		// when time has past vesting period, pay out remaining unclaimed payments
