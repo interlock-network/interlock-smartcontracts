@@ -54,7 +54,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	uint8 constant private _DECIMALS = 18;
 	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
 	uint256 constant private _CAP = 1_000_000_000;
-	uint8 constant private _POOLCOUNT = 13;
+	uint8 constant private _POOLCOUNT = 10;
 	uint256 constant private _MONTH = 30 days;
 	
 	uint256 private _totalSupply;
@@ -80,11 +80,11 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 	struct PoolData {
 	    uint256 tokens;
-	    uint8 vests;
-	    uint8 cliff;
+	    uint256 vests;
+	    uint256 cliff;
 	    string name; }
 
-	PoolData[] public pool = [
+	PoolData public pool = [
 
 		PoolData({
 			tokens: 3_703_704,
@@ -416,7 +416,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		address from,
 		address to,
 		uint256 amount
-	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) {
+	) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) returns (bool) {
 		_beforeTokenTransfer(from, to, amount);
 
 		uint256 fromBalance = _balances[from];
@@ -426,7 +426,9 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		emit Transfer(from, to, amount);
 
-		_afterTokenTransfer(from, to, amount); }
+		_afterTokenTransfer(from, to, amount);
+		
+		return true; }
 
 /*************************************************/
 
@@ -580,48 +582,32 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		Stake calldata data
 	) public noZero(stakeholder) onlyOwner returns (bool) {
 
-		bytes32 identifier = keccak256(bytes.concat(bytes20(stakeholder), bytes20(stakeholder)));
-
-		Stake storage emptyStake;
+		bytes32 identifier = keccak256(
+							 bytes.concat(bytes20(stakeholder),
+							 			  bytes32(data.share),
+										  bytes1(data.pool) ));
 
 		// validate input
 		require(
-			_stakes[stakeholder][identifier] != emptyStake,
+			!stakeExists(stakeholder, identifier),
 			"this stake already exists and cannot be edited");
-		require(
-			data != [],
-			"no stake provided for stakeholder");
 		require(
 			data.paid == 0,
 			"amount paid must be zero");
 		require(
-			data.share >= pools[pool].vests,
+			data.share >= pool[data.pool].vests,
 			"share is too small");
 		require(
 			data.pool < _POOLCOUNT,
 			"invalid pool number");
 
-		bytes32 stakeIdentifier = keccak256(identifier);
+		// store stake
+		_stakes[stakeholder][identifier] = data;
 
-		// create stake
-		_stakes[stakeholder][stakeIdentifier] = data;
+		// store identifier for future iteration
+		_stakeIdentifiers[stakeholder].push(identifier);
 
 		return true; }
-
-		 // that ensures we do not overwrite
-		// helper view function for validating registerStake input (stake existence)
-	function stakeExists(address stakeholder, bytes32 identifier) public view returns (bool) {
-
-		for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
-
-			if (_stakeIdentifiers[stakeholder][i] == identifier) {
-
-				return true;
-			}
-		}
-
-		return false;
-	}
 
 /*************************************************/
 
@@ -633,23 +619,14 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		// see if we need to update time
 		_checkTime();
 
-		// verify that caller owns stake
-		bytes32[] storage stakeIdentifiers = getStakeIdentifiers(_msgSender());
-
-		bool isPresent = false;
-		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
-			if (stakeIdentifiers[i] == stakeIdentifier) {
-				isPresent = true;
-		}}
-
-		// caller does not own stake
+		// caller must own the stake they are claiming
 		require(
-			isPresent,
-			"caller does not own stake, or stake does not exist");
+			stakeExists(_msgSender(), stakeIdentifier),
+			"this stake does not exist and cannot be claimed");
 
 		Stake storage stake = _stakes[_msgSender()][stakeIdentifier];
-		uint8 cliff = pool[stake.pool].cliff;
-		uint8 vests = pool[stake.pool].vests;
+		uint256 cliff = pool[stake.pool].cliff;
+		uint256 vests = pool[stake.pool].vests;
 
 		// make sure cliff has been surpassed
 		require(
@@ -661,11 +638,11 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 			stake.paid < stake.share,
 			"member already collected entire token share");
 		
-		// determine the number of payments claimant has rights to
-		uint8 payout = stake.share / vests;
+		// determine the traunch amount claimant has rights to for each vested month
+		uint256 payout = stake.share / uint256(vests);
 
 		// and determine the number of payments claimant has received
-		uint8 payments = stake.paid / payout;
+		uint256 payments = uint8(stake.paid / payout);
 
 		// even if cliff is passed, is it too soon for next payment?
 		require(
@@ -674,7 +651,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		
 		uint256 newPaidBalance = stake.paid + payout;
 		uint256 remainingShare = stake.share - newPaidBalance;
-		uint8 thesePayments;
+		uint256 thesePayments;
 
 		// when time has past vesting period, pay out remaining unclaimed payments
 		if (cliff + vests <= monthsPassed) {
@@ -731,28 +708,19 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		uint256 paidOut,
 		uint256 payRemaining,
 		uint256 payAvailable,
-		uint8 vestingMonths,
-		uint8 monthsRemaining,
-		uint8 cliff
+		uint256 vestingMonths,
+		uint256 monthsRemaining,
+		uint256 cliff
 	) {
 
-			// verify that caller owns stake
-		bytes32[] memory stakeIdentifiers = getStakeIdentifiers(_msgSender());
-
-		bool isPresent = false;
-		for (uint8 i = 0; i < stakeIdentifiers.length; i++) {
-			if (stakeIdentifiers[i] == stakeIdentifier) {
-				isPresent = true;
-		}}
-
-		// caller does not own stake
+		// caller must own the stake they are viewing
 		require(
-			isPresent,
-			"caller does not own stake, or stake does not exist");
+			stakeExists(_msgSender(), stakeIdentifier),
+			"this stake does not exist and cannot be viewed");
 
 		Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
 		cliff = pool[stake.pool].cliff;
-		uint8 vests = pool[stake.pool].vests;
+		uint256 vests = pool[stake.pool].vests;
 
 		// compute the time left until the next payment is available
 		// if months passed beyond last payment, stop counting
@@ -776,10 +744,10 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		paidOut = stake.paid;
 
 		// determine the number of payments claimant has rights to
-		uint8 payout = stake.share / vests;
+		uint256 payout = stake.share / vests;
 
 		// and determine the number of payments claimant has received
-		uint8 payments = paidOut / payout;
+		uint256 payments = paidOut / payout;
 
 		// how much does member have yet to collect, after vesting complete
 		payRemaining = stake.share - paidOut;
@@ -822,11 +790,27 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 		// gets stake identifiers for stakes owned by message caller
 	function getStakeIdentifiers(
-	) public view returns (bytes32[] calldata) {
+		address stakeholder
+	) public view returns (bytes32[] memory stakeIdentifiers) {
 
-		bytes32[] calldata stakeIdentifiers = _stakeIdentifiers[_msgSender()];
+		return _stakeIdentifiers[stakeholder]; }
+    
+/*************************************************/
 
-		return stakeIdentifiers; }
+		 // that ensures we do not overwrite
+		// helper view function for validating registerStake input (stake existence)
+	function stakeExists(
+		address stakeholder,
+		bytes32 identifier
+	) public view returns (bool) {
+    
+		for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
+
+       		if (_stakeIdentifiers[stakeholder][i] == identifier) {
+
+        		return true; } }
+
+    	return false; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -834,7 +818,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 
 	function testingIncrementMonth(
-	) public returns (uint32) {
+	) public returns (uint256) {
 
 		monthsPassed += 1;
 		_nextPayout += _MONTH;
