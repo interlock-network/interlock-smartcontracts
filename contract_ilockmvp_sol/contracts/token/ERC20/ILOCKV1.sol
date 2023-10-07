@@ -17,15 +17,13 @@ pragma solidity ^0.8.0;
 import "./IERC20Upgradeable.sol";
 import "./ILOCKpool.sol";
 import "./extensions/IERC20MetadataUpgradeable.sol";
-import "./extensions/ERC20PausableUpgradeable.sol";
 import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
 
 contract ILOCKV1 is Initializable,
                     ContextUpgradeable,
                     IERC20Upgradeable,
-                    IERC20MetadataUpgradeable,
-                    ERC20PausableUpgradeable {
+                    IERC20MetadataUpgradeable {
 
 /***************************************************************************/
 /***************************************************************************/
@@ -39,8 +37,9 @@ contract ILOCKV1 is Initializable,
 
     /** @dev **/
 
-        // issued upon reward distribution to interlocker
-    event Reward(address indexed interlocker, uint256 amount );
+	event Paused(address account);
+    event Unpaused(address account);
+    bool private _paused;
 
         // Constants (order doesn't matter for storage)
     string constant private _NAME = "Interlock Network";
@@ -284,19 +283,52 @@ contract ILOCKV1 is Initializable,
 /***************************************************************************/
 /***************************************************************************/
     /**
-    * ownership methods
+    * ownership and pausability
     **/
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/                    
+
         // changes the contract owner
     function changeOwner(
         address newOwner
     ) public onlyOwner {
 
-        // reassign
-        _owner = newOwner;
-    }
+        _owner = newOwner; }
+
+/*************************************************/
+
+		// returns pause status of contract
+	function paused(
+	) public view returns (bool) {
+
+        return _paused; }
+
+/*************************************************/
+
+		// pauses any functions requiring unpause
+	function pause(
+	) public onlyOwner {
+        
+		require(
+			paused(),
+			"already paused");
+		_paused = true;
+        
+		emit Paused(_msgSender()); }
+
+/*************************************************/
+
+		// resumes operation of functions requiring unpause
+	function unpause(
+	) public onlyOwner {
+        
+		require(
+			!paused(),
+			"already unpaused");
+		_paused = false;
+        
+		emit Unpaused(_msgSender()); }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -460,6 +492,9 @@ contract ILOCKV1 is Initializable,
         uint256 amount
     ) internal virtual noZero(owner) noZero(spender) {
 
+		require(
+			!paused(),
+			"contract is paused");
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount); }
 
@@ -538,7 +573,15 @@ contract ILOCKV1 is Initializable,
         address from,
         address to,
         uint256 amount
-    ) internal virtual {}
+    ) internal virtual {
+
+		from;
+		to;
+		amount;
+	
+		require(
+			!paused(),
+			"contract is paused"); }
 
 /*************************************************/
 
@@ -583,7 +626,7 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-        // register stakeholder
+        // register stake
     function registerStake(
         address stakeholder,
         Stake calldata data
@@ -591,8 +634,8 @@ contract ILOCKV1 is Initializable,
 
         bytes32 identifier = keccak256(
                              bytes.concat(bytes20(stakeholder),
-                                           bytes32(data.share),
-                                          bytes1(data.pool) ));
+                                          bytes32(data.share),
+                                          bytes1(data.pool) ) );
 
         // validate input
         require(
@@ -788,8 +831,7 @@ contract ILOCKV1 is Initializable,
             payAvailable,
             vests,
             cliff,
-            vests - cliff - monthsPassed
-        ); }
+            vests - cliff - monthsPassed); }
 
 /*************************************************/
 
