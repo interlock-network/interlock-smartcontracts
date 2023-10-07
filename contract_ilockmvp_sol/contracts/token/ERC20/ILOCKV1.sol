@@ -3,7 +3,7 @@
 /***************************************************************************/
 // SPDX-License-Identifier: MIT
 //
-// Interlock ERC-20 ILOCK Token Mint Platform
+// Interlock Network ERC-20 ILOCK Token Version 1
 //
 // Contributors:
 // blairmunroakusa
@@ -25,13 +25,17 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20Upgradeable.sol";
-import "./extensions/IERC20MetadataUpgradeable.sol";
-import "../../utils/ContextUpgradeable.sol";
 import "./ILOCKpool.sol";
+import "./extensions/IERC20MetadataUpgradeable.sol";
+import "./extensions/ERC20PausableUpgradeable.sol";
+import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
-//import “https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol”;
 
-contract ILOCKV1 is Initializable, ContextUpgradeable, IERC20Upgradeable, IERC20MetadataUpgradeable {
+contract ILOCKV1 is Initializable,
+		    ContextUpgradeable,
+		    IERC20Upgradeable,
+		    IERC20MetadataUpgradeable,
+		    ERC20PausableUpgradeable {
 
 /***************************************************************************/
 /***************************************************************************/
