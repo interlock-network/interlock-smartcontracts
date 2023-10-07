@@ -31,7 +31,7 @@ import "./ILOCKpool.sol";
 import "../../proxy/utils/Initializable.sol";
 //import “https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol”;
 
-contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgradeable, IERC20MetadataUpgradeable {
+contract ILOCKV2 is Initializable, ContextUpgradeable, IERC20Upgradeable, IERC20MetadataUpgradeable {
 
 /***************************************************************************/
 /***************************************************************************/
@@ -53,9 +53,11 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	string constant private _SYMBOL = "ILOCK";
 	uint8 constant private _DECIMALS = 18;
 	uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
+	uint256 constant private _REWARDS_POOL = 300_000_000;
 	uint256 constant private _CAP = 1_000_000_000;
 	uint8 constant private _POOLCOUNT = 10;
 	uint256 constant private _MONTH = 30 days;
+	
 	
 	uint256 private _totalSupply;
 	uint256 private _nextPayout;
@@ -71,6 +73,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 
 	address[] public pools;
 	bool public TGEtriggered;
+	bool public initialized;
 	uint256 public monthsPassed;
 
 	struct Stake {
@@ -85,6 +88,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	    string name; }
 
 	PoolData[_POOLCOUNT] public pool;
+
 
 /***************************************************************************/
 /***************************************************************************/
@@ -117,7 +121,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 		}
 
 		require(
-			sumTokens == _CAP,
+			sumTokens == _CAP - _REWARDS_POOL,
 			"pool token amounts must add up cap");
 
 		_totalSupply = 0;
@@ -129,7 +133,7 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	) internal {
 		
 		pool[0] = PoolData({
-			tokens: 3_703_704,
+			tokens: 3_703_703,
 			vests: 3,
 			cliff: 1,
 			name: "community sale"
@@ -248,7 +252,10 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 	) public onlyOwner {
 
 		require(
-			TGEtriggered == false,
+			initialized,
+			"contract not yet initialized");
+		require(
+			!TGEtriggered,
 			"TGE already happened");
 
 		// create pool accounts and initiate
@@ -821,21 +828,25 @@ contract ERC20ILOCKUpgradeable is Initializable, ContextUpgradeable, IERC20Upgra
 /***************************************************************************/
 /***************************************************************************/
 
-
+// this area dedicated for now to testing upgradeability
 	function testingIncrementMonth(
 	) public returns (uint256) {
 
-		monthsPassed += 1;
+		newstorage = 100;
+		monthsPassed += 3;
 		_nextPayout += _MONTH;
 
 		return monthsPassed; }
 
+	function newFeature(
+	) public view returns (string memory) {
 
 
+		return "new feature"; }
 
 
-
-	uint256[100] private __gap;
+	uint256 public newstorage;
+	uint256[99] public __gap;
 }
 
 /***************************************************************************/
