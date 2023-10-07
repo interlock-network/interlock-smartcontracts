@@ -38,3 +38,15 @@ package*
 
 # system stuff
 .DS_STORE
+
+# hardhat
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+
+# Hardhat files
+cache
+artifacts
+
