@@ -1,10 +1,14 @@
 import { ethers, upgrades } from "hardhat";
+import { writeFileSync } from "fs";
 
 import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
 
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const CONTRACT = process.env.CONTRACT;
+const ADMIN_LOG_PATH = process.env.ADMIN_LOG_PATH;
+const CLAIM_LOG_PATH = process.env.ADMIN_LOG_PATH;
+const IDENTIFIER_LOG_PATH = process.env.ADMIN_LOG_PATH;
 
 async function main () {
 
@@ -15,14 +19,19 @@ async function main () {
   const response = await ilockv1.waitForDeployment()
   console.log('ILOCKV1 token contract deployed.');
 
-  const receipt = {
-	  "contractNetwork": "Arbitrum Mainnet",
-		"contractAddress": response.target
+  let deploymentReceipt = {
+    "contractNetwork": "Arbitrum Mainnet",
+    "contractAddress": response.target
   };
-  const deploymentReceipt = {
-	  "deploymentReceipt": receipt
+  deploymentReceipt = {
+    "deploymentReceipt": deploymentReceipt
   };
+
   console.log(deploymentReceipt)
+
+  writeFileSync(ADMIN_LOG_PATH, JSON.stringify([deploymentReceipt], null, 2), 'utf-8');
+  writeFileSync(CLAIM_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
+  writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
 }
 
 main().catch((error) => {

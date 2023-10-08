@@ -117,7 +117,7 @@ contract ILOCKV1 is Initializable,
             "pool token amounts must add up cap");
 
         _totalSupply = 0;
-		iniitalized = true;
+		initialized = true;
         TGEtriggered = false; }
 
 /*************************************************/
@@ -246,7 +246,7 @@ contract ILOCKV1 is Initializable,
 
         require(
             initialized,
-            "contract not yet initialized");
+            "contract not initialized");
         require(
             !TGEtriggered,
             "TGE already happened");

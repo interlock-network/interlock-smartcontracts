@@ -1,0 +1,242 @@
+[
+  {
+    "claimReceipt": {
+      "stakeholder": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+      "registrationHash": "0xa62b3cc268712843826b8c22377d42bbdeda285396975ec4e762ec70f806b7f7",
+      "registrationBlockHash": "0x246e6be1bdb0f133ec9dfc283545d68a7fef352a81882728418ca36ff58b09af",
+      "stakeIdentifier": "0x75d220f43c56d027835f7661447900f8d13d489d63c9dcde0849eabff6866ac5"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+      "registrationHash": "0xdfdfa1c1369898d3f11cedce1d9d969bab74e826372b31a4c0db8b1b28829ec5",
+      "registrationBlockHash": "0x094198ec95ae3a35eb33eb57aa4060643931bb271ab213417ba49bf606e3e8f6",
+      "stakeIdentifier": "0xd53e8740ba90e68ba9235b5933e346f6648ad3f3ed06c594be7f391a135e5f9b"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+      "registrationHash": "0x5a94beebd15f9c031c49362306e66e56f2d79fb75e19e2426f2290a367e606b4",
+      "registrationBlockHash": "0x55042075daa1380a9a958e3ee97e81f6c723a5538d8db5527f7284895974817a",
+      "stakeIdentifier": "0x87f08ae339d47f47a5f603560231c46e6d2bbd8c429ff02bca9e9c32a59a2bac"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+      "registrationHash": "0x70e1f5f019a31cfc90f91563492c2bfb7a1c917b4c10c8f026c0f1174f017bce",
+      "registrationBlockHash": "0x725049fee722c7deace2875a8ea7258fea0a677015f689d098534a69f000ca07",
+      "stakeIdentifier": "0x8fdda03b447be8b950fbf7b78f9146e254a6d18b0974d86928625529d0fbce33"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "registrationHash": "0xb7f33878ea5f3caa0e2c5c5dceb620ed220c92021797fc5c0d6b3c33c776f222",
+      "registrationBlockHash": "0x14c22db9da20e9a3c82c955960c3bfebf51f4298c231e612994407884b40c329",
+      "stakeIdentifier": "0x1d7d4981e0d1677e7725913621837bae87e79cf4bac757b6f1547dceab4bae24"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "registrationHash": "0x06ee569ef7d771fc3928f85ab4e4d0b217360b3adbd34b2d8e5776246ace8efd",
+      "registrationBlockHash": "0x02ed0039401f156888646c089d0f5ca8bc6965aa618e696aed55f3d5354f2577",
+      "stakeIdentifier": "0x3fac25d55513feaa689c878111d5a53557e25d4e20c9a7b93df6dd267302535c"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+      "registrationHash": "0x3eba90c57293731f7697a11dfeb4b40977317aeb2922a30108f5712ffab02e5d",
+      "registrationBlockHash": "0x3d8b0178120b59950ca9f02842eb0bc00b90294120be8cd59a9a86c0e7bc8ba2",
+      "stakeIdentifier": "0xdb0f42302fa8fa08eb9759dfd172e316392db2dd98af72a395514cf6d485435b"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "registrationHash": "0x9383babf829a30d08ab3a8004899a050a4c5d40e198a3ae4bd0c33e2e40745e6",
+      "registrationBlockHash": "0x503ab33a920fa151195b16a8acf66c67803f101e3f73d79e423da6f394097956",
+      "stakeIdentifier": "0x0e3fc20f2148f546e63b1847d65e690f5987f05566cdd5c6ada73e51312e6e7e"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+      "registrationHash": "0x84ac52a2e10bd0ae93ba385476df8650a8170ac79c714e36a56bca8ae92cef6f",
+      "registrationBlockHash": "0x03f2d8073f548a1d0f5cc8e93df3338ada39799ef374b85d573569225cdcefd6",
+      "stakeIdentifier": "0x5c3cd3e84a74cd543b6d0c5a48242ec34a15d7385d2d493adcf2502652fa958d"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "registrationHash": "0xf1c1bf49e2eb50cb771d5dd85b1d6548ce29a578204f73ffa44c04760f166558",
+      "registrationBlockHash": "0x342336cc20e3411661eb00b95650a350d22e79a1d951f6c049939cdf2b2c11d6",
+      "stakeIdentifier": "0x85be5206dc0f3e192fabe6ee4c98262f86c1deefe383f2c89d87f9b5ca7ff276"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+      "registrationHash": "0x16b671c5765589fed8f6fd5cd5923f33c38aaab34ed1a6d4d6809fcd7263d7fb",
+      "registrationBlockHash": "0xa4b6250b4f6e33271b8a338d3be6455a0cee2e6f31a2642c7094f16f630d9220",
+      "stakeIdentifier": "0xfcbde5b76570f341a585573bdd046b9ced6e571799997cd156980cf732d7b167"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
+      "registrationHash": "0x7127a5dd90bb8e47236356492298e9c69f7cca621438379813f1507947ae86f7",
+      "registrationBlockHash": "0xc7f3218650e2cef69316849829ad6286e941c8382046479d6ca7caf3bcbfa4b8",
+      "stakeIdentifier": "0xaca33e8a14499b8c748906ce159670994223e8eadb7296315e145065051a79bd"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+      "registrationHash": "0x1ea32e7c799b78366847460aff91e54c9b56c676067689e73a1696fe9ebec9a5",
+      "registrationBlockHash": "0x67b8d62312c705f21827a0dbce79b6e5ef5058e1d9ef7a01cdb494b8f0cb2bea",
+      "stakeIdentifier": "0x63d27d629cd4f87930a16d5ada32546d40e11bdfd25789008ed18d567583455d"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+      "registrationHash": "0x4306a8cf683d76f65c4100794107e0c9bb38425809161dbec492d6ed3c2cc597",
+      "registrationBlockHash": "0x56a5d4089c0a002aad61e0f50048b8b52fb1ef70533865838569b779220f7240",
+      "stakeIdentifier": "0x81c27f14543e4615d988e62c1fd938c02b80da1738c7a99cb77613acb78925de"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+      "registrationHash": "0xc4d48c880217313858cf573878d2706bcc50fde9d27628dd6538f7032566c786",
+      "registrationBlockHash": "0x5c142f66b38bf2bdaa73ba2a176cc4aae6b5743bb6fd6e1a94dc3a72777d7688",
+      "stakeIdentifier": "0xaf6f3ca2286f82d25ffa0719cdd112ae11594f013801a8f3d9c854e953db7057"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+      "registrationHash": "0xbe74eb6038124b07929512365161cebf01c28662caa73072d9ef64547fc3b06b",
+      "registrationBlockHash": "0x169453b3cc0a78cd9d6120275f5abb436de4ed6dbfd1304d7f0f5ea2820678b0",
+      "stakeIdentifier": "0x52e9b2d051b74f1bc727a49109b507dea2b5fdec3492d1c8c2539d331dc71324"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+      "registrationHash": "0x7400fdf00be1a31105018076bf1a83b2e74f34ba86775adac664f940d01a9b34",
+      "registrationBlockHash": "0x0057115a0a6ae88951ebcec2ffdcae3c4ac1d8187c1fffc55f90256cb0dcdef9",
+      "stakeIdentifier": "0xbf10bf54221a1896e5bbb5bac2effb21ddd5fd0295cbd6c07a4ecb4f00907bc6"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+      "registrationHash": "0x917b4fa3513ee1dbf13257b41e38b98578110037c109e4c003a09f01368b19d6",
+      "registrationBlockHash": "0x65b179dd19cfecf33e1741f440d4d913d8700b3a9fad42ef87367ec235866e19",
+      "stakeIdentifier": "0x9f9e77e6d367e7d9ed02f1ff1501b830528b00bbba56728702a00b7ae5b50b6e"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+      "registrationHash": "0xec4185ed8f98d6aedd279880d020a2e538ad163b28627d53ef35b9ce637d1a6e",
+      "registrationBlockHash": "0x439a7941d043f5a0487960d11dbcad08eb1370dc45ee2fa870315662241402f5",
+      "stakeIdentifier": "0x2fb298cfa55adbf607c9c00800d75db1ae1afa2a1c8831dc8cfb18075eb9b5f3"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+      "registrationHash": "0x70d237c317eee15b0203fd33dd833dfd4fda619aa67b2b90391425cd065dc7a7",
+      "registrationBlockHash": "0x02f318a04056cc5e9b855d17682e47f590973965d6b5f48a188fb42f02333680",
+      "stakeIdentifier": "0xeabca595a25cf2837de88669f6dc7c028d0f83a6aee4f2b9e97657b33e37e492"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+      "registrationHash": "0xdb767f66bc0d32861f54a8f52d335a2800435c708f836db25e98612e3ae35e58",
+      "registrationBlockHash": "0xc60304d07926b0e5a4e2b98b32521cc33fe03353ce6f2fc6eb0238cca88080a8",
+      "stakeIdentifier": "0xc0cdeb31db5bb744624df9578cca6749775e520a90833f7c7a407e9888f2aa78"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "registrationHash": "0x88502b60f3e9f2e59ec94dd2e591743b3721a5fb78741249c029201b010676ed",
+      "registrationBlockHash": "0x68fdadc2c685718e2329ec4d80825c1d898e0a182264cccc9510a3dbddcc81c7",
+      "stakeIdentifier": "0x6a7769d80ddd56374542080270ae78c02a8f95c1c58931083d4522d515c49d80"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "registrationHash": "0xae0969678f5c2b1e3c50b5598b1796c34d307cbd467d2c0ea69bd5b5dd06e6ca",
+      "registrationBlockHash": "0xae7aa1edb96471eaafa7f6686dc5b556e8a7f85b676b39c38aa2069ef064699e",
+      "stakeIdentifier": "0x5f9d02e4ddd9b698aa8777f6683d7528e2855402dd3bed84300a12be2bfc55c2"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "registrationHash": "0x34327ef3188e69c21067ab4b67c2bc9318905daf1b1920bca425e2360b76f280",
+      "registrationBlockHash": "0x7dd5737eeb9f75dc250b30300f43422c1a778e7cee8dc6b6d1a163a0d52b2959",
+      "stakeIdentifier": "0x50ca5d7a259f3632f4db7e88c34979e77c9f2c1d25c5adabb00ba27d10636606"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "registrationHash": "0xf4b7c0edf0246e9dd2a0f283ba3ed69a287831540f364cabda5a78bb2c2e32aa",
+      "registrationBlockHash": "0xa72defb39785ed062ff18f26374c22cd56ded64916b34b7926960ae25084fb92",
+      "stakeIdentifier": "0x98e091b9b86b67dcb07f0e88cf46ce58d002b1b12808ab669d5af58dc4e1d8a8"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "registrationHash": "0xd7fca02cd263f04e1a5c5047491d24e6590eceb06ec56485d5cb9ec7ff9325cc",
+      "registrationBlockHash": "0xe2f625c297facdcd91b9d73280b55da1e7a8d120be9e5028e4a80d91dd373d2a",
+      "stakeIdentifier": "0x71a769578c4ed5cf6fa26f490710f0172cab9e9e81b95ceac21faf48550d683b"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "registrationHash": "0x4f7b9eaa084e245e420b49e36a61e487a333e1cd5f5f6b2669744bfd00bbfcbb",
+      "registrationBlockHash": "0x35ec9c3b4792bc3d956eacbabe32c520bbb35e345bd1a4a8421d24e9a5b22b7d",
+      "stakeIdentifier": "0x08ba919e18555c333dcc39a506b14cd8f3472be71fd8c7d035b435f0eb28dd49"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "registrationHash": "0x6d126fa4e187996de2d1ec1487c4db6e3b82e61db24a33c532f53b7a09a4e871",
+      "registrationBlockHash": "0x9417e107d74dfa9e1a5920602592cda21d59cf6426e2fab4723cd8e6ca3da292",
+      "stakeIdentifier": "0x926c5540eca3b779620575ca420d51df5634492dbf55395cfecd26dea4090033"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "registrationHash": "0x196fb9b74bc3c2aee48f0e9e5bc21634c8a18668c1af080c95b009a84403cfe5",
+      "registrationBlockHash": "0x811737a044529196f924eae51dff4a0978f3fa52919289e293d31de31241bd6b",
+      "stakeIdentifier": "0x69dee0a4763b71dc9f734a08952f50d1292044e77498dc2c469986c54d787e31"
+    }
+  },
+  {
+    "claimReceipt": {
+      "stakeholder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "registrationHash": "0xebc31c314a8568af3725266f3b57f40457d35f8d2916b749d8a0d1b3714a333e",
+      "registrationBlockHash": "0x0ff49b2e3c4511560ad13a6b8f361e288bb701e4c5432df907bea5d8dc2f6422",
+      "stakeIdentifier": "0x787bd918746dcb6b98aeddc7c610769b73d8fdfa6c3b6ae35ad84377a152d3bf"
+    }
+  }
+]
