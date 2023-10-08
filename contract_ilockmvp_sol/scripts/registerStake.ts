@@ -24,10 +24,15 @@ async function main () {
     const response = await ilockv1.registerStake(stake.stakeholder, data);
     const receipt = await response.wait();
 
+		const identifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
+													.toString()
+													.split(',')
+													.pop();
     const claimStub = {
       "stakeholder": stake.stakeholder,
       "registrationHash": receipt.hash,
       "registrationBlockHash": receipt.blockHash,
+			"stakeIdentifier": identifier
     }
     claimStubs.push(claimStub);
   }

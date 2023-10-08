@@ -9,8 +9,6 @@ const CONTRACT = process.env.CONTRACT;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const STAKE_DATA = JSON.parse(readFileSync(process.env.STAKE_DATA).toString());
 
-console.log(STAKE_DATA);
-
 async function main () {
   const ILOCKV1 = await hardhatEthers.getContractFactory(CONTRACT);
   const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
