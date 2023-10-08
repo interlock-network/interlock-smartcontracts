@@ -1,6 +1,6 @@
 import { ethers as hardhatEthers, upgrades } from "hardhat";
 import { ethers } from "ethers";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
@@ -24,17 +24,21 @@ async function main () {
     const response = await ilockv1.registerStake(stake.stakeholder, data);
     const receipt = await response.wait();
 
-		const identifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
-													.toString()
-													.split(',')
-													.pop();
+    const identifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
+                          .toString()
+                          .split(',')
+                          .pop();
     const claimStub = {
       "stakeholder": stake.stakeholder,
       "registrationHash": receipt.hash,
       "registrationBlockHash": receipt.blockHash,
-			"stakeIdentifier": identifier
+      "stakeIdentifier": identifier
     }
     claimStubs.push(claimStub);
+  }
+
+  claimStubs = {
+    "stubs": claimStubs
   }
   console.log(claimStubs);
 }
