@@ -59,7 +59,7 @@ async function main () {
   buffer = claimReceipts.concat(buffer);
   writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
-	let buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
+	buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
 	buffer = claimIdentifiers.concat(buffer);
 	writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 }
@@ -77,7 +77,7 @@ main().catch((error) => {
   	buffer = claimReceipts.concat(buffer);
   	writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
-  	let buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
+  	buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
   	buffer = claimIdentifiers.concat(buffer);
   	writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
