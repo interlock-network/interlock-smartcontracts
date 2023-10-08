@@ -13,16 +13,25 @@ async function main () {
   const ILOCKV1 = await hardhatEthers.getContractFactory(CONTRACT);
   const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
 
-
+  let claimStubs = [];
   for (const stake of STAKE_DATA.stakes) {
 
     const data = {
-	    "paid": 0,
-	    "share": stake.share,
-	    "pool": stake.pool
+      "paid": 0,
+      "share": stake.share,
+      "pool": stake.pool
     }
-  await ilockv1.registerStake(stake.stakeholder, data);
+    const response = await ilockv1.registerStake(stake.stakeholder, data);
+    const receipt = await response.wait();
+
+    const claimStub = {
+      "stakeholder": stake.stakeholder,
+      "registrationHash": receipt.hash,
+      "registrationBlockHash": receipt.blockHash,
+    }
+    claimStubs.push(claimStub);
   }
+  console.log(claimStubs);
 }
 
 main().catch((error) => {
