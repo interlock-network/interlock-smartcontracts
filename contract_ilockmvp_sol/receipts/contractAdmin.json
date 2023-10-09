@@ -1,18 +1,7 @@
 [
   {
-    "upgradePreparedReceipt": {
-      "contractVersion": "ILOCKV2",
-      "hash": "0x2dfee53f97f914503939b5ec6a72183b963300ac6184128e98d2dd463ef758a1",
-      "blockHash": "0xa615f85730263d106d1085e9f8561fe003b512a5b283093e5921fbc409d8ad24",
-      "dateAndTime": "Mon, 09 Oct 2023 16:08:45 GMT"
-    }
-  },
-  {
-    "upgradeReceipt": {
-      "contractVersion": "ILOCKV2",
-      "hash": "0xbc0e30656ca6e0d958a4da167c137e599b22640125264d561c9446a3de117e82",
-      "blockHash": "0x5a7f7251b7746566c6d492868cad226c052c8b9f86d70c9140932ea39e8d8feb",
-      "dateAndTime": "Mon, 09 Oct 2023 16:08:56 GMT"
+    "multisigEnabledReceipt": {
+      "safeAddress": "Mon, 09 Oct 2023 16:41:52 GMT"
     }
   }
 ]
