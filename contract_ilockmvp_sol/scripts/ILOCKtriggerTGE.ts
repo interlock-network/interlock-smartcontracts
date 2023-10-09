@@ -18,7 +18,8 @@ async function main () {
 
   let TGEreceipt = {
     "hash": receipt.hash,
-    "blockHash": receipt.blockHash
+    "blockHash": receipt.blockHash,
+    "dateAndTime": new Date().toUTCString()
   };
   TGEreceipt = {
     "TGEreceipt": TGEreceipt

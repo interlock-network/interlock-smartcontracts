@@ -17,15 +17,17 @@ async function main () {
   console.log('ILOCK token contract upgraded.');
 
   let upgradeReceipt = {
+		"contractVersion": CONTRACT_UPGRADE,
     "hash": response.deployTransaction.hash,
-    "blockHash": response.deployTransaction.blockHash
+    "blockHash": response.deployTransaction.blockHash,
+    "dateAndTime": new Date().toUTCString()
   };
   upgradeReceipt = {
     "upgradeReceipt": upgradeReceipt
   };
 
   console.log(upgradeReceipt);
-	const buffer = JSON.parse(readFileSync(ADMIN_LOG_PATH, 'utf8'));
+  const buffer = JSON.parse(readFileSync(ADMIN_LOG_PATH, 'utf8'));
   buffer.push(upgradeReceipt);
   writeFileSync(ADMIN_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 }

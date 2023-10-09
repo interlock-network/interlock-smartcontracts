@@ -21,7 +21,8 @@ async function main () {
 
   let deploymentReceipt = {
     "contractNetwork": "Arbitrum Mainnet",
-    "contractAddress": response.target
+    "contractAddress": response.target,
+		"dateAndTime": new Date().toUTCString()
   };
   deploymentReceipt = {
     "deploymentReceipt": deploymentReceipt
