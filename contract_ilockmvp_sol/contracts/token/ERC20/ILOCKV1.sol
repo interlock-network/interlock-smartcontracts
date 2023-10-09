@@ -70,8 +70,8 @@ contract ILOCKV1 is Initializable,
     uint256 public monthsPassed;
 
     struct Stake {
-        uint256 paid;
         uint256 share;
+        uint256 paid;
         uint8 pool; }
 
     struct PoolData {
@@ -841,7 +841,17 @@ contract ILOCKV1 is Initializable,
     ) public view returns (bytes32[] memory stakeIdentifiers) {
 
         return _stakeIdentifiers[stakeholder]; }
-    
+
+/*************************************************/
+
+        // gets stake designated by stake identifier
+    function getStake(
+		address stakeholder,
+        bytes32 stakeIdentifier
+    ) public view returns (Stake memory stake) {
+
+        return _stakes[stakeholder][stakeIdentifier]; }
+
 /*************************************************/
 
          // that ensures we do not overwrite

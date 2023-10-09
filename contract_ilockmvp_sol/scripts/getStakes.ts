@@ -1,5 +1,4 @@
-import { ethers as hardhatEthers, upgrades } from "hardhat";
-import { ethers } from "ethers";
+import { ethers, upgrades } from "hardhat";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 
 import * as dotenv from "dotenv";
@@ -7,75 +6,49 @@ dotenv.config({ path: './.env.dev' });
 
 const CONTRACT = process.env.CONTRACT;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
-const IDENTIFIER_LOG_PATH = process.env.IDENTIFIER_LOG_PATH;
-const CLAIM_LOG_PATH = process.env.CLAIM_LOG_PATH;
+const STAKE_LOG_PATH = process.env.STAKE_LOG_PATH;
 const STAKE_DATA = JSON.parse(readFileSync(process.env.STAKE_DATA).toString());
 
-let claimReceipts = [];
-let claimIdentifiers = [];
+let stakeholderStakes = [];
 async function main () {
 
-
-  const ILOCKV1 = await hardhatEthers.getContractFactory(CONTRACT);
+  const ILOCKV1 = await ethers.getContractFactory(CONTRACT);
   const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
 
-  for (const stake of STAKE_DATA.stakes) {
+  for (const stakeholder of STAKE_DATA.stakeholders) {
 
-    const data = {
-      "paid": 0,
-      "share": stake.share,
-      "pool": stake.pool
-    }
-    const response = await ilockv1.registerStake(stake.stakeholder, data);
-    const receipt = await response.wait();
-
-    const identifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
+    const identifiers = (await ilockv1.getStakeIdentifiers(stakeholder))
                                      .toString()
-                                     .split(',')
-                                     .pop();
-    let claimReceipt = {
-      "stakeholder": stake.stakeholder,
-      "registrationHash": receipt.hash,
-      "registrationBlockHash": receipt.blockHash,
-      "stakeIdentifier": identifier
+                                     .split(',');
+    let stakes = [];
+    for (const identifier of identifiers) {
+      
+      let stake = (await ilockv1.getStake(stakeholder, identifier))
+                                .toString()
+                                .split(',');
+      stake = {
+        "identifier": identifier,
+        "share": stake[0],
+        "paid": stake[1],
+        "pool": stake[2]
+      };
+      stakes.push(stake);
     }
-    claimReceipt = {
-      "claimReceipt": claimReceipt
+
+    stakes = {
+      "stakeholder": stakeholder,
+      "stakes": stakes
     };
-    claimReceipts = [claimReceipt].concat(claimReceipts);
-    claimIdentifiers = [identifier].concat(claimIdentifiers);
+    stakeholderStakes.push(stakes);
   }
 
-  console.log(claimReceipts);
-  console.log(claimIdentifiers);
-
-  let buffer = JSON.parse(readFileSync(CLAIM_LOG_PATH, 'utf8'));
-  buffer = claimReceipts.concat(buffer);
-  writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
-
-  buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
-  buffer = claimIdentifiers.concat(buffer);
-  writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
+  stakeholderStakes = {
+    "stakeholderStakes": stakeholderStakes
+  };
+  writeFileSync(STAKE_LOG_PATH, JSON.stringify(stakeholderStakes, null, 2), 'utf-8');
 }
 
 main().catch((error) => {
-
   console.error(error);
-  
-  if (claimReceipts.length > 0) {
-
-    console.log(claimReceipts);
-    console.log(claimIdentifiers);
-
-    let buffer = JSON.parse(readFileSync(CLAIM_LOG_PATH, 'utf8'));
-    buffer = claimReceipts.concat(buffer);
-    writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
-
-    buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
-    buffer = claimIdentifiers.concat(buffer);
-    writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
-
-    console.log('gracefully logged incomplete batch of claim receipts and identifiers');
-  }
   process.exitCode = 1;
 });

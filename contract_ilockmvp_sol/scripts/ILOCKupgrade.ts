@@ -17,7 +17,7 @@ async function main () {
   console.log('ILOCK token contract upgraded.');
 
   let upgradeReceipt = {
-		"contractVersion": CONTRACT_UPGRADE,
+    "contractVersion": CONTRACT_UPGRADE,
     "hash": response.deployTransaction.hash,
     "blockHash": response.deployTransaction.blockHash,
     "dateAndTime": new Date().toUTCString()
