@@ -12,7 +12,7 @@ const CLAIM_LOG_PATH = process.env.CLAIM_LOG_PATH;
 const STAKE_DATA = JSON.parse(readFileSync(process.env.STAKE_DATA).toString());
 
 let claimReceipts = [];
-let claimIdentifiers = [];
+let stakeIdentifiers = [];
 async function main () {
 
   const ILOCKV1 = await hardhatEthers.getContractFactory(CONTRACT);
@@ -28,7 +28,7 @@ async function main () {
     const response = await ilockv1.registerStake(stake.stakeholder, data);
     const receipt = await response.wait();
 
-    const identifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
+    const stakeIdentifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
                                      .toString()
                                      .split(',')
                                      .pop();
@@ -43,7 +43,7 @@ async function main () {
       "claimReceipt": claimReceipt
     };
     claimReceipts = [claimReceipt].concat(claimReceipts);
-    claimIdentifiers = [identifier].concat(claimIdentifiers);
+    stakeIdentifiers = [stakeIdentifier].concat(stakeIdentifiers);
   }
 
   console.log(claimReceipts);

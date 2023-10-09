@@ -15,12 +15,6 @@ let claimReceipts = [];
 let claimIdentifiers = [];
 async function main () {
 
-  if (!existsSync(CLAIM_LOG_PATH)) { 
-		writeFileSync(CLAIM_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
-	}
-  if (!existsSync(IDENTIFIER_LOG_PATH)) { 
-		writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
-	}
 
   const ILOCKV1 = await hardhatEthers.getContractFactory(CONTRACT);
   const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
@@ -46,42 +40,42 @@ async function main () {
       "stakeIdentifier": identifier
     }
     claimReceipt = {
-	    "claimReceipt": claimReceipt
+      "claimReceipt": claimReceipt
     };
     claimReceipts = [claimReceipt].concat(claimReceipts);
     claimIdentifiers = [identifier].concat(claimIdentifiers);
   }
 
   console.log(claimReceipts);
-	console.log(claimIdentifiers);
+  console.log(claimIdentifiers);
 
   let buffer = JSON.parse(readFileSync(CLAIM_LOG_PATH, 'utf8'));
   buffer = claimReceipts.concat(buffer);
   writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
-	buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
-	buffer = claimIdentifiers.concat(buffer);
-	writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
+  buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
+  buffer = claimIdentifiers.concat(buffer);
+  writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 }
 
 main().catch((error) => {
 
   console.error(error);
   
-	if (claimReceipts.length > 0) {
+  if (claimReceipts.length > 0) {
 
-  	console.log(claimReceipts);
-		console.log(claimIdentifiers);
+    console.log(claimReceipts);
+    console.log(claimIdentifiers);
 
-  	let buffer = JSON.parse(readFileSync(CLAIM_LOG_PATH, 'utf8'));
-  	buffer = claimReceipts.concat(buffer);
-  	writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
+    let buffer = JSON.parse(readFileSync(CLAIM_LOG_PATH, 'utf8'));
+    buffer = claimReceipts.concat(buffer);
+    writeFileSync(CLAIM_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
-  	buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
-  	buffer = claimIdentifiers.concat(buffer);
-  	writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
+    buffer = JSON.parse(readFileSync(IDENTIFIER_LOG_PATH, 'utf8'));
+    buffer = claimIdentifiers.concat(buffer);
+    writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 
-  	console.log('gracefully logged incomplete batch of claim receipts and identifiers');
-	}
+    console.log('gracefully logged incomplete batch of claim receipts and identifiers');
+  }
   process.exitCode = 1;
 });
