@@ -12,23 +12,23 @@ async function main () {
 
   const ILOCKV2 = await ethers.getContractFactory(CONTRACT_UPGRADE);
 
-  console.log('Upgrading ILOCK token contract...');
+  console.log('Preparing  ILOCK token contract upgrade...');
   const response = await upgrades.upgradeProxy(PROXY_ADDRESS, ILOCKV2);
-  console.log('ILOCK token contract upgraded.');
+  console.log('ILOCK token contract upgrade prepared.');
 
-  let upgradeReceipt = {
+  let upgradePreparedReceipt = {
     "contractVersion": CONTRACT_UPGRADE,
     "hash": response.deployTransaction.hash,
     "blockHash": response.deployTransaction.blockHash,
     "dateAndTime": new Date().toUTCString()
   };
-  upgradeReceipt = {
-    "upgradeReceipt": upgradeReceipt
+  upgradePreparedReceipt = {
+    "upgradePreparedReceipt": upgradePreparedReceipt
   };
 
-  console.log(upgradeReceipt);
+  console.log(upgradePreparedReceipt);
   const buffer = JSON.parse(readFileSync(ADMIN_LOG_PATH, 'utf8'));
-  buffer.push(upgradeReceipt);
+  buffer.push(upgradePreparedReceipt);
   writeFileSync(ADMIN_LOG_PATH, JSON.stringify(buffer, null, 2), 'utf-8');
 }
 

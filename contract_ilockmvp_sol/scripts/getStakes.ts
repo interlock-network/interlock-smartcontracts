@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
 
 const CONTRACT = process.env.CONTRACT;
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+const PROXY_ADDRESS = process.env.PROXY_ADDRESS;
 const STAKE_LOG_PATH = process.env.STAKE_LOG_PATH;
 const STAKE_DATA = JSON.parse(readFileSync(process.env.STAKE_DATA).toString());
 
@@ -13,7 +13,7 @@ let stakeholderStakes = [];
 async function main () {
 
   const ILOCKV1 = await ethers.getContractFactory(CONTRACT);
-  const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
+  const ilockv1 = await ILOCKV1.attach(PROXY_ADDRESS);
 
   for (const stakeholder of STAKE_DATA.stakeholders) {
 

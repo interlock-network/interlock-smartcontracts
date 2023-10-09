@@ -4,7 +4,6 @@ import { writeFileSync } from "fs";
 import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
 
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const CONTRACT = process.env.CONTRACT;
 const ADMIN_LOG_PATH = process.env.ADMIN_LOG_PATH;
 const CLAIM_LOG_PATH = process.env.ADMIN_LOG_PATH;
@@ -21,15 +20,14 @@ async function main () {
 
   let deploymentReceipt = {
     "contractNetwork": "Arbitrum Mainnet",
-    "contractAddress": response.target,
-		"dateAndTime": new Date().toUTCString()
+    "contractProxyAddress": response.target,
+    "dateAndTime": new Date().toUTCString()
   };
   deploymentReceipt = {
     "deploymentReceipt": deploymentReceipt
   };
 
   console.log(deploymentReceipt)
-
   writeFileSync(ADMIN_LOG_PATH, JSON.stringify([deploymentReceipt], null, 2), 'utf-8');
   writeFileSync(CLAIM_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');
   writeFileSync(IDENTIFIER_LOG_PATH, JSON.stringify([], null, 2), 'utf-8');

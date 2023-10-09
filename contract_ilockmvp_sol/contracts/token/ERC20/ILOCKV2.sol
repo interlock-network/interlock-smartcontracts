@@ -70,8 +70,8 @@ contract ILOCKV2 is Initializable,
     uint256 public monthsPassed;
 
     struct Stake {
-        uint256 paid;
         uint256 share;
+        uint256 paid;
         uint8 pool; }
 
     struct PoolData {

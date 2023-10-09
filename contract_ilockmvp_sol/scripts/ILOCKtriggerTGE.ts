@@ -5,13 +5,13 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
 
 const CONTRACT = process.env.CONTRACT;
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+const PROXY_ADDRESS = process.env.PROXY_ADDRESS;
 const ADMIN_LOG_PATH = process.env.ADMIN_LOG_PATH;
 
 async function main () {
 
   const ILOCKV1 = await ethers.getContractFactory(CONTRACT);
-  const ilockv1 = await ILOCKV1.attach(CONTRACT_ADDRESS);
+  const ilockv1 = await ILOCKV1.attach(PROXY_ADDRESS);
 
   const response = await ilockv1.triggerTGE();
   const receipt = await response.wait();
