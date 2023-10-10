@@ -762,7 +762,6 @@ contract ILOCKV1 is Initializable,
 	function timeRemaining(
 		bytes32 stakeIdentifier
 	) public view returns (
-		string memory timeFormat,
 		uint256 monthsRemaining,
 		uint256 daysRemaining,
 		uint256 hoursRemaining,
@@ -805,7 +804,6 @@ contract ILOCKV1 is Initializable,
 	function parseTimeLeft(
 		uint256 timeLeft
 	) internal pure returns (
-		string memory timeFormat,
 		uint256 monthsRemaining,
 		uint256 daysRemaining,
 		uint256 hoursRemaining,
@@ -829,7 +827,6 @@ contract ILOCKV1 is Initializable,
 		secondsRemaining = remainingSeconds;
 
 		return (
-			"time format:\nmonths\ndays\nhours\nminutes\nseconds",
 			monthsRemaining,
 			daysRemaining,
 			hoursRemaining,
