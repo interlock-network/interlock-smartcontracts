@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"application":[["impl ContractDispatchableMessages&lt;pub struct Application {\n\n        token_instance: ILOCKmvpRef,\n        operator: AccountId,\n    }&gt; for <a class=\"struct\" href=\"application/application/struct.Application.html\" title=\"struct application::application::Application\">Application</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

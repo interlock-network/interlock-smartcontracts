@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"application":[["impl StorageLayout for <a class=\"struct\" href=\"application/application/struct.ApplicationRef.html\" title=\"struct application::application::ApplicationRef\">ApplicationRef</a>"],["impl StorageLayout for <a class=\"struct\" href=\"application/application/struct.Application.html\" title=\"struct application::application::Application\">Application</a>"],["impl StorageLayout for <a class=\"struct\" href=\"application/application/struct.CallBuilder.html\" title=\"struct application::application::CallBuilder\">CallBuilder</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
