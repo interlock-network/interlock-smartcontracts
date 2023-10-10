@@ -263,7 +263,7 @@ contract ILOCKV1 is Initializable,
             !TGEtriggered,
             "TGE already happened");
 
-		_multisigSafe = multisigSafe_
+		_multisigSafe = multisigSafe_;
 
         // create pool accounts and initiate
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
@@ -757,23 +757,18 @@ contract ILOCKV1 is Initializable,
 /***************************************************************************/
 /***************************************************************************/
 
-            // get how much of amount left to pay is available to claim
-           // get amount left to pay
-          // get amount paid so far to member
-         // get amount investor still needs to pay in before claiming tokens
-        // get time remaining until next payout ready
-    function stakeStatus(
-        bytes32 stakeIdentifier
-    ) public view returns (
-        uint256 timeLeft,
-        uint256 share,
-        uint256 paidOut,
-        uint256 payRemaining,
-        uint256 payAvailable,
-        uint256 vestingMonths,
-        uint256 monthsRemaining,
-        uint256 cliff
-    ) {
+		 // on a stake by stake basis
+		// returns time remaining until next token traunch may be claimed
+	function timeRemaining(
+		bytes32 stakeIdentifier
+	) public view returns (
+		string memory timeFormat,
+		uint256 monthsRemaining,
+		uint256 daysRemaining,
+		uint256 hoursRemaining,
+		uint256 minutesRemaining,
+		uint256 secondsRemaining
+	) {
 
         // caller must own the stake they are viewing
         require(
@@ -781,14 +776,15 @@ contract ILOCKV1 is Initializable,
             "this stake does not exist and cannot be viewed");
 
         Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
-        cliff = pool[stake.pool].cliff;
+        uint256 cliff = pool[stake.pool].cliff;
         uint256 vests = pool[stake.pool].vests;
+		uint256 timeLeft;
 
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
         if (monthsPassed >= vests + cliff) {
             
-            timeLeft = 0;
+			timeLeft = 0;
 
         // when cliff hasn't been surpassed, include that time into countdown
         } else if (monthsPassed < cliff) {
@@ -799,8 +795,74 @@ contract ILOCKV1 is Initializable,
         // during vesting period, timeleft is only time til next month's payment
         } else {
 
-            timeLeft = _nextPayout - block.timestamp;
-        }
+            timeLeft = _nextPayout - block.timestamp; }
+
+		return parseTimeLeft(timeLeft); }
+
+/*************************************************/
+
+		// breaks time left into human readable units for display on arbiscan
+	function parseTimeLeft(
+		uint256 timeLeft
+	) internal pure returns (
+		string memory timeFormat,
+		uint256 monthsRemaining,
+		uint256 daysRemaining,
+		uint256 hoursRemaining,
+		uint256 minutesRemaining,
+		uint256 secondsRemaining
+	) {
+		uint256 remainingSeconds;
+
+		monthsRemaining = timeLeft / 30 days;
+		remainingSeconds = timeLeft % 30 days;
+
+		daysRemaining = remainingSeconds / 24 hours;
+		remainingSeconds = remainingSeconds % 24 hours;
+
+		hoursRemaining = remainingSeconds / 60 minutes;
+		remainingSeconds = remainingSeconds % 60 minutes;
+
+		minutesRemaining = remainingSeconds / 60 seconds;
+		remainingSeconds = remainingSeconds % 60 seconds;
+
+		secondsRemaining = remainingSeconds;
+
+		return (
+			"time format:\nmonths\ndays\nhours\nminutes\nseconds",
+			monthsRemaining,
+			daysRemaining,
+			hoursRemaining,
+			minutesRemaining,
+			secondsRemaining); }
+
+
+/*************************************************/
+
+            // get how much of amount left to pay is available to claim
+           // get amount left to pay
+          // get amount paid so far to member
+         // get amount investor still needs to pay in before claiming tokens
+        // get time remaining until next payout ready
+    function stakeStatus(
+        bytes32 stakeIdentifier
+    ) public view returns (
+        uint256 share,
+        uint256 paidOut,
+        uint256 payRemaining,
+        uint256 payAvailable,
+        uint256 vestingMonths,
+        uint256 monthsRemaining
+    ) {
+
+        // caller must own the stake they are viewing
+        require(
+            stakeExists(_msgSender(), stakeIdentifier),
+            "this stake does not exist and cannot be viewed");
+
+        Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
+        uint256 cliff = pool[stake.pool].cliff;
+        uint256 vests = pool[stake.pool].vests;
 
         // how much has member already claimed
         paidOut = stake.paid;
@@ -838,13 +900,12 @@ contract ILOCKV1 is Initializable,
         }
 
         return (
-            timeLeft,
             stake.share,
             paidOut,
             payRemaining,
             payAvailable,
             vests,
-            cliff,
+            //cliff,
             vests - cliff - monthsPassed); }
 
 /*************************************************/
@@ -907,5 +968,6 @@ contract ILOCKV1 is Initializable,
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+
 
 
