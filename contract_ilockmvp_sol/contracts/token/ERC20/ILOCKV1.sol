@@ -208,6 +208,16 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
+        // only allows the Safe wallet multisig safe to call
+    modifier onlyMultisigSafe(
+    ) {
+        require(
+            _msgSender() == _multisigSafe,
+            "only multisig safe can call"
+        );
+        _; }
+
+/*************************************************/
         // verifies zero address was not provied
     modifier noZero(
         address _address
@@ -297,7 +307,7 @@ contract ILOCKV1 is Initializable,
         // changes the contract owner
     function changeOwner(
         address newOwner
-    ) public onlyOwner {
+    ) public onlyMultisigSafe {
 
         _owner = newOwner; }
 
@@ -313,7 +323,7 @@ contract ILOCKV1 is Initializable,
 
 		// pauses any functions requiring unpause
 	function pause(
-	) public onlyOwner {
+	) public onlyMultisigSafe {
         
 		require(
 			paused(),
@@ -326,7 +336,7 @@ contract ILOCKV1 is Initializable,
 
 		// resumes operation of functions requiring unpause
 	function unpause(
-	) public onlyOwner {
+	) public onlyMultisigSafe {
         
 		require(
 			!paused(),
@@ -563,7 +573,7 @@ contract ILOCKV1 is Initializable,
             "ERC20: decreased allowance below zero");
 
         unchecked {
-            _approve(owner, spender, currentAllowance - subtractedValue);}
+            _approve(owner, spender, currentAllowance - subtractedValue); }
 
          return true; }
 
