@@ -57,6 +57,7 @@ contract ILOCKV1 is Initializable,
     uint256 private _rewardedTotal;
 
     address private _owner;
+	address private _multisigSafe;
 
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -242,6 +243,7 @@ contract ILOCKV1 is Initializable,
 
         // generates all the tokens
     function triggerTGE(
+		address multisigSafe_
     ) public onlyOwner {
 
         require(
@@ -250,6 +252,8 @@ contract ILOCKV1 is Initializable,
         require(
             !TGEtriggered,
             "TGE already happened");
+
+		_multisigSafe = multisigSafe_
 
         // create pool accounts and initiate
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
@@ -863,7 +867,7 @@ contract ILOCKV1 is Initializable,
     
         for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
 
-               if (_stakeIdentifiers[stakeholder][i] == identifier) {
+            if (_stakeIdentifiers[stakeholder][i] == identifier) {
 
                 return true; } }
 

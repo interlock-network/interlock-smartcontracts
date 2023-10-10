@@ -6,6 +6,7 @@ dotenv.config({ path: './.env.dev' });
 
 const CONTRACT = process.env.CONTRACT;
 const PROXY_ADDRESS = process.env.PROXY_ADDRESS;
+const SAFE_ADDRESS = process.env.SAFE_ADDRESS;
 const ADMIN_LOG_PATH = process.env.ADMIN_LOG_PATH;
 
 async function main () {
@@ -13,7 +14,7 @@ async function main () {
   const ILOCKV1 = await ethers.getContractFactory(CONTRACT);
   const ilockv1 = await ILOCKV1.attach(PROXY_ADDRESS);
 
-  const response = await ilockv1.triggerTGE();
+  const response = await ilockv1.triggerTGE(SAFE_ADDRESS);
   const receipt = await response.wait();
 
   let TGEreceipt = {
