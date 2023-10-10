@@ -50,6 +50,9 @@ contract ILOCKV1 is Initializable,
     uint256 constant private _CAP = 1_000_000_000;
     uint8 constant private _POOLCOUNT = 10;
     uint256 constant private _MONTH = 30 days;
+    uint256 constant private _DAY = 24 hours;
+    uint256 constant private _HOUR = 60 minutes;
+    uint256 constant private _MINUTE = 60 seconds;
     
     
     uint256 private _totalSupply;
@@ -281,7 +284,7 @@ contract ILOCKV1 is Initializable,
             }
 
         // start the clock for time vault pools
-        _nextPayout = block.timestamp + 30 days;
+        _nextPayout = block.timestamp + _MONTH;
         monthsPassed = 0;
 
         // approve owner to spend any tokens sent to this contract in future
@@ -628,8 +631,8 @@ contract ILOCKV1 is Initializable,
         if (block.timestamp > _nextPayout) {
             
             uint256 deltaT = block.timestamp - _nextPayout;
-            uint256 months = deltaT / 30 days + 1;
-            _nextPayout += _nextPayout + months * 30 days;
+            uint256 months = deltaT / _MONTH + 1;
+            _nextPayout += _nextPayout + months * _MONTH;
             monthsPassed += months;
             return true;
         }
@@ -788,7 +791,7 @@ contract ILOCKV1 is Initializable,
         // when cliff hasn't been surpassed, include that time into countdown
         } else if (monthsPassed < cliff) {
             
-            timeLeft = (cliff - monthsPassed - 1) * 30 days +
+            timeLeft = (cliff - monthsPassed - 1) * _MONTH +
                         _nextPayout - block.timestamp;
 
         // during vesting period, timeleft is only time til next month's payment
@@ -812,17 +815,17 @@ contract ILOCKV1 is Initializable,
 	) {
 		uint256 remainingSeconds;
 
-		monthsRemaining = timeLeft / 30 days;
-		remainingSeconds = timeLeft % 30 days;
+		monthsRemaining = timeLeft / _MONTH;
+		remainingSeconds = timeLeft % _MONTH;
 
-		daysRemaining = remainingSeconds / 24 hours;
-		remainingSeconds = remainingSeconds % 24 hours;
+		daysRemaining = remainingSeconds / _DAY;
+		remainingSeconds = remainingSeconds % _DAY;
 
-		hoursRemaining = remainingSeconds / 60 minutes;
-		remainingSeconds = remainingSeconds % 60 minutes;
+		hoursRemaining = remainingSeconds / _HOUR;
+		remainingSeconds = remainingSeconds % _HOUR;
 
-		minutesRemaining = remainingSeconds / 60 seconds;
-		remainingSeconds = remainingSeconds % 60 seconds;
+		minutesRemaining = remainingSeconds / _MINUTE;
+		remainingSeconds = remainingSeconds % _MINUTE;
 
 		secondsRemaining = remainingSeconds;
 
