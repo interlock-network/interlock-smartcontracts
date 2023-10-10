@@ -318,7 +318,7 @@ contract ILOCKV1 is Initializable,
 
 		// returns pause status of contract
 	function paused(
-	) public view returns (bool) {
+	) public view returns (bool isPaused) {
 
         return _paused; }
 
@@ -360,7 +360,7 @@ contract ILOCKV1 is Initializable,
 
         // gets token name (Interlock Network)
     function name(
-    ) public pure override returns (string memory) {
+    ) public pure override returns (string memory _name) {
 
         return _NAME; }
 
@@ -368,7 +368,7 @@ contract ILOCKV1 is Initializable,
 
         // gets token symbol (ILOCK)
     function symbol(
-    ) public pure override returns (string memory) {
+    ) public pure override returns (string memory _symbol) {
 
         return _SYMBOL; }
 
@@ -376,7 +376,7 @@ contract ILOCKV1 is Initializable,
 
         // gets token decimal number
     function decimals(
-    ) public pure override returns (uint8) {
+    ) public pure override returns (uint8 _decimals) {
 
         return _DECIMALS; }
 
@@ -384,7 +384,7 @@ contract ILOCKV1 is Initializable,
 
         // gets tokens minted
     function totalSupply(
-    ) public view override returns (uint256) {
+    ) public view override returns (uint256 _supply) {
 
         return _totalSupply; }
 
@@ -393,7 +393,7 @@ contract ILOCKV1 is Initializable,
         // gets account balance (tokens payable)
     function balanceOf(
         address account
-    ) public view override returns (uint256) {
+    ) public view override returns (uint256 _balance) {
 
         return _balances[account]; }
 
@@ -403,7 +403,7 @@ contract ILOCKV1 is Initializable,
     function allowance(
         address owner,
         address spender
-    ) public view virtual override returns (uint256) {
+    ) public view virtual override returns (uint256 _allowance) {
 
         return _allowances[owner][spender]; }
 
@@ -411,7 +411,7 @@ contract ILOCKV1 is Initializable,
 
         // gets total tokens remaining in pools
     function reserve(
-    ) public view returns (uint256) {
+    ) public view returns (uint256 _reserve) {
 
         return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
 
@@ -419,7 +419,7 @@ contract ILOCKV1 is Initializable,
 
         // gets token cap
     function cap(
-    ) public pure returns (uint256) {
+    ) public pure returns (uint256 _cap) {
 
         return _CAP; }
 
@@ -647,7 +647,7 @@ contract ILOCKV1 is Initializable,
     function registerStake(
         address stakeholder,
         Stake calldata data
-    ) public noZero(stakeholder) onlyOwner returns (bool) {
+    ) public noZero(stakeholder) onlyOwner returns (bool success) {
 
         bytes32 identifier = keccak256(
                              bytes.concat(bytes20(stakeholder),
@@ -681,7 +681,7 @@ contract ILOCKV1 is Initializable,
         // claim stake for vest periods accumulated
     function claimStake(
         bytes32 stakeIdentifier
-    ) public returns (bool) {
+    ) public returns (bool success) {
 
         // see if we need to update time
         _checkTime();
@@ -929,12 +929,11 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-         // that ensures we do not overwrite
-        // helper view function for validating registerStake input (stake existence)
+        // view predicate for validating getStake & claimStake input
     function stakeExists(
         address stakeholder,
         bytes32 identifier
-    ) public view returns (bool) {
+    ) public view returns (bool exists) {
     
         for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
 
