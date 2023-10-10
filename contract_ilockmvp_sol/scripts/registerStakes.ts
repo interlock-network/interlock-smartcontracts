@@ -42,6 +42,8 @@ async function main () {
       "claimReceipt": claimReceipt
     };
 
+  console.log(receipt);
+
     claimReceipts = [claimReceipt].concat(claimReceipts);
     stakeIdentifiers = [stakeIdentifier].concat(stakeIdentifiers);
   }
