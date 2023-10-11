@@ -44,7 +44,7 @@ To create a new MOP, perform the following. Template in reference is found at th
 
 #### 1. clone template
 
-Copy this template document -- `./bcmop0.methodOfProcedureTemplate.md` -- to a new mop file in this format: `bcmop<<number>>.<<mop title in camel case>>.md`. Edit the file by following remaining steps.
+Copy this template document -- `./inbmop0.methodOfProcedureTemplate.md` -- to a new mop file in this format: `bcmop<<number>>.<<mop title in camel case>>.md`. Edit the file by following remaining steps.
 
 #### 2. populate Purpose and Scope section
 
