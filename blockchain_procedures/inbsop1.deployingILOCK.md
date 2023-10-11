@@ -45,7 +45,6 @@ Due to the relative complexity of an initial ILOCK solidity contract launch, thi
 
 1 - prelaunch preparation
 2 - setup organization's Safe multisig safe (wallet)
-3 - setup deployment environment
 4 - prelaunch checklist
 5 - execute deployment
 6 - prepare, input, and verify stakeholder data
