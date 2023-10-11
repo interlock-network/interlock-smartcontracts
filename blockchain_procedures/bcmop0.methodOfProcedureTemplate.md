@@ -75,8 +75,15 @@ Here is the MOP template that this repository adheres to:
 
 ## <<MOP title>>
 
+##### Metadata:
+```
 Creation date: <<creation date MM/DD/YYYY>>
 Revision date: <<revision date MM/DD/YYYY>>
+```
+##### TODO:
+```
+<<Stuff that needs todo attention here, as bullet list>>
+```
 
 ### Purpose and Scope:
 
