@@ -43,12 +43,12 @@ The roles are:
 
 Due to the relative complexity of an initial ILOCK solidity contract launch, this SOP will involve a few different MOPs:
 
-1 - prelaunch preparation
-2 - setup organization's Safe multisig safe (wallet)
-4 - prelaunch checklist
-5 - execute deployment
-6 - prepare, input, and verify stakeholder data
-7 - execute and verify TGE
+1 - [prelaunch preparation [MOP#1]](inbmop1.ILOCKprelaunchPreparation.md)
+2 - [setup organization's Safe multisig safe (wallet) [MOP#2]](inbmop2.ILOCKmultisigSetup.md)
+4 - [prelaunch checklist [MOP#3]](inbmop3.ILOCKprelaunchChecklist.md)
+5 - [execute deployment [MOP#4]](inbmop4.ILOCKdeploy.md)
+6 - [prepare, input, and verify stakeholder data [MOP#5]](inbmop5.ILOCKprepare.md)
+7 - [execute and verify TGE [MOP#6]](inbmop6.ILOCKexecuteTGE.md)
 
 ### Resources and Communication:
 
