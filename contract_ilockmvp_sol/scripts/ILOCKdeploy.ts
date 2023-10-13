@@ -6,8 +6,8 @@ dotenv.config({ path: './.env.dev' });
 
 const CONTRACT = process.env.CONTRACT;
 const ADMIN_LOG_PATH = process.env.ADMIN_LOG_PATH;
-const CLAIM_LOG_PATH = process.env.ADMIN_LOG_PATH;
-const IDENTIFIER_LOG_PATH = process.env.ADMIN_LOG_PATH;
+const CLAIM_LOG_PATH = process.env.CLAIM_LOG_PATH;
+const IDENTIFIER_LOG_PATH = process.env.IDENTIFIER_LOG_PATH;
 
 async function main () {
 

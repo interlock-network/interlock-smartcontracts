@@ -3,16 +3,23 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
 
-
+import * as dotenv from "dotenv";
+dotenv.config({ path: './.env.dev' });
 
 const config: HardhatUserConfig = {
   solidity: "0.8.19",
-  // for testnet
-  "base-goerli": {
-    url: "https://goerli.base.org",
-    accounts: [process.env.PRIVATE_KEY as string]
-    gasPrice: 1000000000,
+  networks: {
+    // for testnet
+    "base-goerli": {
+      url: "https://goerli.base.org",
+      accounts: [process.env.OWNER_PRIKEY as string],
+      gasPrice: 1000000000,
+    },
   },
+  etherscan: {
+    url: "https://api-goerli.basescan.org/api",
+    apiKey: process.env.ETHERSCAN_APIKEY as string
+  }
 };
 
 export default config;
