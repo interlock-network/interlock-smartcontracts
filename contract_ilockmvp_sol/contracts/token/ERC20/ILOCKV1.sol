@@ -82,7 +82,7 @@ contract ILOCKV1 is Initializable,
         uint256 cliff;
         string name; }
 
-    PoolData[_POOLCOUNT] private _pool;
+    PoolData[_POOLCOUNT] public _pool;
 
 /***************************************************************************/
 /***************************************************************************/
@@ -434,9 +434,18 @@ contract ILOCKV1 is Initializable,
         // lists token pool data
     function poolData(
     ) public view returns (
-        PoolData[10] memory
+        PoolData memory pool1,
+        PoolData memory pool2,
+        PoolData memory pool3,
+        PoolData memory pool4,
+        PoolData memory pool5,
+        PoolData memory pool6,
+        PoolData memory pool7,
+        PoolData memory pool8,
+        PoolData memory pool9,
+        PoolData memory pool10
     ) {
-        return [
+        return (
 			_pool[0],
 			_pool[1],
 			_pool[2],
@@ -446,7 +455,7 @@ contract ILOCKV1 is Initializable,
 			_pool[6],
 			_pool[7],
 			_pool[8],
-			_pool[9] ]; }
+			_pool[9] ); }
 
 /***************************************************************************/
 /***************************************************************************/

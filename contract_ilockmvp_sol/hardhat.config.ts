@@ -7,7 +7,19 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.19",
+  solidity: {
+		compilers: [
+			{
+				version: "0.8.19",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 200,
+					},
+				},
+			}
+		]
+	},
   networks: {
     // for testnet
     "base-goerli": {
