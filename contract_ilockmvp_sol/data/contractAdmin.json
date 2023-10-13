@@ -1,9 +1,9 @@
 [
   {
-    "TGEreceipt": {
-      "hash": "0x933d5001b9fee6fe49270032a4a0b23d4a4583225e44a1abd9014e4e35a2c934",
-      "blockHash": "0x4c33fc118ca2759203dc72c5bb747441db4f3bb0a57e127d126bf4a589d03bbc",
-      "dateAndTime": "Thu, 12 Oct 2023 23:19:16 GMT"
+    "deploymentReceipt": {
+      "contractNetwork": "Arbitrum Mainnet",
+      "contractProxyAddress": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "dateAndTime": "Fri, 13 Oct 2023 01:36:01 GMT"
     }
   }
 ]

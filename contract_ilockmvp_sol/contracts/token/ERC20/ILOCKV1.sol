@@ -36,7 +36,6 @@ contract ILOCKV1 is Initializable,
 /***************************************************************************/
 
     /** @dev **/
-
     event Paused(address account);
     event Unpaused(address account);
     bool private _paused;
@@ -77,12 +76,13 @@ contract ILOCKV1 is Initializable,
         uint8 pool; }
 
     struct PoolData {
+		address addr;
         uint256 tokens;
         uint256 vests;
         uint256 cliff;
         string name; }
 
-    PoolData[_POOLCOUNT] public pool;
+    PoolData[_POOLCOUNT] private _pool;
 
 /***************************************************************************/
 /***************************************************************************/
@@ -108,10 +108,10 @@ contract ILOCKV1 is Initializable,
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
             // here we are adding up tokens to make sure sum is correct
-            sumTokens += pool[i].tokens;
+            sumTokens += _pool[i].tokens;
 
             // in the same breath we convert token amounts to ERC20 format
-            pool[i].tokens *= _DECIMAL_MAGNITUDE;
+            _pool[i].tokens *= _DECIMAL_MAGNITUDE;
         }
         require(
             sumTokens == _CAP - _REWARDS_POOL,
@@ -126,61 +126,71 @@ contract ILOCKV1 is Initializable,
     function _initializePools(
     ) internal {
         
-        pool[0] = PoolData({
+        _pool[0] = PoolData({
+			addr: address(0),
             tokens: 3_703_703,
             vests: 3,
             cliff: 1,
             name: "community sale"
         });
-        pool[1] = PoolData({
+        _pool[1] = PoolData({
+			addr: address(0),
             tokens: 48_626_667,
             vests: 18,
             cliff: 1,
             name: "presale 1"
         });
-        pool[2] = PoolData({
+        _pool[2] = PoolData({
+			addr: address(0),
             tokens: 33_333_333,
             vests: 15,
             cliff: 1,
             name: "presale 2"
         });
-        pool[3] = PoolData({
+        _pool[3] = PoolData({
+			addr: address(0),
             tokens: 25_714_286,
             vests: 12,
             cliff: 1,
             name: "presale 3"
         });
-        pool[4] = PoolData({
+        _pool[4] = PoolData({
+			addr: address(0),
             tokens: 28_500_000,
             vests: 3,
             cliff: 0,
             name: "public sale"
         });
-        pool[5] = PoolData({
+        _pool[5] = PoolData({
+			addr: address(0),
             tokens: 200_000_000,
             vests: 36,
             cliff: 6,
             name: "founders and team"
         });
-        pool[6] = PoolData({
+        _pool[6] = PoolData({
+			addr: address(0),
             tokens: 40_000_000,
             vests: 24,
             cliff: 1,
             name: "outlier ventures"
         });
-        pool[7] = PoolData({
+        _pool[7] = PoolData({
+			addr: address(0),
             tokens: 25_000_000,
             vests: 24,
             cliff: 1,
             name: "advisors"
         });
-        pool[8] = PoolData({
+        _pool[8] = PoolData({
+			addr: address(0),
             tokens: 258_122_011,
             vests: 84,
             cliff: 0,
             name: "foundation"
         });
-        pool[9] = PoolData({
+        _pool[9] = PoolData({
+			addr: address(0),
             tokens: 37_000_000,
             vests: 12,
             cliff: 1,
@@ -268,7 +278,8 @@ contract ILOCKV1 is Initializable,
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
             pools.push(Pool);
-            uint256 balance = pool[i].tokens;
+			_pool[i].addr = Pool;
+            uint256 balance = _pool[i].tokens;
             _balances[Pool] = balance;
             emit Transfer(address(0), Pool, balance); }
 
@@ -417,6 +428,25 @@ contract ILOCKV1 is Initializable,
         uint256 _cap
     ) {
         return _CAP; }
+
+/*************************************************/
+
+        // lists token pool data
+    function poolData(
+    ) public view returns (
+        PoolData[10] memory
+    ) {
+        return [
+			_pool[0],
+			_pool[1],
+			_pool[2],
+			_pool[3],
+			_pool[4],
+			_pool[5],
+			_pool[6],
+			_pool[7],
+			_pool[8],
+			_pool[9] ]; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -659,7 +689,7 @@ contract ILOCKV1 is Initializable,
             data.paid == 0,
             "amount paid must be zero");
         require(
-            data.share >= pool[data.pool].vests,
+            data.share >= _pool[data.pool].vests,
             "share is too small");
         require(
             data.pool < _POOLCOUNT,
@@ -687,8 +717,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(_msgSender(), stakeIdentifier),
             "this stake does not exist and cannot be claimed");
         Stake storage stake = _stakes[_msgSender()][stakeIdentifier];
-        uint256 cliff = pool[stake.pool].cliff;
-        uint256 vests = pool[stake.pool].vests;
+        uint256 cliff = _pool[stake.pool].cliff;
+        uint256 vests = _pool[stake.pool].vests;
 
         // make sure cliff has been surpassed
         require(
@@ -765,8 +795,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(_msgSender(), stakeIdentifier),
             "this stake does not exist and cannot be viewed");
         Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
-        uint256 cliff = pool[stake.pool].cliff;
-        uint256 vests = pool[stake.pool].vests;
+        uint256 cliff = _pool[stake.pool].cliff;
+        uint256 vests = _pool[stake.pool].vests;
 
         uint256 timeLeft;
         // compute the time left until the next payment is available
@@ -845,8 +875,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(_msgSender(), stakeIdentifier),
             "this stake does not exist and cannot be viewed");
         Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
-        uint256 cliff = pool[stake.pool].cliff;
-        uint256 vests = pool[stake.pool].vests;
+        uint256 cliff = _pool[stake.pool].cliff;
+        uint256 vests = _pool[stake.pool].vests;
 
         // how much has member already claimed
         paidOut = stake.paid;
