@@ -670,11 +670,9 @@ contract ILOCKV1 is Initializable,
             _nextPayout += _nextPayout + months * _MONTH;
             monthsPassed += months;
             // is time
-            return true;
-        }
+            return true; }
         // is not time
-        return false;
-    }
+        return false; }
 
 /*************************************************/
 
@@ -791,6 +789,7 @@ contract ILOCKV1 is Initializable,
          // on a stake by stake basis
         // returns time remaining until next token traunch may be claimed
     function timeRemaining(
+		address stakeholder,
         bytes32 stakeIdentifier
     ) public view returns (
         uint256 monthsRemaining,
@@ -801,9 +800,9 @@ contract ILOCKV1 is Initializable,
     ) {
         // if stake exists, then get it
         require(
-            stakeExists(_msgSender(), stakeIdentifier),
+            stakeExists(stakeholder, stakeIdentifier),
             "this stake does not exist and cannot be viewed");
-        Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
+        Stake memory stake = _stakes[stakeholder][stakeIdentifier];
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
@@ -870,6 +869,7 @@ contract ILOCKV1 is Initializable,
          // get amount investor still needs to pay in before claiming tokens
         // get time remaining until next payout ready
     function stakeStatus(
+		address stakeholder,
         bytes32 stakeIdentifier
     ) public view returns (
         uint256 share,
@@ -881,9 +881,9 @@ contract ILOCKV1 is Initializable,
     ) {
         // if stake exists, then get it
         require(
-            stakeExists(_msgSender(), stakeIdentifier),
+            stakeExists(stakeholder, stakeIdentifier),
             "this stake does not exist and cannot be viewed");
-        Stake memory stake = _stakes[_msgSender()][stakeIdentifier];
+        Stake memory stake = _stakes[stakeholder][stakeIdentifier];
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
