@@ -731,8 +731,10 @@ contract ILOCKV1 is Initializable,
             "this stake does not exist");
         Stake storage stake = _stakes[stakeIdentifier];
         address stakeholder = stake.stakeholder;
+		uint256 tokenShare = stake.share;
+		uint256 tokensPaid = stake.paid;
         uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vests = _pool[stake.pool].vests;
+        uint256 vestingMonths = _pool[stake.pool].vests;
 
         // make sure cliff has been surpassed
         require(
@@ -740,37 +742,37 @@ contract ILOCKV1 is Initializable,
             "too soon -- cliff not yet passed");
         // number of payouts must not surpass number of vests
         require(
-            stake.paid < stake.share,
+            tokensPaid < tokenShare,
             "member already collected entire token share");
         
         // determine the traunch amount claimant has rights to for each vested month
-        uint256 payout = stake.share / uint256(vests);
+        uint256 monthlyTokenAmount = tokenShare / vestingMonths;
         // and determine the number of payments claimant has received
-        uint256 payments = uint8(stake.paid / payout);
+        uint256 paymentsMade = tokensPaid / monthlyTokenAmount;
 
         // even if cliff is passed, is it too soon for next payment?
         require(
-            payments < monthsPassed,
+            paymentsMade < monthsPassed,
             "payout too early");
         
         uint256 thesePayments;
         // when time has past vesting period, pay out remaining unclaimed payments
-        if (cliff + vests <= monthsPassed) {
+        if (cliff + vestingMonths <= monthsPassed) {
             
-            thesePayments = vests - payments;
+            thesePayments = vestingMonths - paymentsMade;
 
         // don't count months past vests+cliff as payments
         } else {
 
-            thesePayments = 1 + monthsPassed - payments - cliff; }
+            thesePayments = 1 + monthsPassed - paymentsMade - cliff; }
 
         // use payments to calculate amount to pay out
-        uint256 thisPayout = thesePayments * payout;
+        uint256 thisPayout = thesePayments * monthlyTokenAmount;
 
         // if at final payment, add remainder of share to final payment
-        if (stake.share - stake.paid - thisPayout < stake.share / vests) {
+        if (tokenShare - tokensPaid - thisPayout < tokenShare / vestingMonths) {
             
-            thisPayout += stake.share % vests; }
+            thisPayout += tokenShare % vestingMonths; }
 
         // transfer and make sure it succeeds
         require(
@@ -877,62 +879,64 @@ contract ILOCKV1 is Initializable,
     function stakeStatus(
         bytes32 stakeIdentifier
     ) public view returns (
-        uint256 share,
-        uint256 paidOut,
-        uint256 payRemaining,
-        uint256 payAvailable,
+        uint256 tokenShare,
+        uint256 tokensPaidOut,
+        uint256 tokensRemaining,
+        uint256 tokensAvailable,
+		uint256 monthlyTokenAmount,
         uint256 vestingMonths,
-        uint256 monthsRemaining
+		uint256 cliff
     ) {
         // if stake exists, then get it
         require(
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake memory stake = _stakes[stakeIdentifier];
-        uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vests = _pool[stake.pool].vests;
+        cliff = _pool[stake.pool].cliff;
+        vestingMonths = _pool[stake.pool].vests;
+		tokenShare = stake.share;
 
         // how much has member already claimed
-        paidOut = stake.paid;
+        tokensPaidOut = stake.paid;
 
         // determine the number of payments claimant has rights to
-        uint256 payout = stake.share / vests;
+        monthlyTokenAmount = tokenShare / vestingMonths;
 
         // and determine the number of payments claimant has received
-        uint256 payments = paidOut / payout;
+        uint256 payments = tokensPaidOut / monthlyTokenAmount;
 
         // how much does member have yet to collect, after vesting complete
-        payRemaining = stake.share - paidOut;
+        tokensRemaining = tokenShare - tokensPaidOut;
 
         // compute the pay available to claim at current moment
         // if months passed are inbetween cliff and end of vesting period
-        if (monthsPassed >= cliff && monthsPassed < cliff + vests) {
+        if (monthsPassed >= cliff && monthsPassed < cliff + vestingMonths) {
             
-            payAvailable = (1 + monthsPassed - cliff - payments) * payout;
+            tokensAvailable = (1 + monthsPassed - cliff - payments) * monthlyTokenAmount;
 
         // until time reaches cliff, no pay is available
         } else if (monthsPassed < cliff ){
 
-            payAvailable = 0;
+            tokensAvailable = 0;
 
         // if time has passed cliff and vesting period, the entire remaining share is available
         } else {
 
-            payAvailable = stake.share - paidOut; }
+            tokensAvailable = tokenShare - tokensPaidOut; }
 
         // if at final payment, add remainder of share to final payment
-        if (stake.share - paidOut - payAvailable < payout && payAvailable > 0) {
+        if (tokenShare - tokensPaidOut - tokensAvailable < monthlyTokenAmount && tokensAvailable > 0) {
             
-            payAvailable += stake.share % vests; }
+            tokensAvailable += tokenShare % vestingMonths; }
 
         return (
-            stake.share,
-            paidOut,
-            payRemaining,
-            payAvailable,
-            vests,
-            //cliff,
-            vests - cliff - monthsPassed); }
+            tokenShare,
+            tokensPaidOut,
+            tokensRemaining,
+            tokensAvailable,
+			monthlyTokenAmount,
+            vestingMonths,
+            cliff); }
 
 /*************************************************/
 
@@ -971,7 +975,7 @@ contract ILOCKV1 is Initializable,
         bool exists
     ) {
         if (_stakes[stakeIdentifier].share > 0 &&
-           _stakes[stakeIdentifier].stakeholder != address(0)) {
+            _stakes[stakeIdentifier].stakeholder != address(0)) {
             
             // does exist
             return true; }
