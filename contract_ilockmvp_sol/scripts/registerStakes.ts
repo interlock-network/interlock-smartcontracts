@@ -20,11 +20,12 @@ async function main () {
   for (const stake of STAKE_DATA.stakes) {
 
     const data = {
-      "paid": ethers.parseEther("0"),
+      "stakeholder": stake.stakeholder,
       "share": ethers.parseEther(stake.share.toString()),
+      "paid": ethers.parseEther("0"),
       "pool": stake.pool
     }
-    const response = await ilockv1.registerStake(stake.stakeholder, data);
+    const response = await ilockv1.registerStake(data);
     const receipt = await response.wait();
 
     const stakeIdentifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
@@ -41,8 +42,6 @@ async function main () {
     claimReceipt = {
       "claimReceipt": claimReceipt
     };
-
-  console.log(receipt);
 
     claimReceipts = [claimReceipt].concat(claimReceipts);
     stakeIdentifiers = [stakeIdentifier].concat(stakeIdentifiers);

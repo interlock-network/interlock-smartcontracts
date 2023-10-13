@@ -23,14 +23,14 @@ async function main () {
     let stakes = [];
     for (const identifier of identifiers) {
       
-      let stake = (await ilockv1.getStake(stakeholder, identifier))
+      let stake = (await ilockv1.getStake(identifier))
                                 .toString()
                                 .split(',');
       stake = {
         "identifier": identifier,
-        "share": stake[0],
-        "paid": stake[1],
-        "pool": stake[2]
+        "share": stake[1],
+        "paid": stake[2],
+        "pool": stake[3]
       };
       stakes.push(stake);
     }

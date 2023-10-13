@@ -62,7 +62,7 @@ contract ILOCKV1 is Initializable,
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private _rewardedInterlocker;
-    mapping(address => mapping(bytes32 => Stake)) private _stakes;
+    mapping(bytes32 => Stake) private _stakes;
     mapping(address => bytes32[]) private _stakeIdentifiers;
 
     address[] public pools;
@@ -71,12 +71,13 @@ contract ILOCKV1 is Initializable,
     uint256 public monthsPassed;
 
     struct Stake {
+        address stakeholder;
         uint256 share;
         uint256 paid;
         uint8 pool; }
 
     struct PoolData {
-		address addr;
+        address addr;
         uint256 tokens;
         uint256 vests;
         uint256 cliff;
@@ -127,70 +128,70 @@ contract ILOCKV1 is Initializable,
     ) internal {
         
         _pool[0] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 3_703_703,
             vests: 3,
             cliff: 1,
             name: "community sale"
         });
         _pool[1] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 48_626_667,
             vests: 18,
             cliff: 1,
             name: "presale 1"
         });
         _pool[2] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 33_333_333,
             vests: 15,
             cliff: 1,
             name: "presale 2"
         });
         _pool[3] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 25_714_286,
             vests: 12,
             cliff: 1,
             name: "presale 3"
         });
         _pool[4] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 28_500_000,
             vests: 3,
             cliff: 0,
             name: "public sale"
         });
         _pool[5] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 200_000_000,
             vests: 36,
             cliff: 6,
             name: "founders and team"
         });
         _pool[6] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 40_000_000,
             vests: 24,
             cliff: 1,
             name: "outlier ventures"
         });
         _pool[7] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 25_000_000,
             vests: 24,
             cliff: 1,
             name: "advisors"
         });
         _pool[8] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 258_122_011,
             vests: 84,
             cliff: 0,
             name: "foundation"
         });
         _pool[9] = PoolData({
-			addr: address(0),
+            addr: address(0),
             tokens: 37_000_000,
             vests: 12,
             cliff: 1,
@@ -278,7 +279,7 @@ contract ILOCKV1 is Initializable,
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
             pools.push(Pool);
-			_pool[i].addr = Pool;
+            _pool[i].addr = Pool;
             uint256 balance = _pool[i].tokens;
             _balances[Pool] = balance;
             emit Transfer(address(0), Pool, balance); }
@@ -446,16 +447,16 @@ contract ILOCKV1 is Initializable,
         PoolData memory pool10
     ) {
         return (
-			_pool[0],
-			_pool[1],
-			_pool[2],
-			_pool[3],
-			_pool[4],
-			_pool[5],
-			_pool[6],
-			_pool[7],
-			_pool[8],
-			_pool[9] ); }
+            _pool[0],
+            _pool[1],
+            _pool[2],
+            _pool[3],
+            _pool[4],
+            _pool[5],
+            _pool[6],
+            _pool[7],
+            _pool[8],
+            _pool[9] ); }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -678,19 +679,18 @@ contract ILOCKV1 is Initializable,
 
         // register stake
     function registerStake(
-        address stakeholder,
         Stake calldata data
-    ) public noZero(stakeholder) onlyOwner returns (
+    ) public onlyOwner returns (
         bool success
     ) {
         // generate stake identifier
-        bytes32 identifier = keccak256(
-                             bytes.concat(bytes20(stakeholder),
+        bytes32 stakeIdentifier = keccak256(
+                             bytes.concat(bytes20(data.stakeholder),
                                           bytes32(data.share),
                                           bytes1(data.pool) ) );
         // validate input
         require(
-            !stakeExists(stakeholder, identifier),
+            !stakeExists(stakeIdentifier),
             "this stake already exists and cannot be edited");
         require(
             data.paid == 0,
@@ -701,11 +701,17 @@ contract ILOCKV1 is Initializable,
         require(
             data.pool < _POOLCOUNT,
             "invalid pool number");
+        require(
+            data.stakeholder != address(0),
+            "stakeholder cannot be zero address");
+        require(
+            data.stakeholder != address(this),
+            "stakeholder cannot be this contract address");
 
         // store stake
-        _stakes[stakeholder][identifier] = data;
+        _stakes[stakeIdentifier] = data;
         // store identifier for future iteration
-        _stakeIdentifiers[stakeholder].push(identifier);
+        _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
         return true; }
 
 /*************************************************/
@@ -721,9 +727,10 @@ contract ILOCKV1 is Initializable,
 
         // if stake exists, then get it
         require(
-            stakeExists(_msgSender(), stakeIdentifier),
-            "this stake does not exist and cannot be claimed");
-        Stake storage stake = _stakes[_msgSender()][stakeIdentifier];
+            stakeExists(stakeIdentifier),
+            "this stake does not exist");
+        Stake storage stake = _stakes[stakeIdentifier];
+        address stakeholder = stake.stakeholder;
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
@@ -767,11 +774,11 @@ contract ILOCKV1 is Initializable,
 
         // transfer and make sure it succeeds
         require(
-            _transfer(pools[stake.pool], _msgSender(), thisPayout),
+            _transfer(pools[stake.pool], stakeholder, thisPayout),
             "stake claim transfer failed");
 
         // update member state
-        _stakes[_msgSender()][stakeIdentifier].paid += thisPayout;
+        _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
         return true; }    
@@ -789,7 +796,6 @@ contract ILOCKV1 is Initializable,
          // on a stake by stake basis
         // returns time remaining until next token traunch may be claimed
     function timeRemaining(
-		address stakeholder,
         bytes32 stakeIdentifier
     ) public view returns (
         uint256 monthsRemaining,
@@ -800,9 +806,9 @@ contract ILOCKV1 is Initializable,
     ) {
         // if stake exists, then get it
         require(
-            stakeExists(stakeholder, stakeIdentifier),
-            "this stake does not exist and cannot be viewed");
-        Stake memory stake = _stakes[stakeholder][stakeIdentifier];
+            stakeExists(stakeIdentifier),
+            "this stake does not exist");
+        Stake memory stake = _stakes[stakeIdentifier];
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
@@ -869,7 +875,6 @@ contract ILOCKV1 is Initializable,
          // get amount investor still needs to pay in before claiming tokens
         // get time remaining until next payout ready
     function stakeStatus(
-		address stakeholder,
         bytes32 stakeIdentifier
     ) public view returns (
         uint256 share,
@@ -881,9 +886,9 @@ contract ILOCKV1 is Initializable,
     ) {
         // if stake exists, then get it
         require(
-            stakeExists(stakeholder, stakeIdentifier),
-            "this stake does not exist and cannot be viewed");
-        Stake memory stake = _stakes[stakeholder][stakeIdentifier];
+            stakeExists(stakeIdentifier),
+            "this stake does not exist");
+        Stake memory stake = _stakes[stakeIdentifier];
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
@@ -943,28 +948,33 @@ contract ILOCKV1 is Initializable,
 
         // gets stake designated by stake identifier
     function getStake(
-        address stakeholder,
         bytes32 stakeIdentifier
     ) public view returns (
-        Stake memory stake
+        address stakeholder,
+        uint256 share,
+        uint256 paid,
+        uint256 pool
     ) {
-        return _stakes[stakeholder][stakeIdentifier]; }
+        Stake memory stake = _stakes[stakeIdentifier];
+        return (
+            stake.stakeholder,
+            stake.share,
+            stake.paid,
+            stake.pool); }
 
 /*************************************************/
 
         // view predicate for validating getStake & claimStake input
     function stakeExists(
-        address stakeholder,
-        bytes32 identifier
+        bytes32 stakeIdentifier
     ) public view returns (
         bool exists
     ) {
-        for (uint16 i = 0; i < _stakeIdentifiers[stakeholder].length; i++) {
-
-            if (_stakeIdentifiers[stakeholder][i] == identifier) {
-
-                // exists
-                return true; } }
+        if (_stakes[stakeIdentifier].share > 0 &&
+           _stakes[stakeIdentifier].stakeholder != address(0)) {
+            
+            // does exist
+            return true; }
         // does not exist
         return false; }
 
