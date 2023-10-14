@@ -733,6 +733,7 @@ contract ILOCKV1 is Initializable,
         address stakeholder = stake.stakeholder;
 		uint256 tokenShare = stake.share;
 		uint256 tokensPaid = stake.paid;
+		uint256 tokensRemaining = tokenShare - tokensPaid;
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vestingMonths = _pool[stake.pool].vests;
 
@@ -743,7 +744,7 @@ contract ILOCKV1 is Initializable,
         // number of payouts must not surpass number of vests
         require(
             tokensPaid < tokenShare,
-            "member already collected entire token share");
+            "stakeholder already collected entire token share");
         
         // determine the traunch amount claimant has rights to for each vested month
         uint256 monthlyTokenAmount = tokenShare / vestingMonths;
@@ -752,7 +753,7 @@ contract ILOCKV1 is Initializable,
 
         // even if cliff is passed, is it too soon for next payment?
         require(
-            paymentsMade < monthsPassed,
+            paymentsMade < monthsPassed - cliff,
             "payout too early");
         
         uint256 thesePayments;
@@ -770,7 +771,7 @@ contract ILOCKV1 is Initializable,
         uint256 thisPayout = thesePayments * monthlyTokenAmount;
 
         // if at final payment, add remainder of share to final payment
-        if (tokenShare - tokensPaid - thisPayout < tokenShare / vestingMonths) {
+        if (tokensRemaining - thisPayout < monthlyTokenAmount) {
             
             thisPayout += tokenShare % vestingMonths; }
 
@@ -824,7 +825,7 @@ contract ILOCKV1 is Initializable,
         // when cliff hasn't been surpassed, include that time into countdown
         } else if (monthsPassed < cliff) {
             
-            timeLeft = (cliff - monthsPassed - 1) * _MONTH +
+            timeLeft = (cliff - monthsPassed ) * _MONTH +
                         _nextPayout - block.timestamp;
 
         // during vesting period, timeleft is only time til next month's payment
