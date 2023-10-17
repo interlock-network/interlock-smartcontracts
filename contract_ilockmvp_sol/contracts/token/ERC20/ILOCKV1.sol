@@ -38,6 +38,7 @@ contract ILOCKV1 is Initializable,
     /** @dev **/
     event Paused(address account);
     event Unpaused(address account);
+	event RegisteredStake(Stake stake);
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
@@ -456,11 +457,10 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-             // emitting Approval, reverting on failure
-            // where msg.sender allowance w/`from` must be >= amount
-           // where `from` balance must be >= amount
-          // where `from` and `to` cannot = zero address
-         // which does not update allowance if allowance = u256.max
+            // emitting Approval and Transfer, reverting on failure
+           // where msg.sender allowance w/`from` must be >= amount
+          // where `from` balance must be >= amount
+         // where `from` and `to` cannot = zero address
         // pays portion of spender's allowance with owner to recipient
     function transferFrom(
         address from,
@@ -476,7 +476,10 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-        // internal implementation of transfer() above
+              // emitting Transfer, reverting on failure
+          // where `from` balance must be >= amount
+         // where `from` and `to` cannot = zero address
+        // is internal implementation of transfer() above
     function _transfer(
         address from,
         address to,
@@ -497,9 +500,8 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-          // emitting Approval, reverting on failure
-         // (=> no allownance delta when TransferFrom)
-        // defines tokens available to spender from msg.sender
+         // emitting Approval event, reverting on failure
+        // defines spender's transferrable tokens from from msg.sender
     function approve(
         address spender,
         uint256 amount
@@ -512,7 +514,8 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-        // internal implementation of approve() above 
+          // emitting Approvl event, reverting on failure
+        // is internal implementation of approve() above 
     function _approve(
         address owner,
         address spender,
@@ -527,7 +530,7 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-           // emitting Approval if finite, reverting on failure 
+           // emitting Approval event, reverting on failure 
           // will do nothing if infinite allowance
          // used strictly internally
         // deducts from spender's allowance with owner
@@ -544,14 +547,14 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-          // emitting Approval, reverting on failure
-         // (=> no allownance delta when TransferFrom)
-        // defines tokens available to spender from msg.sender
+          // emitting Approval event, reverting on failure
+          // only callable by multisig safe
+        // defines tokens directly available to spender from contract pool
     function approvePool(
         address spender,
         uint256 amount,
         uint8 poolnumber
-    ) public onlyOwner returns (
+    ) public onlyMultisig returns (
         bool success
     ) {
         _approve(pools[poolnumber], spender, amount);
@@ -590,9 +593,7 @@ contract ILOCKV1 is Initializable,
 
 /*************************************************/
 
-            // where `from` && `to` != zero account => to be regular xfer
-           // where `from` = zero account => `amount` to be minted `to`
-          // where `to` = zero account => `amount` to be burned `from`
+          // where `from` && `to` != zero account => to be regular xfer
          // where `from` && `to` = zero account => impossible
         // hook that inserts behavior prior to transfer/mint/burn
     function _beforeTokenTransfer(
@@ -657,9 +658,9 @@ contract ILOCKV1 is Initializable,
     ) {
         // generate stake identifier
         bytes32 stakeIdentifier = keccak256(
-                             bytes.concat(bytes20(data.stakeholder),
-                                          bytes32(data.share),
-                                          bytes1(data.pool) ) );
+                                  bytes.concat(bytes20(data.stakeholder),
+                                               bytes32(data.share),
+                                               bytes1(data.pool) ) );
         // validate input
         require(
             !stakeExists(stakeIdentifier),
@@ -684,6 +685,8 @@ contract ILOCKV1 is Initializable,
         _stakes[stakeIdentifier] = data;
         // store identifier for future iteration
         _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
+		// emit record
+		emit RegisteredStake(data);
         return true; }
 
 /*************************************************/
@@ -703,9 +706,9 @@ contract ILOCKV1 is Initializable,
             "this stake does not exist");
         Stake storage stake = _stakes[stakeIdentifier];
         address stakeholder = stake.stakeholder;
-		uint256 tokenShare = stake.share;
-		uint256 tokensPaid = stake.paid;
-		uint256 tokensRemaining = tokenShare - tokensPaid;
+        uint256 tokenShare = stake.share;
+        uint256 tokensPaid = stake.paid;
+        uint256 tokensRemaining = tokenShare - tokensPaid;
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vestingMonths = _pool[stake.pool].vests;
 
@@ -856,9 +859,9 @@ contract ILOCKV1 is Initializable,
         uint256 tokensPaidOut,
         uint256 tokensRemaining,
         uint256 tokensAvailable,
-		uint256 monthlyTokenAmount,
+        uint256 monthlyTokenAmount,
         uint256 vestingMonths,
-		uint256 cliff
+        uint256 cliff
     ) {
         // if stake exists, then get it
         require(
@@ -867,7 +870,7 @@ contract ILOCKV1 is Initializable,
         Stake memory stake = _stakes[stakeIdentifier];
         cliff = _pool[stake.pool].cliff;
         vestingMonths = _pool[stake.pool].vests;
-		tokenShare = stake.share;
+        tokenShare = stake.share;
 
         // how much has member already claimed
         tokensPaidOut = stake.paid;
@@ -907,7 +910,7 @@ contract ILOCKV1 is Initializable,
             tokensPaidOut,
             tokensRemaining,
             tokensAvailable,
-			monthlyTokenAmount,
+            monthlyTokenAmount,
             vestingMonths,
             cliff); }
 
