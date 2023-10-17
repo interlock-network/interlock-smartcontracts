@@ -430,34 +430,6 @@ contract ILOCKV1 is Initializable,
     ) {
         return _CAP; }
 
-/*************************************************/
-
-        // lists token pool data
-    function poolData(
-    ) public view returns (
-        PoolData memory pool1,
-        PoolData memory pool2,
-        PoolData memory pool3,
-        PoolData memory pool4,
-        PoolData memory pool5,
-        PoolData memory pool6,
-        PoolData memory pool7,
-        PoolData memory pool8,
-        PoolData memory pool9,
-        PoolData memory pool10
-    ) {
-        return (
-            _pool[0],
-            _pool[1],
-            _pool[2],
-            _pool[3],
-            _pool[4],
-            _pool[5],
-            _pool[6],
-            _pool[7],
-            _pool[8],
-            _pool[9] ); }
-
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
