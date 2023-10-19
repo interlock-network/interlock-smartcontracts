@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, defender } from "hardhat";
 import { readFileSync, writeFileSync } from "fs";
 
 import * as dotenv from "dotenv";
@@ -13,8 +13,9 @@ async function main () {
   const ILOCKV2 = await ethers.getContractFactory(CONTRACT_UPGRADE);
 
   console.log('Upgrading ILOCK token contract...');
-  const response = await upgrades.upgradeProxy(PROXY_ADDRESS, ILOCKV2);
-  console.log('ILOCK token contract upgraded.');
+  const response = await defender.proposeUpgradeWithApproval(PROXY_ADDRESS, ILOCKV2);
+  //const response = await upgrades.upgradeProxy(PROXY_ADDRESS, ILOCKV2);
+  console.log('ILOCK token contract upgrade proposed.');
 
   let upgradeReceipt = {
     "contractVersion": CONTRACT_UPGRADE,

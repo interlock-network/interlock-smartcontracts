@@ -38,11 +38,12 @@ contract ILOCKV1 is Initializable,
     /** @dev **/
     event Paused(address account);
     event Unpaused(address account);
-	event RegisteredStake(Stake stake);
+	event StakeRegistered(Stake stake);
+	event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
-    string constant private _SYMBOL = "ILOCK";
+    string constant private _SYMBOL = "TESTILOCK";
     uint8 constant private _DECIMALS = 18;
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
     uint256 constant private _REWARDS_POOL = 300_000_000;
@@ -54,11 +55,11 @@ contract ILOCKV1 is Initializable,
     uint256 constant private _MINUTE = 60 seconds;
     
     uint256 private _totalSupply;
-    uint256 private _nextPayout;
+    uint256 public _nextPayout;
     uint256 private _rewardedTotal;
 
-    address private _owner;
-    address private _multisigSafe;
+    address public _owner;
+    address public _multisigSafe;
 
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -634,7 +635,7 @@ contract ILOCKV1 is Initializable,
 
         // makes sure that distributions do not happen too early
     function _checkTime(
-    ) internal returns (
+    ) public returns (
         bool isTime
     ) {
         // test time
@@ -686,7 +687,7 @@ contract ILOCKV1 is Initializable,
         // store identifier for future iteration
         _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
 		// emit record
-		emit RegisteredStake(data);
+		emit StakeRegistered(data);
         return true; }
 
 /*************************************************/
@@ -728,7 +729,7 @@ contract ILOCKV1 is Initializable,
 
         // even if cliff is passed, is it too soon for next payment?
         require(
-            paymentsMade < monthsPassed - cliff,
+            paymentsMade <= monthsPassed - cliff,
             "payout too early");
         
         uint256 thesePayments;
@@ -759,6 +760,7 @@ contract ILOCKV1 is Initializable,
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
+		emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
         return true; }    
 
 /***************************************************************************/
@@ -793,14 +795,15 @@ contract ILOCKV1 is Initializable,
         uint256 timeLeft;
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
-        if (monthsPassed >= vests + cliff) {
+        if (monthsPassed >= vests + cliff ||
+		    _nextPayout < block.timestamp) {
             
             timeLeft = 0;
 
         // when cliff hasn't been surpassed, include that time into countdown
         } else if (monthsPassed < cliff) {
             
-            timeLeft = (cliff - monthsPassed ) * _MONTH +
+            timeLeft = (cliff - monthsPassed - 1) * _MONTH +
                         _nextPayout - block.timestamp;
 
         // during vesting period, timeleft is only time til next month's payment

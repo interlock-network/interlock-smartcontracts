@@ -32,6 +32,7 @@ async function main () {
                                      .toString()
                                      .split(',')
                                      .pop();
+    console.log(stakeIdentifier);
     let claimReceipt = {
       "stakeholder": stake.stakeholder,
       "stakeIdentifier": stakeIdentifier,

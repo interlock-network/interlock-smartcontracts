@@ -8,18 +8,18 @@ dotenv.config({ path: './.env.dev' });
 
 const config: HardhatUserConfig = {
   solidity: {
-		compilers: [
-			{
-				version: "0.8.19",
-				settings: {
-					optimizer: {
-						enabled: true,
-						runs: 200,
-					},
-				},
-			}
-		]
-	},
+    compilers: [
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      }
+    ]
+  },
   networks: {
     // for testnet
     "base-goerli": {

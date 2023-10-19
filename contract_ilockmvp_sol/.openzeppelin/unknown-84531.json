@@ -14,6 +14,31 @@
       "address": "0x48D4cd9077d109c51B10239faD3de0Cb41e5791b",
       "txHash": "0x36e04ee36cd72cb55239831a0e4dfdaf378b8b7b614d87dca04f49b667f0ba60",
       "kind": "transparent"
+    },
+    {
+      "address": "0x9258c6007010500deC23671b607640c034ec0DA3",
+      "txHash": "0x655ecffd37dc06049368013ca2e3256aa93bf65d991c93af4da47f01076b1a5f",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xd3f82Bbb77b2432d8c2BB362e5b263EA760b6a71",
+      "txHash": "0x6807ac896a7259e16617d7afe940fc52bf30693b844ffc02738d502339b9bde6",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xE9CBb0b5d2D60901b33b8658eac22066D529Be31",
+      "txHash": "0x212760fa83bcbc22dbf3d4c9dae2aa792fb75dff12e19d247daed0cc27c42949",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x17F3e61B530E6e8797c87Fcd63fB5c43F61Ed171",
+      "txHash": "0x183a224ee4199c3a2a0356b59b3f3396b5621e81a9a73f22643985301c5d696a",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x77dBea417B07621E09215D9C0b50Cf2C32143388",
+      "txHash": "0x274e1269a0af7cb28375e7ea4407656575a1235a8c4c55e08ed1e1e376c98473",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -566,6 +591,1202 @@
             "numberOfBytes": "160"
           },
           "t_struct(Stake)359_storage": {
+            "label": "struct ILOCKV1.Stake",
+            "members": [
+              {
+                "label": "stakeholder",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "share",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "paid",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pool",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "59edf4e04d6b946d65263487ccda5a3babc67bb7646f4271dd433b31d813ab9b": {
+      "address": "0xA78a6f4822B86E6B7CF0bF0F4E0076B71267ED95",
+      "txHash": "0x28f6b99b7c6d4252c9e6103b697f99846dfdbc38d39ad905ae428f60434e7a05",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "contracts/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:42"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:56"
+          },
+          {
+            "label": "_nextPayout",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:57"
+          },
+          {
+            "label": "_rewardedTotal",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:58"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:60"
+          },
+          {
+            "label": "_multisigSafe",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:61"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:63"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:64"
+          },
+          {
+            "label": "_rewardedInterlocker",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:65"
+          },
+          {
+            "label": "_stakes",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_mapping(t_bytes32,t_struct(Stake)364_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:66"
+          },
+          {
+            "label": "_stakeIdentifiers",
+            "offset": 0,
+            "slot": "61",
+            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:67"
+          },
+          {
+            "label": "pools",
+            "offset": 0,
+            "slot": "62",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:69"
+          },
+          {
+            "label": "TGEtriggered",
+            "offset": 0,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:70"
+          },
+          {
+            "label": "initialized",
+            "offset": 1,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:71"
+          },
+          {
+            "label": "monthsPassed",
+            "offset": 0,
+            "slot": "64",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:72"
+          },
+          {
+            "label": "_pool",
+            "offset": 0,
+            "slot": "65",
+            "type": "t_array(t_struct(PoolData)375_storage)10_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:87"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_array(t_uint256)100_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:973"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(PoolData)375_storage)10_storage": {
+            "label": "struct ILOCKV1.PoolData[10]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)100_storage": {
+            "label": "uint256[100]",
+            "numberOfBytes": "3200"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+            "label": "mapping(address => bytes32[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Stake)364_storage)": {
+            "label": "mapping(bytes32 => struct ILOCKV1.Stake)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PoolData)375_storage": {
+            "label": "struct ILOCKV1.PoolData",
+            "members": [
+              {
+                "label": "addr",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokens",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "vests",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "cliff",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(Stake)364_storage": {
+            "label": "struct ILOCKV1.Stake",
+            "members": [
+              {
+                "label": "stakeholder",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "share",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "paid",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pool",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "4d3d11d400c5a8403aece3f0dada107c59d2e0da71f1c29335ba6e31c5540811": {
+      "address": "0xd20af199Bc51363f6C08b4889DFa6aA3863F78d9",
+      "txHash": "0x98f37d3eec317f2af1ed4021fbb0e8f8aa4717df845ef427cebd0f7b6c2f44cf",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "contracts/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:43"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:57"
+          },
+          {
+            "label": "_nextPayout",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:58"
+          },
+          {
+            "label": "_rewardedTotal",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:59"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:61"
+          },
+          {
+            "label": "_multisigSafe",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:62"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:64"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:65"
+          },
+          {
+            "label": "_rewardedInterlocker",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:66"
+          },
+          {
+            "label": "_stakes",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_mapping(t_bytes32,t_struct(Stake)372_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:67"
+          },
+          {
+            "label": "_stakeIdentifiers",
+            "offset": 0,
+            "slot": "61",
+            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:68"
+          },
+          {
+            "label": "pools",
+            "offset": 0,
+            "slot": "62",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:70"
+          },
+          {
+            "label": "TGEtriggered",
+            "offset": 0,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:71"
+          },
+          {
+            "label": "initialized",
+            "offset": 1,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:72"
+          },
+          {
+            "label": "monthsPassed",
+            "offset": 0,
+            "slot": "64",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:73"
+          },
+          {
+            "label": "_pool",
+            "offset": 0,
+            "slot": "65",
+            "type": "t_array(t_struct(PoolData)383_storage)10_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_array(t_uint256)100_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:975"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(PoolData)383_storage)10_storage": {
+            "label": "struct ILOCKV1.PoolData[10]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)100_storage": {
+            "label": "uint256[100]",
+            "numberOfBytes": "3200"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+            "label": "mapping(address => bytes32[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Stake)372_storage)": {
+            "label": "mapping(bytes32 => struct ILOCKV1.Stake)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PoolData)383_storage": {
+            "label": "struct ILOCKV1.PoolData",
+            "members": [
+              {
+                "label": "addr",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokens",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "vests",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "cliff",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(Stake)372_storage": {
+            "label": "struct ILOCKV1.Stake",
+            "members": [
+              {
+                "label": "stakeholder",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "share",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "paid",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pool",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "46701b2a2e55a53c3da212bf25bc59e10d88e6780af500c88515ed7c9e0628d7": {
+      "address": "0x1e29D29a7e7B60a69Bef10e077531e2F6A8365D7",
+      "txHash": "0x226c51844670e483a39144ed60a83e271ff4e50cfffa235e5e1eca43c3082401",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "contracts/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:43"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:57"
+          },
+          {
+            "label": "_nextPayout",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:58"
+          },
+          {
+            "label": "_rewardedTotal",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:59"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:61"
+          },
+          {
+            "label": "_multisigSafe",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:62"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:64"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:65"
+          },
+          {
+            "label": "_rewardedInterlocker",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:66"
+          },
+          {
+            "label": "_stakes",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_mapping(t_bytes32,t_struct(Stake)372_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:67"
+          },
+          {
+            "label": "_stakeIdentifiers",
+            "offset": 0,
+            "slot": "61",
+            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:68"
+          },
+          {
+            "label": "pools",
+            "offset": 0,
+            "slot": "62",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:70"
+          },
+          {
+            "label": "TGEtriggered",
+            "offset": 0,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:71"
+          },
+          {
+            "label": "initialized",
+            "offset": 1,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:72"
+          },
+          {
+            "label": "monthsPassed",
+            "offset": 0,
+            "slot": "64",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:73"
+          },
+          {
+            "label": "_pool",
+            "offset": 0,
+            "slot": "65",
+            "type": "t_array(t_struct(PoolData)383_storage)10_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_array(t_uint256)100_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:976"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(PoolData)383_storage)10_storage": {
+            "label": "struct ILOCKV1.PoolData[10]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)100_storage": {
+            "label": "uint256[100]",
+            "numberOfBytes": "3200"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+            "label": "mapping(address => bytes32[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Stake)372_storage)": {
+            "label": "mapping(bytes32 => struct ILOCKV1.Stake)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PoolData)383_storage": {
+            "label": "struct ILOCKV1.PoolData",
+            "members": [
+              {
+                "label": "addr",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokens",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "vests",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "cliff",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(Stake)372_storage": {
+            "label": "struct ILOCKV1.Stake",
+            "members": [
+              {
+                "label": "stakeholder",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "share",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "paid",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pool",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "818691c50836c5b55254a7f90af027c74a58f08428924218af2e2c9974d144a2": {
+      "address": "0x3018A4E741b76120b4Ee41353Aa5e6d2DCc6E4f7",
+      "txHash": "0xf417d1ffee9eda52b6bfb4d976fc86012281e533a87a7510a804ffbfa5593b28",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "contracts/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:43"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:57"
+          },
+          {
+            "label": "_nextPayout",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:58"
+          },
+          {
+            "label": "_rewardedTotal",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:59"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:61"
+          },
+          {
+            "label": "_multisigSafe",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_address",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:62"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:64"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:65"
+          },
+          {
+            "label": "_rewardedInterlocker",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:66"
+          },
+          {
+            "label": "_stakes",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_mapping(t_bytes32,t_struct(Stake)372_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:67"
+          },
+          {
+            "label": "_stakeIdentifiers",
+            "offset": 0,
+            "slot": "61",
+            "type": "t_mapping(t_address,t_array(t_bytes32)dyn_storage)",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:68"
+          },
+          {
+            "label": "pools",
+            "offset": 0,
+            "slot": "62",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:70"
+          },
+          {
+            "label": "TGEtriggered",
+            "offset": 0,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:71"
+          },
+          {
+            "label": "initialized",
+            "offset": 1,
+            "slot": "63",
+            "type": "t_bool",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:72"
+          },
+          {
+            "label": "monthsPassed",
+            "offset": 0,
+            "slot": "64",
+            "type": "t_uint256",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:73"
+          },
+          {
+            "label": "_pool",
+            "offset": 0,
+            "slot": "65",
+            "type": "t_array(t_struct(PoolData)383_storage)10_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_array(t_uint256)100_storage",
+            "contract": "ILOCKV1",
+            "src": "contracts/token/ERC20/ILOCKV1.sol:976"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(PoolData)383_storage)10_storage": {
+            "label": "struct ILOCKV1.PoolData[10]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)100_storage": {
+            "label": "uint256[100]",
+            "numberOfBytes": "3200"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_array(t_bytes32)dyn_storage)": {
+            "label": "mapping(address => bytes32[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Stake)372_storage)": {
+            "label": "mapping(bytes32 => struct ILOCKV1.Stake)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PoolData)383_storage": {
+            "label": "struct ILOCKV1.PoolData",
+            "members": [
+              {
+                "label": "addr",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokens",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "vests",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "cliff",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(Stake)372_storage": {
             "label": "struct ILOCKV1.Stake",
             "members": [
               {

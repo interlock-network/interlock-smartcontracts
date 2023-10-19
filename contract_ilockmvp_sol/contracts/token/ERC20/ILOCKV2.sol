@@ -20,7 +20,7 @@ import "./extensions/IERC20MetadataUpgradeable.sol";
 import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
 
-contract ILOCKV1 is Initializable,
+contract ILOCKV2 is Initializable,
                     ContextUpgradeable,
                     IERC20Upgradeable,
                     IERC20MetadataUpgradeable {
@@ -971,7 +971,7 @@ contract ILOCKV1 is Initializable,
         return monthsPassed; }
 
 	function newFeature(
-	) public view returns (string memory) {
+	) public pure returns (string memory) {
 
 	return "new feature"; }
 

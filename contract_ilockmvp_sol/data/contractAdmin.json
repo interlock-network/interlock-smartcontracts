@@ -2,15 +2,15 @@
   {
     "deploymentReceipt": {
       "contractNetwork": "Arbitrum Mainnet",
-      "contractProxyAddress": "0x48D4cd9077d109c51B10239faD3de0Cb41e5791b",
-      "dateAndTime": "Fri, 13 Oct 2023 20:58:31 GMT"
+      "contractProxyAddress": "0x77dBea417B07621E09215D9C0b50Cf2C32143388",
+      "dateAndTime": "Thu, 19 Oct 2023 22:21:30 GMT"
     }
   },
   {
-    "multisigEnabledReceipt": {
-      "oldAddress": "0x4599Bb9B14e1bea536C175206cf878fe07dE390F",
-      "safeAddress": "0x3d5C5Cb27A0DCd4Af3bd794Fd63eF2d3357fF708",
-      "dateAndTime": "Wed, 18 Oct 2023 01:07:37 GMT"
+    "TGEreceipt": {
+      "hash": "0x5bc4b0ce25648708d1f438a4b5ff0530a9246ed1485bc504aa1ad22979bdbe69",
+      "blockHash": "0x58edb4cc4351c11b5f404e8c6a69383ce036e236c6214759505c75e89e3bada8",
+      "dateAndTime": "Thu, 19 Oct 2023 22:25:43 GMT"
     }
   }
 ]
