@@ -554,7 +554,7 @@ contract ILOCKV1 is Initializable,
         address spender,
         uint256 amount,
         uint8 poolnumber
-    ) public onlyMultisig returns (
+    ) public onlyMultisigSafe returns (
         bool success
     ) {
         _approve(pools[poolnumber], spender, amount);
