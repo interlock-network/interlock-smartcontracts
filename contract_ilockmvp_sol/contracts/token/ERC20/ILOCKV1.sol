@@ -79,11 +79,11 @@ contract ILOCKV1 is Initializable,
         uint8 pool; }
 
     struct PoolData {
+        string name;
         address addr;
         uint256 tokens;
         uint256 vests;
-        uint256 cliff;
-        string name; }
+        uint256 cliff; }
 
     PoolData[_POOLCOUNT] public _pool;
 
@@ -130,74 +130,74 @@ contract ILOCKV1 is Initializable,
     ) internal {
         
         _pool[0] = PoolData({
+            name: "Community Sale",
             addr: address(0),
             tokens: 3_703_703,
             vests: 3,
-            cliff: 1,
-            name: "community sale"
+            cliff: 1
         });
         _pool[1] = PoolData({
+            name: "Presale 1",
             addr: address(0),
             tokens: 48_626_667,
             vests: 18,
-            cliff: 1,
-            name: "presale 1"
+            cliff: 1
         });
         _pool[2] = PoolData({
+            name: "Presale 2",
             addr: address(0),
             tokens: 33_333_333,
             vests: 15,
-            cliff: 1,
-            name: "presale 2"
+            cliff: 1
         });
         _pool[3] = PoolData({
+            name: "Presale 3",
             addr: address(0),
             tokens: 25_714_286,
             vests: 12,
-            cliff: 1,
-            name: "presale 3"
+            cliff: 2
         });
         _pool[4] = PoolData({
+            name: "Public Sale",
             addr: address(0),
             tokens: 28_500_000,
             vests: 3,
-            cliff: 0,
-            name: "public sale"
+            cliff: 0
         });
         _pool[5] = PoolData({
+            name: "Founders and Team",
             addr: address(0),
             tokens: 200_000_000,
             vests: 36,
-            cliff: 6,
-            name: "founders and team"
+            cliff: 1
         });
         _pool[6] = PoolData({
+            name: "Outlier Ventures",
             addr: address(0),
             tokens: 40_000_000,
             vests: 24,
-            cliff: 1,
-            name: "outlier ventures"
+            cliff: 1
         });
         _pool[7] = PoolData({
+            name: "Advisors",
             addr: address(0),
             tokens: 25_000_000,
             vests: 24,
-            cliff: 1,
-            name: "advisors"
+            cliff: 1
         });
         _pool[8] = PoolData({
+            name: "Interlock Foundation",
             addr: address(0),
             tokens: 258_122_011,
             vests: 84,
-            cliff: 0,
-            name: "foundation"
+            cliff: 0
         });
         _pool[9] = PoolData({
+            name: "Strategic Partners and KOL",
             addr: address(0),
             tokens: 37_000_000,
             vests: 12,
-            cliff: 1,
-            name: "strategic partners and KOL"
+            cliff: 1
         }); }
 
 /***************************************************************************/
@@ -431,6 +431,30 @@ contract ILOCKV1 is Initializable,
         uint256 _cap
     ) {
         return _CAP; }
+
+/*************************************************/
+
+        // gets token cap
+    function poolData(
+		uint8 poolNumber
+    ) public view returns (
+        string memory poolName,
+		address poolAddress,
+		uint256 poolTokenSize,
+		uint256 poolTokenBalance,
+		uint256 poolTokensRemaining,
+		uint256 vestingMonths,
+		uint256 vestingCliff
+    ) {
+
+        return (
+			_pool[poolNumber].name,
+			_pool[poolNumber].addr,
+			_pool[poolNumber].tokens,
+			balanceOf(_pool[poolNumber].addr),
+			_pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
+			_pool[poolNumber].vests,
+			_pool[poolNumber].cliff ); }
 
 /***************************************************************************/
 /***************************************************************************/

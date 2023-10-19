@@ -2,15 +2,8 @@
   {
     "deploymentReceipt": {
       "contractNetwork": "Arbitrum Mainnet",
-      "contractProxyAddress": "0x77dBea417B07621E09215D9C0b50Cf2C32143388",
-      "dateAndTime": "Thu, 19 Oct 2023 22:21:30 GMT"
-    }
-  },
-  {
-    "TGEreceipt": {
-      "hash": "0x5bc4b0ce25648708d1f438a4b5ff0530a9246ed1485bc504aa1ad22979bdbe69",
-      "blockHash": "0x58edb4cc4351c11b5f404e8c6a69383ce036e236c6214759505c75e89e3bada8",
-      "dateAndTime": "Thu, 19 Oct 2023 22:25:43 GMT"
+      "contractProxyAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "dateAndTime": "Thu, 19 Oct 2023 23:50:59 GMT"
     }
   }
 ]
