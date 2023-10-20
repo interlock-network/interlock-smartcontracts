@@ -67,7 +67,6 @@ contract ILOCKV1 is Initializable,
     mapping(bytes32 => Stake) private _stakes;
     mapping(address => bytes32[]) private _stakeIdentifiers;
 
-    address[] public pools;
     bool public TGEtriggered;
     bool public initialized;
     uint256 public monthsPassed;
@@ -280,7 +279,6 @@ contract ILOCKV1 is Initializable,
             
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
-            pools.push(Pool);
             _pool[i].addr = Pool;
             uint256 balance = _pool[i].tokens;
             _balances[Pool] = balance;
@@ -581,7 +579,7 @@ contract ILOCKV1 is Initializable,
     ) public onlyMultisigSafe returns (
         bool success
     ) {
-        _approve(pools[poolnumber], spender, amount);
+        _approve(_pool[poolnumber].addr, spender, amount);
         return true; }
 
 /*************************************************/
@@ -776,7 +774,7 @@ contract ILOCKV1 is Initializable,
 
         // transfer and make sure it succeeds
         require(
-            _transfer(pools[stake.pool], stakeholder, thisPayout),
+            _transfer(_pool[stake.pool].addr, stakeholder, thisPayout),
             "stake claim transfer failed");
 
         // update member state

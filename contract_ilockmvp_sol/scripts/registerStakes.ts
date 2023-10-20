@@ -29,9 +29,9 @@ async function main () {
     const receipt = await response.wait();
 
     const stakeIdentifier = (await ilockv1.getStakeIdentifiers(stake.stakeholder))
-                                     .toString()
-                                     .split(',')
-                                     .pop();
+                                          .toString()
+                                          .split(',')
+                                          .pop();
     console.log(stakeIdentifier);
     let claimReceipt = {
       "stakeholder": stake.stakeholder,
