@@ -3,7 +3,7 @@
 /***************************************************************************/
 // SPDX-License-Identifier: MIT
 //
-// Interlock Network ERC-20 ILOCK Token Version 1
+// Interlock Network ERC-20 ILOCK Token Version 2
 //
 // Contributors:
 // blairmunroakusa
@@ -38,11 +38,12 @@ contract ILOCKV2 is Initializable,
     /** @dev **/
     event Paused(address account);
     event Unpaused(address account);
-	event RegisteredStake(Stake stake);
+	event StakeRegistered(Stake stake);
+	event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
-    string constant private _SYMBOL = "ILOCK";
+    string constant private _SYMBOL = "TESTILOCK";
     uint8 constant private _DECIMALS = 18;
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
     uint256 constant private _REWARDS_POOL = 300_000_000;
@@ -54,11 +55,11 @@ contract ILOCKV2 is Initializable,
     uint256 constant private _MINUTE = 60 seconds;
     
     uint256 private _totalSupply;
-    uint256 private _nextPayout;
+    uint256 public _nextPayout;
     uint256 private _rewardedTotal;
 
-    address private _owner;
-    address private _multisigSafe;
+    address public _owner;
+    address public _multisigSafe;
 
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -66,7 +67,6 @@ contract ILOCKV2 is Initializable,
     mapping(bytes32 => Stake) private _stakes;
     mapping(address => bytes32[]) private _stakeIdentifiers;
 
-    address[] public pools;
     bool public TGEtriggered;
     bool public initialized;
     uint256 public monthsPassed;
@@ -78,11 +78,11 @@ contract ILOCKV2 is Initializable,
         uint8 pool; }
 
     struct PoolData {
+        string name;
         address addr;
         uint256 tokens;
         uint256 vests;
-        uint256 cliff;
-        string name; }
+        uint256 cliff; }
 
     PoolData[_POOLCOUNT] public _pool;
 
@@ -129,74 +129,74 @@ contract ILOCKV2 is Initializable,
     ) internal {
         
         _pool[0] = PoolData({
+            name: "Community Sale",
             addr: address(0),
             tokens: 3_703_703,
             vests: 3,
-            cliff: 1,
-            name: "community sale"
+            cliff: 1
         });
         _pool[1] = PoolData({
+            name: "Presale 1",
             addr: address(0),
             tokens: 48_626_667,
             vests: 18,
-            cliff: 1,
-            name: "presale 1"
+            cliff: 1
         });
         _pool[2] = PoolData({
+            name: "Presale 2",
             addr: address(0),
             tokens: 33_333_333,
             vests: 15,
-            cliff: 1,
-            name: "presale 2"
+            cliff: 1
         });
         _pool[3] = PoolData({
+            name: "Presale 3",
             addr: address(0),
             tokens: 25_714_286,
             vests: 12,
-            cliff: 1,
-            name: "presale 3"
+            cliff: 2
         });
         _pool[4] = PoolData({
+            name: "Public Sale",
             addr: address(0),
             tokens: 28_500_000,
             vests: 3,
-            cliff: 0,
-            name: "public sale"
+            cliff: 0
         });
         _pool[5] = PoolData({
+            name: "Founders and Team",
             addr: address(0),
             tokens: 200_000_000,
             vests: 36,
-            cliff: 6,
-            name: "founders and team"
+            cliff: 1
         });
         _pool[6] = PoolData({
+            name: "Outlier Ventures",
             addr: address(0),
             tokens: 40_000_000,
             vests: 24,
-            cliff: 1,
-            name: "outlier ventures"
+            cliff: 1
         });
         _pool[7] = PoolData({
+            name: "Advisors",
             addr: address(0),
             tokens: 25_000_000,
             vests: 24,
-            cliff: 1,
-            name: "advisors"
+            cliff: 1
         });
         _pool[8] = PoolData({
+            name: "Interlock Foundation",
             addr: address(0),
             tokens: 258_122_011,
             vests: 84,
-            cliff: 0,
-            name: "foundation"
+            cliff: 0
         });
         _pool[9] = PoolData({
+            name: "Strategic Partners and KOL",
             addr: address(0),
             tokens: 37_000_000,
             vests: 12,
-            cliff: 1,
-            name: "strategic partners and KOL"
+            cliff: 1
         }); }
 
 /***************************************************************************/
@@ -279,7 +279,6 @@ contract ILOCKV2 is Initializable,
             
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
-            pools.push(Pool);
             _pool[i].addr = Pool;
             uint256 balance = _pool[i].tokens;
             _balances[Pool] = balance;
@@ -429,7 +428,30 @@ contract ILOCKV2 is Initializable,
     ) public pure returns (
         uint256 _cap
     ) {
-        return _CAP; }
+        return _CAP * _DECIMAL_MAGNITUDE; }
+
+/*************************************************/
+
+        // gets relevant pool data
+    function poolData(
+		uint8 poolNumber
+    ) public view returns (
+        string memory poolName,
+		address poolAddress,
+		uint256 poolTokenSize,
+		uint256 poolTokenBalance,
+		uint256 poolTokensRemaining,
+		uint256 vestingMonths,
+		uint256 vestingCliff
+    ) {
+        return (
+			_pool[poolNumber].name,
+			_pool[poolNumber].addr,
+			_pool[poolNumber].tokens,
+			balanceOf(_pool[poolNumber].addr),
+			_pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
+			_pool[poolNumber].vests,
+			_pool[poolNumber].cliff); }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -557,7 +579,7 @@ contract ILOCKV2 is Initializable,
     ) public onlyMultisigSafe returns (
         bool success
     ) {
-        _approve(pools[poolnumber], spender, amount);
+        _approve(_pool[poolnumber].addr, spender, amount);
         return true; }
 
 /*************************************************/
@@ -634,7 +656,7 @@ contract ILOCKV2 is Initializable,
 
         // makes sure that distributions do not happen too early
     function _checkTime(
-    ) internal returns (
+    ) public returns (
         bool isTime
     ) {
         // test time
@@ -686,7 +708,7 @@ contract ILOCKV2 is Initializable,
         // store identifier for future iteration
         _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
 		// emit record
-		emit RegisteredStake(data);
+		emit StakeRegistered(data);
         return true; }
 
 /*************************************************/
@@ -728,7 +750,7 @@ contract ILOCKV2 is Initializable,
 
         // even if cliff is passed, is it too soon for next payment?
         require(
-            paymentsMade < monthsPassed - cliff,
+            paymentsMade <= monthsPassed - cliff,
             "payout too early");
         
         uint256 thesePayments;
@@ -752,13 +774,14 @@ contract ILOCKV2 is Initializable,
 
         // transfer and make sure it succeeds
         require(
-            _transfer(pools[stake.pool], stakeholder, thisPayout),
+            _transfer(_pool[stake.pool].addr, stakeholder, thisPayout),
             "stake claim transfer failed");
 
         // update member state
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
+		emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
         return true; }    
 
 /***************************************************************************/
@@ -793,14 +816,15 @@ contract ILOCKV2 is Initializable,
         uint256 timeLeft;
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
-        if (monthsPassed >= vests + cliff) {
+        if (monthsPassed >= vests + cliff ||
+		    _nextPayout < block.timestamp) {
             
             timeLeft = 0;
 
         // when cliff hasn't been surpassed, include that time into countdown
         } else if (monthsPassed < cliff) {
             
-            timeLeft = (cliff - monthsPassed ) * _MONTH +
+            timeLeft = (cliff - monthsPassed - 1) * _MONTH +
                         _nextPayout - block.timestamp;
 
         // during vesting period, timeleft is only time til next month's payment
