@@ -430,11 +430,11 @@ contract ILOCKV1 is Initializable,
     ) public pure returns (
         uint256 _cap
     ) {
-        return _CAP; }
+        return _CAP * _DECIMAL_MAGNITUDE; }
 
 /*************************************************/
 
-        // gets token cap
+        // gets relevant pool data
     function poolData(
 		uint8 poolNumber
     ) public view returns (
@@ -446,7 +446,6 @@ contract ILOCKV1 is Initializable,
 		uint256 vestingMonths,
 		uint256 vestingCliff
     ) {
-
         return (
 			_pool[poolNumber].name,
 			_pool[poolNumber].addr,
@@ -454,7 +453,7 @@ contract ILOCKV1 is Initializable,
 			balanceOf(_pool[poolNumber].addr),
 			_pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
 			_pool[poolNumber].vests,
-			_pool[poolNumber].cliff ); }
+			_pool[poolNumber].cliff); }
 
 /***************************************************************************/
 /***************************************************************************/
