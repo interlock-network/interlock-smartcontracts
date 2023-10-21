@@ -54,15 +54,15 @@ contract ILOCKV1 is Initializable,
 
     /** @dev **/
     event Paused(
-		address account);
+        address account);
     event Unpaused(
-		address account);
+        address account);
     event StakeRegistered(
-		Stake stake);
+        Stake stake);
     event StakeClaimed(
-		address stakeholder,
-		bytes32 stakeIdentifier,
-		uint256 amount);
+        address stakeholder,
+        bytes32 stakeIdentifier,
+        uint256 amount);
 
     bool private _paused;
 
@@ -85,15 +85,15 @@ contract ILOCKV1 is Initializable,
     address public _multisigSafe;
 
     mapping(
-		address => uint256) private _balances;
+        address => uint256) private _balances;
     mapping(
-		address => mapping(
-			address => uint256)) private _allowances;
+        address => mapping(
+            address => uint256)) private _allowances;
 
     mapping(
-		bytes32 => Stake) private _stakes;
+        bytes32 => Stake) private _stakes;
     mapping(
-		address => bytes32[]) private _stakeIdentifiers;
+        address => bytes32[]) private _stakeIdentifiers;
 
     bool public TGEtriggered;
     bool public initialized;
@@ -138,11 +138,11 @@ contract ILOCKV1 is Initializable,
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
             // here we are adding up tokens to make sure
-			// sum is correct
+            // sum is correct
             sumTokens += _pool[i].tokens;
 
             // in the same breath we convert token amounts
-			// to ERC20 format
+            // to ERC20 format
             _pool[i].tokens *= _DECIMAL_MAGNITUDE;
         }
         require(
@@ -311,10 +311,13 @@ contract ILOCKV1 is Initializable,
             address Pool = address(new ILOCKpool());
             _pool[i].addr = Pool;
 
-			// mint to pools
-            uint256 balance = _pool[i].tokens;
-            _balances[Pool] = balance;
-            emit Transfer(address(0), Pool, balance); }
+            // mint to pools
+            uint256 poolBalance = _pool[i].tokens;
+            _balances[Pool] = poolBalance;
+            emit Transfer(
+                address(0),
+                Pool,
+                poolBalance); }
 
         // start the clock for time vault pools
         _nextPayout = block.timestamp + _MONTH;
@@ -322,9 +325,9 @@ contract ILOCKV1 is Initializable,
 
         // approve owner to spend any tokens sent to this contract in future
         _approve(
-			address(this),
-			_msgSender(),
-			_CAP * _DECIMAL_MAGNITUDE);
+            address(this),
+            _msgSender(),
+            _CAP * _DECIMAL_MAGNITUDE);
 
         // this must never happen again...
         TGEtriggered = true; }
@@ -479,8 +482,8 @@ contract ILOCKV1 is Initializable,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
-		PoolData thisPool = _pool[poolNumber];
-		uint256 poolBalance = balanceOf(thisPool.addr);
+        PoolData thisPool = _pool[poolNumber];
+        uint256 poolBalance = balanceOf(thisPool.addr);
 
         return (
             thisPool.name,
@@ -512,7 +515,10 @@ contract ILOCKV1 is Initializable,
         bool success
     ) {
         address owner = _msgSender();
-        _transfer(owner, to, amount);
+        _transfer(
+            owner,
+            to,
+            amount);
         return true; }
 
 //***********************************/
@@ -530,8 +536,14 @@ contract ILOCKV1 is Initializable,
         bool success
     ) {
         address spender = _msgSender();        
-        _spendAllowance(from, spender, amount);
-        _transfer(from, to, amount);
+        _spendAllowance(
+            from,
+            spender,
+            amount);
+        _transfer(
+            from,
+            to,
+            amount);
         return true; }
 
 //***********************************/
@@ -547,15 +559,22 @@ contract ILOCKV1 is Initializable,
     ) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) returns (
         bool success
     ) {
-        _beforeTokenTransfer(from, to, amount);
-
+        _beforeTokenTransfer(
+            from,
+            to,
+            amount);
         uint256 fromBalance = _balances[from];
         unchecked {
             _balances[from] = fromBalance - amount;
             _balances[to] += amount; }
-
-        emit Transfer(from, to, amount);
-        _afterTokenTransfer(from, to, amount);
+        emit Transfer(
+            from,
+            to,
+            amount);
+        _afterTokenTransfer(
+            from, 
+            to,
+            amount);
         return true; }
 
 //***********************************/
@@ -569,7 +588,10 @@ contract ILOCKV1 is Initializable,
         bool succcess
     ) {
         address owner = _msgSender();
-        _approve(owner, spender, amount);
+        _approve(
+            owner,
+            spender,
+            amount);
         return true; }
 
 //***********************************/
@@ -586,7 +608,10 @@ contract ILOCKV1 is Initializable,
             !paused(),
             "contract is paused");
         _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount); }
+        emit Approval(
+            owner,
+            spender,
+            amount); }
 
 //***********************************/
 
@@ -603,7 +628,10 @@ contract ILOCKV1 is Initializable,
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
             unchecked {
-                _approve(owner, spender, currentAllowance - amount);} } }
+                _approve(
+                    owner,
+                    spender,
+                    currentAllowance - amount);} } }
 
 //***********************************/
 
@@ -613,11 +641,14 @@ contract ILOCKV1 is Initializable,
     function approvePool(
         address spender,
         uint256 amount,
-        uint8 poolnumber
+        uint8 poolNumber
     ) public onlyMultisigSafe returns (
         bool success
     ) {
-        _approve(_pool[poolnumber].addr, spender, amount);
+        _approve(
+            _pool[poolNumber].addr,
+            spender,
+            amount);
         return true; }
 
 //***********************************/
@@ -630,7 +661,10 @@ contract ILOCKV1 is Initializable,
         bool success
     ) {    
         address owner = _msgSender();
-        _approve(owner, spender, allowance(owner, spender) + addedValue);
+        _approve(
+            owner,
+            spender,
+            allowance(owner, spender) + addedValue);
         return true; }
 
 //***********************************/
@@ -648,7 +682,10 @@ contract ILOCKV1 is Initializable,
             currentAllowance >= subtractedValue,
             "ERC20: decreased allowance below zero");
         unchecked {
-            _approve(owner, spender, currentAllowance - subtractedValue); }
+            _approve(
+                owner,
+                spender,
+                currentAllowance - subtractedValue); }
         return true; }
 
 //***********************************/
@@ -699,10 +736,16 @@ contract ILOCKV1 is Initializable,
     ) {
         // test time
         if (block.timestamp > _nextPayout) {
+
+            // delta time between now and last payout
             uint256 deltaT = block.timestamp - _nextPayout;
+            // calculate how many months to increment
             uint256 months = deltaT / _MONTH + 1;
+            // increment next payout by months in seconds
             _nextPayout += _nextPayout + months * _MONTH;
+            // increment months passed
             monthsPassed += months;
+
             // is time
             return true; }
         // is not time
@@ -812,14 +855,20 @@ contract ILOCKV1 is Initializable,
 
         // transfer and make sure it succeeds
         require(
-            _transfer(_pool[stake.pool].addr, stakeholder, thisPayout),
+            _transfer(
+                _pool[stake.pool].addr,
+                stakeholder,
+                thisPayout),
             "stake claim transfer failed");
 
         // update member state
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
-        emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
+        emit StakeClaimed(
+            stakeholder,
+            stakeIdentifier,
+            thisPayout);
         return true; }    
 
 //*************************************************************/
