@@ -482,7 +482,7 @@ contract ILOCKV1 is Initializable,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
-        PoolData thisPool = _pool[poolNumber];
+        PoolData memory thisPool = _pool[poolNumber];
         uint256 poolBalance = balanceOf(thisPool.addr);
 
         return (
