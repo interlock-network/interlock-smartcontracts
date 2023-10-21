@@ -1,16 +1,33 @@
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 // SPDX-License-Identifier: MIT
 //
-// Interlock Network ERC-20 ILOCK Token Version 2
+// Interlock Network ERC-20 ILOCK Token Version 1
 //
 // Contributors:
 // blairmunroakusa
 // ...
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//
+// This contract is comprised of Open Zeppelin components and
+// bespoke components.
+//
+// This is a token contract that implements a vesting schedule
+// for ILOCK stakeholders to claim their share of token (their 
+// 'stake') over the course of the vesting period. NOTE: a stake
+// in this context is not the same as 'staking tokens' in the
+// typical web3 sense. 'Stake' in this context in in the sense
+// that a stakeholder has a stake or investment in the project.
+//
+// Stakeholders are grouped into various token pools, with each
+// pool being defined by the Interlock Network tokenomics token
+// distribution schedule. Each pool is devoted to a specific
+// type of stakeholder with its own vesting schedule (cliff and
+// vesting period).
+//
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
 pragma solidity ^0.8.0;
 
@@ -25,21 +42,21 @@ contract ILOCKV2 is Initializable,
                     IERC20Upgradeable,
                     IERC20MetadataUpgradeable {
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * declarations
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
     /** @dev **/
     event Paused(address account);
     event Unpaused(address account);
-	event StakeRegistered(Stake stake);
-	event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
+    event StakeRegistered(Stake stake);
+    event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
@@ -86,15 +103,15 @@ contract ILOCKV2 is Initializable,
 
     PoolData[_POOLCOUNT] public _pool;
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * init
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
          // owned by msg.sender
         // initializes contract
@@ -123,7 +140,7 @@ contract ILOCKV2 is Initializable,
         initialized = true;
         TGEtriggered = false; }
 
-/*************************************************/
+//***********************************/
 
     function _initializePools(
     ) internal {
@@ -199,15 +216,15 @@ contract ILOCKV2 is Initializable,
             cliff: 1
         }); }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * modifiers
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
         // only allows owner to call
     modifier onlyOwner(
@@ -217,7 +234,7 @@ contract ILOCKV2 is Initializable,
             "only owner can call");
         _; }
 
-/*************************************************/
+//***********************************/
 
         // only allows the Safe wallet multisig safe to call
     modifier onlyMultisigSafe(
@@ -227,7 +244,7 @@ contract ILOCKV2 is Initializable,
             "only multisig safe can call");
         _; }
 
-/*************************************************/
+//***********************************/
 
         // verifies zero address was not provied
     modifier noZero(
@@ -238,7 +255,7 @@ contract ILOCKV2 is Initializable,
             "zero address where it shouldn't be");
         _; }
 
-/*************************************************/
+//***********************************/
 
         // verifies there exists enough token to proceed
     modifier isEnough(
@@ -250,15 +267,15 @@ contract ILOCKV2 is Initializable,
             "not enough tokens available");
         _; }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * TGE
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
         // generates all the tokens
     function triggerTGE(
@@ -294,15 +311,15 @@ contract ILOCKV2 is Initializable,
         // this must never happen again...
         TGEtriggered = true; }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * ownership and pausability
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/                    
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/                    
 
         // changes the contract owner
     function changeOwner(
@@ -311,7 +328,7 @@ contract ILOCKV2 is Initializable,
 
         _owner = newOwner; }
 
-/*************************************************/
+//***********************************/
 
         // returns pause status of contract
     function paused(
@@ -321,7 +338,7 @@ contract ILOCKV2 is Initializable,
 
         return _paused; }
 
-/*************************************************/
+//***********************************/
 
         // pauses any functions requiring unpause
     function pause(
@@ -334,7 +351,7 @@ contract ILOCKV2 is Initializable,
         
         emit Paused(_msgSender()); }
 
-/*************************************************/
+//***********************************/
 
         // resumes operation of functions requiring unpause
     function unpause(
@@ -347,15 +364,15 @@ contract ILOCKV2 is Initializable,
         
         emit Unpaused(_msgSender()); }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * ERC20 getter methods
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
         // gets token name (Interlock Network)
     function name(
@@ -364,7 +381,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _NAME; }
 
-/*************************************************/
+//***********************************/
 
         // gets token symbol (ILOCK)
     function symbol(
@@ -373,7 +390,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _SYMBOL; }
 
-/*************************************************/
+//***********************************/
 
         // gets token decimal number
     function decimals(
@@ -382,7 +399,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _DECIMALS; }
 
-/*************************************************/
+//***********************************/
 
         // gets tokens minted
     function totalSupply(
@@ -391,7 +408,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _totalSupply; }
 
-/*************************************************/
+//***********************************/
 
         // gets account balance (tokens payable)
     function balanceOf(
@@ -401,7 +418,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _balances[account]; }
 
-/*************************************************/
+//***********************************/
 
         // gets tokens spendable by spender from owner
     function allowance(
@@ -412,7 +429,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _allowances[owner][spender]; }
 
-/*************************************************/
+//***********************************/
 
         // gets total tokens remaining in pools
     function reserve(
@@ -421,7 +438,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
 
-/*************************************************/
+//***********************************/
 
         // gets token cap
     function cap(
@@ -430,38 +447,38 @@ contract ILOCKV2 is Initializable,
     ) {
         return _CAP * _DECIMAL_MAGNITUDE; }
 
-/*************************************************/
+//***********************************/
 
         // gets relevant pool data
     function poolData(
-		uint8 poolNumber
+        uint8 poolNumber
     ) public view returns (
         string memory poolName,
-		address poolAddress,
-		uint256 poolTokenSize,
-		uint256 poolTokenBalance,
-		uint256 poolTokensRemaining,
-		uint256 vestingMonths,
-		uint256 vestingCliff
+        address poolAddress,
+        uint256 poolTokenSize,
+        uint256 poolTokenBalance,
+        uint256 poolTokensRemaining,
+        uint256 vestingMonths,
+        uint256 vestingCliff
     ) {
         return (
-			_pool[poolNumber].name,
-			_pool[poolNumber].addr,
-			_pool[poolNumber].tokens,
-			balanceOf(_pool[poolNumber].addr),
-			_pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
-			_pool[poolNumber].vests,
-			_pool[poolNumber].cliff); }
+            _pool[poolNumber].name,
+            _pool[poolNumber].addr,
+            _pool[poolNumber].tokens,
+            balanceOf(_pool[poolNumber].addr),
+            _pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
+            _pool[poolNumber].vests,
+            _pool[poolNumber].cliff); }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * ERC20 doer methods
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
            // emitting Transfer, reverting on failure
           // where caller balanceOf must be >= amount
@@ -477,7 +494,7 @@ contract ILOCKV2 is Initializable,
         _transfer(owner, to, amount);
         return true; }
 
-/*************************************************/
+//***********************************/
 
             // emitting Approval and Transfer, reverting on failure
            // where msg.sender allowance w/`from` must be >= amount
@@ -496,7 +513,7 @@ contract ILOCKV2 is Initializable,
         _transfer(from, to, amount);
         return true; }
 
-/*************************************************/
+//***********************************/
 
               // emitting Transfer, reverting on failure
           // where `from` balance must be >= amount
@@ -520,7 +537,7 @@ contract ILOCKV2 is Initializable,
         _afterTokenTransfer(from, to, amount);
         return true; }
 
-/*************************************************/
+//***********************************/
 
          // emitting Approval event, reverting on failure
         // defines spender's transferrable tokens from from msg.sender
@@ -534,7 +551,7 @@ contract ILOCKV2 is Initializable,
         _approve(owner, spender, amount);
         return true; }
 
-/*************************************************/
+//***********************************/
 
           // emitting Approvl event, reverting on failure
         // is internal implementation of approve() above 
@@ -550,7 +567,7 @@ contract ILOCKV2 is Initializable,
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount); }
 
-/*************************************************/
+//***********************************/
 
            // emitting Approval event, reverting on failure 
           // will do nothing if infinite allowance
@@ -567,7 +584,7 @@ contract ILOCKV2 is Initializable,
             unchecked {
                 _approve(owner, spender, currentAllowance - amount);} } }
 
-/*************************************************/
+//***********************************/
 
           // emitting Approval event, reverting on failure
           // only callable by multisig safe
@@ -582,7 +599,7 @@ contract ILOCKV2 is Initializable,
         _approve(_pool[poolnumber].addr, spender, amount);
         return true; }
 
-/*************************************************/
+//***********************************/
 
         // allows client to safely execute approval facing double spend attack
     function increaseAllowance(
@@ -595,7 +612,7 @@ contract ILOCKV2 is Initializable,
         _approve(owner, spender, allowance(owner, spender) + addedValue);
         return true; }
 
-/*************************************************/
+//***********************************/
 
         // allows client to safely execute approval facing double spend attack
     function decreaseAllowance(
@@ -613,7 +630,7 @@ contract ILOCKV2 is Initializable,
             _approve(owner, spender, currentAllowance - subtractedValue); }
         return true; }
 
-/*************************************************/
+//***********************************/
 
           // where `from` && `to` != zero account => to be regular xfer
          // where `from` && `to` = zero account => impossible
@@ -631,7 +648,7 @@ contract ILOCKV2 is Initializable,
             !paused(),
             "contract is paused"); }
 
-/*************************************************/
+//***********************************/
 
             // where `from` && `to` != zero account => was regular xfer
            // where `from` = zero account => `amount` was minted `to`
@@ -644,15 +661,15 @@ contract ILOCKV2 is Initializable,
         uint256 amount
     ) internal virtual {}
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * stakeholder entry and distribution
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
         // makes sure that distributions do not happen too early
     function _checkTime(
@@ -670,7 +687,7 @@ contract ILOCKV2 is Initializable,
         // is not time
         return false; }
 
-/*************************************************/
+//***********************************/
 
         // register stake
     function registerStake(
@@ -707,11 +724,11 @@ contract ILOCKV2 is Initializable,
         _stakes[stakeIdentifier] = data;
         // store identifier for future iteration
         _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
-		// emit record
-		emit StakeRegistered(data);
+        // emit record
+        emit StakeRegistered(data);
         return true; }
 
-/*************************************************/
+//***********************************/
 
         // claim stake for vest periods accumulated
     function claimStake(
@@ -781,18 +798,18 @@ contract ILOCKV2 is Initializable,
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
-		emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
+        emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
         return true; }    
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
     /**
     * stakeholder getters
     **/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
          // on a stake by stake basis
         // returns time remaining until next token traunch may be claimed
@@ -817,7 +834,7 @@ contract ILOCKV2 is Initializable,
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
         if (monthsPassed >= vests + cliff ||
-		    _nextPayout < block.timestamp) {
+            _nextPayout < block.timestamp) {
             
             timeLeft = 0;
 
@@ -834,7 +851,7 @@ contract ILOCKV2 is Initializable,
 
         return parseTimeLeft(timeLeft); }
 
-/*************************************************/
+//***********************************/
 
         // breaks time left into human readable units for display on arbiscan
     function parseTimeLeft(
@@ -869,7 +886,7 @@ contract ILOCKV2 is Initializable,
             minutesRemaining,
             secondsRemaining); }
 
-/*************************************************/
+//***********************************/
 
             // get how much of amount left to pay is available to claim
            // get amount left to pay
@@ -938,7 +955,7 @@ contract ILOCKV2 is Initializable,
             vestingMonths,
             cliff); }
 
-/*************************************************/
+//***********************************/
 
         // gets stake identifiers for stakes owned by message caller
     function getStakeIdentifiers(
@@ -948,7 +965,7 @@ contract ILOCKV2 is Initializable,
     ) {
         return _stakeIdentifiers[stakeholder]; }
 
-/*************************************************/
+//***********************************/
 
         // gets stake designated by stake identifier
     function getStake(
@@ -966,7 +983,7 @@ contract ILOCKV2 is Initializable,
             stake.paid,
             stake.pool); }
 
-/*************************************************/
+//***********************************/
 
         // view predicate for validating getStake & claimStake input
     function stakeExists(
@@ -982,9 +999,9 @@ contract ILOCKV2 is Initializable,
         // does not exist
         return false; }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
     function testingIncrementMonth(
     ) public returns (uint256) {
@@ -994,19 +1011,19 @@ contract ILOCKV2 is Initializable,
 
         return monthsPassed; }
 
-	function newFeature(
-	) public pure returns (string memory) {
+    function newFeature(
+    ) public pure returns (string memory) {
 
-	return "new feature"; }
+    return "new feature"; }
 
 
-	uint256 public newstorage;
-	uint256[99] public __gap;
+    uint256 public newstorage;
+    uint256[99] public __gap;
 }
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
+//*************************************************************/
+//*************************************************************/
+//*************************************************************/
 
 
 
