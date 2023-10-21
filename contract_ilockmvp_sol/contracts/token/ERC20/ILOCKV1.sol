@@ -788,8 +788,9 @@ contract ILOCKV1 is Initializable,
         _stakes[stakeIdentifier] = data;
         // store identifier for future iteration
         _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
-        // emit record
-        emit StakeRegistered(data);
+
+        emit StakeRegistered(
+			data);
         return true; }
 
 //***********************************/
@@ -808,6 +809,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake storage stake = _stakes[stakeIdentifier];
+
+		// define relevant stake values
         address stakeholder = stake.stakeholder;
         uint256 tokenShare = stake.share;
         uint256 tokensPaid = stake.paid;
@@ -838,11 +841,13 @@ contract ILOCKV1 is Initializable,
         // when time has past vesting period, pay out remaining unclaimed payments
         if (cliff + vestingMonths <= monthsPassed) {
             
+			// these are all remaining payments in this case
             thesePayments = vestingMonths - paymentsMade;
 
-        // don't count months past vests+cliff as payments
+        // don't count months past payments made + cliff as payments
         } else {
 
+			// these 
             thesePayments = 1 + monthsPassed - paymentsMade - cliff; }
 
         // use payments to calculate amount to pay out
@@ -865,6 +870,7 @@ contract ILOCKV1 is Initializable,
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
+
         emit StakeClaimed(
             stakeholder,
             stakeIdentifier,
@@ -897,6 +903,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake memory stake = _stakes[stakeIdentifier];
+
+		// define relevant stake values
         uint256 cliff = _pool[stake.pool].cliff;
         uint256 vests = _pool[stake.pool].vests;
 
@@ -923,7 +931,7 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // breaks time left into human readable units for display on arbiscan
+        // breaks time left into human readable units for display on blockscanner
     function parseTimeLeft(
         uint256 timeLeft
     ) internal pure returns (
