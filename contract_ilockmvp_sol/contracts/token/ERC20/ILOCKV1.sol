@@ -53,10 +53,17 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 
     /** @dev **/
-    event Paused(address account);
-    event Unpaused(address account);
-    event StakeRegistered(Stake stake);
-    event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
+    event Paused(
+		address account);
+    event Unpaused(
+		address account);
+    event StakeRegistered(
+		Stake stake);
+    event StakeClaimed(
+		address stakeholder,
+		bytes32 stakeIdentifier,
+		uint256 amount);
+
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
@@ -73,16 +80,20 @@ contract ILOCKV1 is Initializable,
     
     uint256 private _totalSupply;
     uint256 public _nextPayout;
-    uint256 private _rewardedTotal;
 
     address public _owner;
     address public _multisigSafe;
 
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
-    mapping(address => uint256) private _rewardedInterlocker;
-    mapping(bytes32 => Stake) private _stakes;
-    mapping(address => bytes32[]) private _stakeIdentifiers;
+    mapping(
+		address => uint256) private _balances;
+    mapping(
+		address => mapping(
+			address => uint256)) private _allowances;
+
+    mapping(
+		bytes32 => Stake) private _stakes;
+    mapping(
+		address => bytes32[]) private _stakeIdentifiers;
 
     bool public TGEtriggered;
     bool public initialized;
@@ -126,15 +137,17 @@ contract ILOCKV1 is Initializable,
         // iterate through pools to create struct array
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
-            // here we are adding up tokens to make sure sum is correct
+            // here we are adding up tokens to make sure
+			// sum is correct
             sumTokens += _pool[i].tokens;
 
-            // in the same breath we convert token amounts to ERC20 format
+            // in the same breath we convert token amounts
+			// to ERC20 format
             _pool[i].tokens *= _DECIMAL_MAGNITUDE;
         }
         require(
             sumTokens == _CAP - _REWARDS_POOL,
-            "pool token amounts must add up cap less rewards");
+            "pool token amounts must add up to cap less rewards");
 
         _totalSupply = 0;
         initialized = true;
@@ -297,6 +310,8 @@ contract ILOCKV1 is Initializable,
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
             _pool[i].addr = Pool;
+
+			// mint to pools
             uint256 balance = _pool[i].tokens;
             _balances[Pool] = balance;
             emit Transfer(address(0), Pool, balance); }
@@ -306,7 +321,10 @@ contract ILOCKV1 is Initializable,
         monthsPassed = 0;
 
         // approve owner to spend any tokens sent to this contract in future
-        _approve(address(this), _msgSender(), _CAP * _DECIMAL_MAGNITUDE);
+        _approve(
+			address(this),
+			_msgSender(),
+			_CAP * _DECIMAL_MAGNITUDE);
 
         // this must never happen again...
         TGEtriggered = true; }
@@ -461,14 +479,17 @@ contract ILOCKV1 is Initializable,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
+		PoolData thisPool = _pool[poolNumber];
+		uint256 poolBalance = balanceOf(thisPool.addr);
+
         return (
-            _pool[poolNumber].name,
-            _pool[poolNumber].addr,
-            _pool[poolNumber].tokens,
-            balanceOf(_pool[poolNumber].addr),
-            _pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
-            _pool[poolNumber].vests,
-            _pool[poolNumber].cliff); }
+            thisPool.name,
+            thisPool.addr,
+            thisPool.tokens,
+            poolBalance,
+            thisPool.tokens - poolBalance,
+            thisPool.vests,
+            thisPool.cliff); }
 
 //*************************************************************/
 //*************************************************************/
