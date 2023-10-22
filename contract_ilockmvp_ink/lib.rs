@@ -1523,80 +1523,6 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
-/////// stakeholders  //////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function that registers a stakeholder's wallet and vesting info.
-        /// - Data used to calculate monthly payouts and track net paid.
-        /// - Stakeholder data also used for stakeholder to verify their place in vesting schedule.
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn register_stakeholder(
-            &mut self,
-            stakeholder: AccountId,
-            share: Balance,
-            poolnumber: u8,
-            overwrite: bool,
-        ) -> OtherResult<()> {
-
-            // make sure share is large enough to not round to zero on div
-            if share < MIN_SHARE as Balance {
-                return Err(OtherError::ShareTooSmall);
-            }
-
-            // make sure pool is valid
-            if poolnumber >= POOL_COUNT as u8 {
-                return Err(OtherError::PoolOutOfBounds);
-            }
-
-            // make sure stakeholder is not zero address
-            if stakeholder == AccountId::from([0_u8; 32]) {
-                return Err(OtherError::IsZeroAddress)
-            }
-
-            // get stakes held by this stakeholder
-            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
-                Some(stakes) => stakes,
-                None => Vec::new(),
-            };
-
-            // iterate through the stakeholders stakes and check to make sure no duplicate
-            if stakes.iter().any(|stake| stake.pool == poolnumber) && !overwrite {
-                return Err(OtherError::AlreadyRegistered)
-            }
-
-            // create stake struct
-            let this_stake = StakeholderData {
-                paid: 0,
-                share: share,
-                pool: poolnumber,
-            };
-
-            // iterate through preexisting stakes
-            for stake in stakes.iter_mut() {
-
-                if stake.pool == poolnumber {
-
-                    // replace old stake data
-                    *stake = this_stake;
-
-                    // insert stakeholder struct into mapping
-                    self.vest.stakeholder.insert(stakeholder, &stakes);
-
-                    return Ok(());
-                }
-            }
-            
-            // add stake to stakeholder's stake collection
-            stakes.push(this_stake);
-
-            // insert stakeholder struct into mapping
-            self.vest.stakeholder.insert(stakeholder, &stakes);
-
-            Ok(())
-        }
-
-////////////////////////////////////////////////////////////////////////////
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -2531,8 +2457,6 @@ pub mod tests_unit;
 // [!] happyunit_check_time                  <-- not possible to advance block, TEST ON TESTNET
 // [!] sadunit_check_time                    <-- not possible to advance block, TEST ON TESTNET
 // [!] happyunit_remaining_time              <-- not possible to advance block, TEST ON TESTNET
-// [x] happyunit_register_stakeholder        <-- this checked within distribute_tokens()
-// [] sadunit_register_stakeholder ... add sad case where share is greater than pool total?
 // [x] happyunit_stakeholder_data            <-- checked within distriut_tokens()
 // [x] happye2e_distribute_tokens            <-- this is to check that the vesting schedule works...
 // [x] happye2e_payout_tokens                 ...month passage is artificial here, without
