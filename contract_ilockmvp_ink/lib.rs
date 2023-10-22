@@ -1474,55 +1474,6 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
-/////// timing /////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function to check if enough time has passed to collect next payout.
-        /// - This function ensures Interlock cannot rush the vesting schedule.
-        /// - This function must be called before the next round of token distributions.
-        #[ink(message)]
-        pub fn check_time(
-            &mut self,
-        ) -> OtherResult<()> {
-    
-            let caller: AccountID = AccountID { address: self.env().caller() };
-
-            // make sure caller is designated multisigtx account
-            if !self.multisig.signatories.contains(&caller) {
-
-                return Err(OtherError::CallerNotSignatory);
-            }
-
-            // test to see if current time falls beyond time for next payout
-            if self.env().block_timestamp() > self.vest.nextpayout {
-
-                // update time variables
-                self.vest.nextpayout += ONE_MONTH;
-                self.vest.monthspassed += 1;
-
-                return Ok(());
-            }
-
-            // too early, do nothing
-            return Err(OtherError::PayoutTooEarly)
-        }
-        
-        /// - Time in seconds until next payout in minutes.
-        #[ink(message)]
-        pub fn remaining_time(
-            &self
-        ) -> Timestamp {
-
-            // calculate remaining time
-            let timeleft: Timestamp = match self.vest.nextpayout.checked_sub(self.env().block_timestamp()) {
-                Some(difference) => difference,
-                None => return 0,
-            };
-
-            timeleft
-        }
-
-////////////////////////////////////////////////////////////////////////////
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -1692,28 +1643,6 @@ pub mod ilockmvp {
         ) -> Balance {
 
             self.reward.total
-        }
-
-////////////////////////////////////////////////////////////////////////////
-//// misc  /////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function to get the number of months passed for contract.
-        #[ink(message)]
-        pub fn months_passed(
-            &self,
-        ) -> u16 {
-
-            self.vest.monthspassed
-        }
-
-        /// - Function to get the supply cap minted on TGE.
-        #[ink(message)]
-        pub fn cap(
-            &self,
-        ) -> Balance {
-
-            SUPPLY_CAP
         }
 
 ////////////////////////////////////////////////////////////////////////////
