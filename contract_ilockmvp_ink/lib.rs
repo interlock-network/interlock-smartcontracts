@@ -1570,52 +1570,6 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
-/////// pool data //////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function that returns pool data in human readable format..
-        /// - This will allow observers to verify vesting parameters for each pool (esp. theirs).
-        /// - Observers may verify pool data from explorer if so motivated.
-        /// - Pool numbers range from 0-11.
-        /// - Returns (name, tokens, vests, cliff) (formatted for convenient for Substrate UI)..
-        #[ink(message)]
-        pub fn pool_data(
-            &self,
-            poolnumber: u8,
-        ) -> OtherResult<(String, String, String, String)> {
-
-            // make sure pool is valid
-            if poolnumber >= POOL_COUNT as u8 {
-                return Err(OtherError::PoolOutOfBounds);
-            }
-        
-            let pool = &POOLS[poolnumber as usize];
-
-            Ok((
-                format!("pool: {:?} ", pool.name.to_string()),
-                format!("tokens alotted: {:?} ", pool.tokens),
-                format!("number of vests: {:?} ", pool.vests),
-                format!("vesting cliff: {:?} ", pool.cliffs),
-            ))
-        }
-        
-        /// - Get current balance of any vesting pool.
-        /// - Provide human readable and numberic format.
-        #[ink(message)]
-        pub fn pool_balance(
-            &self,
-            poolnumber: u8,
-        ) -> OtherResult<Balance> {
-
-            // make sure pool is valid
-            if poolnumber >= POOL_COUNT as u8 {
-                return Err(OtherError::PoolOutOfBounds);
-            }
-
-            Ok(self.balances[poolnumber as usize])
-        }
-
-////////////////////////////////////////////////////////////////////////////
 //// rewarding  ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
