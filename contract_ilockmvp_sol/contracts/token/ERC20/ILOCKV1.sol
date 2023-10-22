@@ -127,7 +127,7 @@ contract ILOCKV1 is Initializable,
          // owned by msg.sender
         // initializes contract
     function initialize(
-    ) public initializer onlyUninitialized {
+    ) public initializer {
 
         _owner = _msgSender();
 
@@ -238,16 +238,6 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 //*************************************************************/
-
-        // only callable once, on initialization
-    modifier onlyUninitialized(
-    ) {
-        require(
-            !initialized,
-            "can only initialize once");
-        _; }
-
-//***********************************/
 
         // only allows owner to call
     modifier onlyOwner(
