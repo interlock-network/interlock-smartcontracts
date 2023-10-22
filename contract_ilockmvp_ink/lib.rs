@@ -1526,140 +1526,14 @@ pub mod ilockmvp {
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - General function to transfer share a stakeholder is currently entitled to.
-        /// - This is called once per stakeholder per month by Interlock, Interlock paying fees.
-        /// - Pools are guaranteed to have enough tokens for all stakeholders.
+        /// - Function used to manually payout rewards tokens for airdrop purposes
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         #[openbrush::modifiers(when_not_paused)]
-        pub fn distribute_tokens(
-            &mut self,
-            stakeholder: AccountId,
-            poolnumber: u8,
-        ) -> OtherResult<()> {
-
-            // make sure stakeholder is not zero address
-            if stakeholder == AccountId::from([0_u8; 32]) {
-                return Err(OtherError::IsZeroAddress)
-            }
-
-            // make sure pool is valid
-            if poolnumber >= POOL_COUNT as u8 {
-                return Err(OtherError::PoolOutOfBounds);
-            }
-
-            // get stakes held by this stakeholder
-            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
-                Some(stakes) => stakes,
-                None => { return Err(OtherError::StakeholderNotFound) },
-            };
-
-            // iterate through the stakeholders stakes and check to make sure pool stake exists
-            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
-                return Err(OtherError::NoStake)
-            }
-
-            // iterate through the stakeholders stakes and distribute tokens
-            for stake in stakes.iter_mut() {
-
-                if stake.pool == poolnumber {
-
-                    let pool = &POOLS[stake.pool as usize];
-
-                    // require cliff to have been surpassed
-                    if self.vest.monthspassed < pool.cliffs as u16 {
-                        return Err(OtherError::CliffNotPassed)
-                    }
-
-                    // require share has not been completely paid out
-                    if stake.paid == stake.share {
-                        return Err(OtherError::StakeholderSharePaid)
-                    }
-
-                    // calculate the payout owed
-                    // ! no checked_div needed; pool.vests guaranteed to be nonzero
-                    let mut payout: Balance = self.calculate_payout(stake)?;
-
-                    // require that payout isn't repeatable for this month
-                    // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
-                    let payments = self.calculate_payments(stake)?;
-                    if payments >= self.vest.monthspassed as u128 {
-                        return Err(OtherError::PayoutTooEarly)
-                    }
-
-                    // calculate the new total paid to stakeholder
-                    let mut newpaidtotal: Balance = match stake.paid.checked_add(payout) {
-                        Some(sum) => sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // calculate remaining share
-                    let remainingshare: Balance = match stake.share.checked_sub(newpaidtotal) {
-                        Some(difference) => difference,
-                        None => return Err(OtherError::Underflow),
-                    };
-
-                    // if this is final payment, add token remainder to payout
-                    // (this is to compensate for floor division that calculates payamount)
-                    if remainingshare < payout {
-    
-                        payout += remainingshare;
-                        newpaidtotal = stake.share;
-                    }
-
-                    // increment distribution to stakeholder account
-                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-                    match stakeholderbalance.checked_add(payout) {
-                        Some(sum) => stakeholderbalance = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
-
-                    // increment total supply
-                    match self.balances[CIRCULATING as usize].checked_add(payout) {
-                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // deduct tokens from owners account
-                    let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
-                    match ownerbalance.checked_sub(payout) {
-                        Some(difference) => ownerbalance = difference,
-                        None => return Err(OtherError::Underflow),
-                    };
-                    self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
-
-                    // update pool balance
-                    match self.balances[stake.pool as usize].checked_sub(payout) {
-                        Some(difference) => self.balances[stake.pool as usize] = difference,
-                        None => return Err(OtherError::Underflow),
-                    };
-
-                    // update amount paid for this particular stake
-                    stake.paid = newpaidtotal;
-                }
-            }
-
-            // finally update stakeholder data struct state
-            self.vest.stakeholder.insert(stakeholder, &stakes);
-
-            Ok(())
-        }
-
-        /// - Function used to payout tokens to pools with no vesting schedule.
-        /// POOL ARGUMENTS:
-        ///      PARTNERS
-        ///      COMMUNITY
-        ///      PUBLIC
-        ///      PROCEEDS
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        #[openbrush::modifiers(when_not_paused)]
-        pub fn payout_tokens(
+        pub fn airdrop_tokens(
             &mut self,
             stakeholder: AccountId,
             amount: Balance,
-            pool: String,
         ) -> OtherResult<()> {
 
             let owner: AccountId = self.env().caller();
@@ -1669,80 +1543,28 @@ pub mod ilockmvp {
                 return Err(OtherError::IsZeroAddress)
             }
 
-            // get stakes held by this stakeholder
-            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
-                Some(stakes) => stakes,
-                None => { return Err(OtherError::StakeholderNotFound) },
+            // now transfer tokens
+            // increment distribution to stakeholder account
+            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+            match stakeholderbalance.checked_add(amount) {
+                Some(sum) => stakeholderbalance = sum,
+                None => return Err(OtherError::Overflow),
+            };
+            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+            // increment total supply
+            match self.balances[CIRCULATING as usize].checked_add(amount) {
+                Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                None => return Err(OtherError::Overflow),
             };
 
-            let poolnumber: u8 = match pool.as_str() {
-                "PARTNERS"      => PARTNERS,
-                "COMMUNITY"     => COMMUNITY,
-                "PUBLIC"        => PUBLIC,
-                "PROCEEDS"      => PROCEEDS,
-                _ => return Err(OtherError::InvalidPool)
+            // deduct tokens from owners account
+            let mut ownerbalance: Balance = self.psp22.balance_of(owner);
+            match ownerbalance.checked_sub(amount) {
+                Some(difference) => ownerbalance = difference,
+                None => return Err(OtherError::Underflow),
             };
-
-            // iterate through the stakeholders stakes and distribute tokens
-            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
-                return Err(OtherError::NoStake)
-            }
-
-            // iterate through the stakeholders stakes and distribute tokens
-            for stake in stakes.iter_mut() {
-
-                if stake.pool == poolnumber {
-
-                    // require share has not been completely paid out
-                    if stake.paid == stake.share {
-                        return Err(OtherError::StakeholderSharePaid)
-                    }
-
-                    // calculate new total amount paid after amount
-                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
-                        Some(sum) => sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // make sure payout doesn't exceed share
-                    if newpaidtotal > stake.share {
-
-                        return Err(OtherError::PaymentTooLarge);
-                    }
-
-                    // now transfer tokens
-                    // increment distribution to stakeholder account
-                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-                    match stakeholderbalance.checked_add(amount) {
-                        Some(sum) => stakeholderbalance = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
-
-                    // increment total supply
-                    match self.balances[CIRCULATING as usize].checked_add(amount) {
-                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // calculate the new total paid to stakeholder
-                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
-                        Some(sum) => sum,
-                        None => return Err(OtherError::Overflow),
-                    };
-
-                    // deduct tokens from owners account
-                    let mut ownerbalance: Balance = self.psp22.balance_of(owner);
-                    match ownerbalance.checked_sub(amount) {
-                        Some(difference) => ownerbalance = difference,
-                        None => return Err(OtherError::Underflow),
-                    };
-                    self.psp22.balances.insert(&owner, &ownerbalance);
-
-                    // update amount paid for this particular stake
-                    stake.paid = newpaidtotal;
-                }
-            }
+            self.psp22.balances.insert(&owner, &ownerbalance);
 
             Ok(())
         }
