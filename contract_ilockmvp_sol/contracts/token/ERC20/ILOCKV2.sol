@@ -29,7 +29,7 @@
 //*************************************************************/
 //*************************************************************/
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 import "./IERC20Upgradeable.sol";
 import "./ILOCKpool.sol";
@@ -53,10 +53,17 @@ contract ILOCKV2 is Initializable,
 //*************************************************************/
 
     /** @dev **/
-    event Paused(address account);
-    event Unpaused(address account);
-    event StakeRegistered(Stake stake);
-    event StakeClaimed(address stakeholder, bytes32 stakeIdentifier, uint256 amount);
+    event Paused(
+        address account);
+    event Unpaused(
+        address account);
+    event StakeRegistered(
+        Stake stake);
+    event StakeClaimed(
+        address stakeholder,
+        bytes32 stakeIdentifier,
+        uint256 amount);
+
     bool private _paused;
 
     string constant private _NAME = "Interlock Network";
@@ -72,19 +79,23 @@ contract ILOCKV2 is Initializable,
     uint256 constant private _MINUTE = 60 seconds;
     
     uint256 private _totalSupply;
-    uint256 public _nextPayout;
-    uint256 private _rewardedTotal;
+    uint256 public nextPayout;
 
-    address public _owner;
-    address public _multisigSafe;
+    address public contractOwner;
+    address public multisigSafe;
 
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
-    mapping(address => uint256) private _rewardedInterlocker;
-    mapping(bytes32 => Stake) private _stakes;
-    mapping(address => bytes32[]) private _stakeIdentifiers;
+    mapping(
+        address => uint256) private _balances;
+    mapping(
+        address => mapping(
+            address => uint256)) private _allowances;
 
-    bool public TGEtriggered;
+    mapping(
+        bytes32 => Stake) private _stakes;
+    mapping(
+        address => bytes32[]) private _stakeIdentifiers;
+
+    bool public tgeTriggered;
     bool public initialized;
     uint256 public monthsPassed;
 
@@ -101,7 +112,7 @@ contract ILOCKV2 is Initializable,
         uint256 vests;
         uint256 cliff; }
 
-    PoolData[_POOLCOUNT] public _pool;
+    PoolData[_POOLCOUNT] public pool;
 
 //*************************************************************/
 //*************************************************************/
@@ -118,7 +129,7 @@ contract ILOCKV2 is Initializable,
     function initialize(
     ) public initializer {
 
-        _owner = _msgSender();
+        contractOwner = _msgSender();
 
         _initializePools();
 
@@ -126,89 +137,91 @@ contract ILOCKV2 is Initializable,
         // iterate through pools to create struct array
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
-            // here we are adding up tokens to make sure sum is correct
-            sumTokens += _pool[i].tokens;
+            // here we are adding up tokens to make sure
+            // sum is correct
+            sumTokens += pool[i].tokens;
 
-            // in the same breath we convert token amounts to ERC20 format
-            _pool[i].tokens *= _DECIMAL_MAGNITUDE;
-        }
+            // in the same breath we convert token amounts
+            // to ERC20 format
+            pool[i].tokens *= _DECIMAL_MAGNITUDE; }
+
         require(
             sumTokens == _CAP - _REWARDS_POOL,
-            "pool token amounts must add up cap less rewards");
+            "pool token amounts must add up to cap less rewards");
 
         _totalSupply = 0;
         initialized = true;
-        TGEtriggered = false; }
+        tgeTriggered = false; }
 
 //***********************************/
 
     function _initializePools(
     ) internal {
         
-        _pool[0] = PoolData({
+        pool[0] = PoolData({
             name: "Community Sale",
             addr: address(0),
             tokens: 3_703_703,
             vests: 3,
             cliff: 1
         });
-        _pool[1] = PoolData({
+        pool[1] = PoolData({
             name: "Presale 1",
             addr: address(0),
             tokens: 48_626_667,
             vests: 18,
             cliff: 1
         });
-        _pool[2] = PoolData({
+        pool[2] = PoolData({
             name: "Presale 2",
             addr: address(0),
             tokens: 33_333_333,
             vests: 15,
             cliff: 1
         });
-        _pool[3] = PoolData({
+        pool[3] = PoolData({
             name: "Presale 3",
             addr: address(0),
             tokens: 25_714_286,
             vests: 12,
             cliff: 2
         });
-        _pool[4] = PoolData({
+        pool[4] = PoolData({
             name: "Public Sale",
             addr: address(0),
             tokens: 28_500_000,
             vests: 3,
             cliff: 0
         });
-        _pool[5] = PoolData({
+        pool[5] = PoolData({
             name: "Founders and Team",
             addr: address(0),
             tokens: 200_000_000,
             vests: 36,
             cliff: 1
         });
-        _pool[6] = PoolData({
+        pool[6] = PoolData({
             name: "Outlier Ventures",
             addr: address(0),
             tokens: 40_000_000,
             vests: 24,
             cliff: 1
         });
-        _pool[7] = PoolData({
+        pool[7] = PoolData({
             name: "Advisors",
             addr: address(0),
             tokens: 25_000_000,
             vests: 24,
             cliff: 1
         });
-        _pool[8] = PoolData({
+        pool[8] = PoolData({
             name: "Interlock Foundation",
             addr: address(0),
             tokens: 258_122_011,
             vests: 84,
             cliff: 0
         });
-        _pool[9] = PoolData({
+        pool[9] = PoolData({
             name: "Strategic Partners and KOL",
             addr: address(0),
             tokens: 37_000_000,
@@ -230,7 +243,7 @@ contract ILOCKV2 is Initializable,
     modifier onlyOwner(
     ) {
         require(
-            _msgSender() == _owner,
+            _msgSender() == contractOwner,
             "only owner can call");
         _; }
 
@@ -240,7 +253,7 @@ contract ILOCKV2 is Initializable,
     modifier onlyMultisigSafe(
     ) {
         require(
-            _msgSender() == _multisigSafe,
+            _msgSender() == multisigSafe,
             "only multisig safe can call");
         _; }
 
@@ -267,6 +280,16 @@ contract ILOCKV2 is Initializable,
             "not enough tokens available");
         _; }
 
+//***********************************/
+
+        // verifies that contract is not paused
+    modifier notPaused(
+    ) {
+        require(
+            !_paused,
+            "contract is paused");
+        _; }
+
 //*************************************************************/
 //*************************************************************/
 //*************************************************************/
@@ -280,36 +303,46 @@ contract ILOCKV2 is Initializable,
         // generates all the tokens
     function triggerTGE(
         address multisigSafe_
-    ) public onlyOwner {
-
+    ) public 
+        onlyOwner
+        noZero(multisigSafe_)
+    {
         require(
             initialized,
             "contract not initialized");
         require(
-            !TGEtriggered,
+            !tgeTriggered,
             "TGE already happened");
 
-        _multisigSafe = multisigSafe_;
+        multisigSafe = multisigSafe_;
 
         // create pool accounts and initiate
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
             
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
-            _pool[i].addr = Pool;
-            uint256 balance = _pool[i].tokens;
-            _balances[Pool] = balance;
-            emit Transfer(address(0), Pool, balance); }
+            pool[i].addr = Pool;
+
+            // mint to pools
+            uint256 poolBalance = pool[i].tokens;
+            _balances[Pool] = poolBalance;
+            emit Transfer(
+                address(0),
+                Pool,
+                poolBalance); }
 
         // start the clock for time vault pools
-        _nextPayout = block.timestamp + _MONTH;
+        nextPayout = block.timestamp + _MONTH;
         monthsPassed = 0;
 
-        // approve owner to spend any tokens sent to this contract in future
-        _approve(address(this), _msgSender(), _CAP * _DECIMAL_MAGNITUDE);
+        // approve owner for tokens sent to this contract in future
+        _approve(
+            address(this),
+            _msgSender(),
+            _CAP * _DECIMAL_MAGNITUDE);
 
         // this must never happen again...
-        TGEtriggered = true; }
+        tgeTriggered = true; }
 
 //*************************************************************/
 //*************************************************************/
@@ -324,9 +357,11 @@ contract ILOCKV2 is Initializable,
         // changes the contract owner
     function changeOwner(
         address newOwner
-    ) public onlyMultisigSafe {
-
-        _owner = newOwner; }
+    ) public 
+        onlyMultisigSafe
+        noZero(newOwner)
+    {
+        contractOwner = newOwner; }
 
 //***********************************/
 
@@ -335,15 +370,15 @@ contract ILOCKV2 is Initializable,
     ) public view returns (
         bool isPaused
     ) {
-
         return _paused; }
 
 //***********************************/
 
         // pauses any functions requiring unpause
     function pause(
-    ) public onlyMultisigSafe {
-        
+    ) public
+        onlyMultisigSafe ]
+    {    
         require(
             paused(),
             "already paused");
@@ -355,8 +390,9 @@ contract ILOCKV2 is Initializable,
 
         // resumes operation of functions requiring unpause
     function unpause(
-    ) public onlyMultisigSafe {
-        
+    ) public
+        onlyMultisigSafe
+    {    
         require(
             !paused(),
             "already unpaused");
@@ -461,14 +497,17 @@ contract ILOCKV2 is Initializable,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
+        PoolData memory thisPool = pool[poolNumber];
+        uint256 poolBalance = balanceOf(thisPool.addr);
+
         return (
-            _pool[poolNumber].name,
-            _pool[poolNumber].addr,
-            _pool[poolNumber].tokens,
-            balanceOf(_pool[poolNumber].addr),
-            _pool[poolNumber].tokens - balanceOf(_pool[poolNumber].addr),
-            _pool[poolNumber].vests,
-            _pool[poolNumber].cliff); }
+            thisPool.name,
+            thisPool.addr,
+            thisPool.tokens,
+            poolBalance,
+            thisPool.tokens - poolBalance,
+            thisPool.vests,
+            thisPool.cliff); }
 
 //*************************************************************/
 //*************************************************************/
@@ -491,7 +530,10 @@ contract ILOCKV2 is Initializable,
         bool success
     ) {
         address owner = _msgSender();
-        _transfer(owner, to, amount);
+        _transfer(
+            owner,
+            to,
+            amount);
         return true; }
 
 //***********************************/
@@ -509,13 +551,19 @@ contract ILOCKV2 is Initializable,
         bool success
     ) {
         address spender = _msgSender();        
-        _spendAllowance(from, spender, amount);
-        _transfer(from, to, amount);
+        _spendAllowance(
+            from,
+            spender,
+            amount);
+        _transfer(
+            from,
+            to,
+            amount);
         return true; }
 
 //***********************************/
 
-              // emitting Transfer, reverting on failure
+           // emitting Transfer, reverting on failure
           // where `from` balance must be >= amount
          // where `from` and `to` cannot = zero address
         // is internal implementation of transfer() above
@@ -523,18 +571,29 @@ contract ILOCKV2 is Initializable,
         address from,
         address to,
         uint256 amount
-    ) internal virtual noZero(from) noZero(to) isEnough(_balances[from], amount) returns (
+    ) internal virtual
+        noZero(from)
+        noZero(to)
+        isEnough(_balances[from], amount)
+    returns (
         bool success
     ) {
-        _beforeTokenTransfer(from, to, amount);
-
+        _beforeTokenTransfer(
+            from,
+            to,
+            amount);
         uint256 fromBalance = _balances[from];
         unchecked {
             _balances[from] = fromBalance - amount;
             _balances[to] += amount; }
-
-        emit Transfer(from, to, amount);
-        _afterTokenTransfer(from, to, amount);
+        emit Transfer(
+            from,
+            to,
+            amount);
+        _afterTokenTransfer(
+            from, 
+            to,
+            amount);
         return true; }
 
 //***********************************/
@@ -548,24 +607,30 @@ contract ILOCKV2 is Initializable,
         bool succcess
     ) {
         address owner = _msgSender();
-        _approve(owner, spender, amount);
+        _approve(
+            owner,
+            spender,
+            amount);
         return true; }
 
 //***********************************/
 
-          // emitting Approvl event, reverting on failure
+         // emitting Approvl event, reverting on failure
         // is internal implementation of approve() above 
     function _approve(
         address owner,
         address spender,
         uint256 amount
-    ) internal virtual noZero(owner) noZero(spender) {
-
-        require(
-            !paused(),
-            "contract is paused");
+    ) internal virtual
+        notPaused
+        noZero(owner)
+        noZero(spender)
+    {
         _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount); }
+        emit Approval(
+            owner,
+            spender,
+            amount); }
 
 //***********************************/
 
@@ -577,31 +642,41 @@ contract ILOCKV2 is Initializable,
         address owner,
         address spender,
         uint256 amount
-    ) internal virtual isEnough(allowance(owner, spender), amount) {
-    
+    ) internal virtual
+        isEnough(allowance(owner, spender), amount)
+    {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
             unchecked {
-                _approve(owner, spender, currentAllowance - amount);} } }
+                _approve(
+                    owner,
+                    spender,
+                    currentAllowance - amount);} } }
 
 //***********************************/
 
-          // emitting Approval event, reverting on failure
+           // emitting Approval event, reverting on failure
           // only callable by multisig safe
-        // defines tokens directly available to spender from contract pool
+         // defines pool tokens directly available to spender
+        // example use case, approving exchange for public sale pool
     function approvePool(
         address spender,
         uint256 amount,
-        uint8 poolnumber
-    ) public onlyMultisigSafe returns (
+        uint8 poolNumber
+    ) public
+        onlyMultisigSafe
+    returns (
         bool success
     ) {
-        _approve(_pool[poolnumber].addr, spender, amount);
+        _approve(
+            pool[poolNumber].addr,
+            spender,
+            amount);
         return true; }
 
 //***********************************/
 
-        // allows client to safely execute approval facing double spend attack
+        // allows client safe approval facing double spend attack
     function increaseAllowance(
         address spender,
         uint256 addedValue
@@ -609,12 +684,15 @@ contract ILOCKV2 is Initializable,
         bool success
     ) {    
         address owner = _msgSender();
-        _approve(owner, spender, allowance(owner, spender) + addedValue);
+        _approve(
+            owner,
+            spender,
+            allowance(owner, spender) + addedValue);
         return true; }
 
 //***********************************/
 
-        // allows client to safely execute approval facing double spend attack
+        // allows client safe approval facing double spend attack
     function decreaseAllowance(
         address spender,
         uint256 subtractedValue
@@ -627,34 +705,24 @@ contract ILOCKV2 is Initializable,
             currentAllowance >= subtractedValue,
             "ERC20: decreased allowance below zero");
         unchecked {
-            _approve(owner, spender, currentAllowance - subtractedValue); }
+            _approve(
+                owner,
+                spender,
+                currentAllowance - subtractedValue); }
         return true; }
 
 //***********************************/
 
-          // where `from` && `to` != zero account => to be regular xfer
-         // where `from` && `to` = zero account => impossible
-        // hook that inserts behavior prior to transfer/mint/burn
+        // hook that inserts behavior prior to transfer
     function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual {
-
-        from;
-        to;
-        amount;    
-        require(
-            !paused(),
-            "contract is paused"); }
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal virtual notPaused {}
 
 //***********************************/
 
-            // where `from` && `to` != zero account => was regular xfer
-           // where `from` = zero account => `amount` was minted `to`
-          // where `to` = zero account => `amount` was burned `from`
-         // where `from` && `to` = zero account => impossible
-        // hook that inserts behavior prior to transfer/mint/burn
+        // hook that inserts behavior after to transfer
     function _afterTokenTransfer(
         address from,
         address to,
@@ -672,16 +740,22 @@ contract ILOCKV2 is Initializable,
 //*************************************************************/
 
         // makes sure that distributions do not happen too early
-    function _checkTime(
+    function checkTime(
     ) public returns (
         bool isTime
     ) {
         // test time
-        if (block.timestamp > _nextPayout) {
-            uint256 deltaT = block.timestamp - _nextPayout;
+        if (block.timestamp > nextPayout) {
+
+            // delta time between now and last payout
+            uint256 deltaT = block.timestamp - nextPayout;
+            // calculate how many months to increment
             uint256 months = deltaT / _MONTH + 1;
-            _nextPayout += _nextPayout + months * _MONTH;
+            // increment next payout by months in seconds
+            nextPayout += nextPayout + months * _MONTH;
+            // increment months passed
             monthsPassed += months;
+
             // is time
             return true; }
         // is not time
@@ -691,41 +765,44 @@ contract ILOCKV2 is Initializable,
 
         // register stake
     function registerStake(
-        Stake calldata data
-    ) public onlyOwner returns (
+        Stake calldata stakeData
+    ) public
+        onlyOwner
+    returns (
         bool success
     ) {
         // generate stake identifier
         bytes32 stakeIdentifier = keccak256(
-                                  bytes.concat(bytes20(data.stakeholder),
-                                               bytes32(data.share),
-                                               bytes1(data.pool) ) );
+                                  bytes.concat(bytes20(stakeData.stakeholder),
+                                               bytes32(stakeData.share),
+                                               bytes1(stakeData.pool) ) );
         // validate input
         require(
             !stakeExists(stakeIdentifier),
             "this stake already exists and cannot be edited");
         require(
-            data.paid == 0,
+            stakeData.paid == 0,
             "amount paid must be zero");
         require(
-            data.share >= _pool[data.pool].vests,
+            stakeData.share >= pool[stakeData.pool].vests,
             "share is too small");
         require(
-            data.pool < _POOLCOUNT,
+            stakeData.pool < _POOLCOUNT,
             "invalid pool number");
         require(
-            data.stakeholder != address(0),
+            stakeData.stakeholder != address(0),
             "stakeholder cannot be zero address");
         require(
-            data.stakeholder != address(this),
+            stakeData.stakeholder != address(this),
             "stakeholder cannot be this contract address");
 
         // store stake
-        _stakes[stakeIdentifier] = data;
+        _stakes[stakeIdentifier] = stakeData;
         // store identifier for future iteration
-        _stakeIdentifiers[data.stakeholder].push(stakeIdentifier);
-        // emit record
-        emit StakeRegistered(data);
+        _stakeIdentifiers[stakeData.stakeholder].push(stakeIdentifier);
+
+        emit StakeRegistered(
+            stakeData);
         return true; }
 
 //***********************************/
@@ -737,19 +814,21 @@ contract ILOCKV2 is Initializable,
         bool success
     ) {
         // see if we need to update time
-        _checkTime();
+        checkTime();
 
         // if stake exists, then get it
         require(
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake storage stake = _stakes[stakeIdentifier];
+
+        // define relevant stake values
         address stakeholder = stake.stakeholder;
         uint256 tokenShare = stake.share;
         uint256 tokensPaid = stake.paid;
         uint256 tokensRemaining = tokenShare - tokensPaid;
-        uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vestingMonths = _pool[stake.pool].vests;
+        uint256 cliff = pool[stake.pool].cliff;
+        uint256 vestingMonths = pool[stake.pool].vests;
 
         // make sure cliff has been surpassed
         require(
@@ -760,9 +839,11 @@ contract ILOCKV2 is Initializable,
             tokensPaid < tokenShare,
             "stakeholder already collected entire token share");
         
-        // determine the traunch amount claimant has rights to for each vested month
+        // determine the traunch amount claimant
+        // has rights to for each vested month
         uint256 monthlyTokenAmount = tokenShare / vestingMonths;
-        // and determine the number of payments claimant has received
+        // and determine the number of payments
+        // claimant has received
         uint256 paymentsMade = tokensPaid / monthlyTokenAmount;
 
         // even if cliff is passed, is it too soon for next payment?
@@ -771,34 +852,44 @@ contract ILOCKV2 is Initializable,
             "payout too early");
         
         uint256 thesePayments;
-        // when time has past vesting period, pay out remaining unclaimed payments
+        // when time has past vesting period,
+        // pay out remaining unclaimed payments
         if (cliff + vestingMonths <= monthsPassed) {
             
+            // these are all remaining payments in this case
             thesePayments = vestingMonths - paymentsMade;
 
-        // don't count months past vests+cliff as payments
+        // don't count months past payments made + cliff as payments
         } else {
 
+            // these are number of payments owed at time of claim
             thesePayments = 1 + monthsPassed - paymentsMade - cliff; }
 
         // use payments to calculate amount to pay out
         uint256 thisPayout = thesePayments * monthlyTokenAmount;
 
-        // if at final payment, add remainder of share to final payment
+        // if final payment, add remainder of share to payout amount
         if (tokensRemaining - thisPayout < monthlyTokenAmount) {
             
             thisPayout += tokenShare % vestingMonths; }
 
         // transfer and make sure it succeeds
         require(
-            _transfer(_pool[stake.pool].addr, stakeholder, thisPayout),
+            _transfer(
+                pool[stake.pool].addr,
+                stakeholder,
+                thisPayout),
             "stake claim transfer failed");
 
         // update member state
         _stakes[stakeIdentifier].paid += thisPayout;
         // update total supply and reserve
         _totalSupply += thisPayout;
-        emit StakeClaimed(stakeholder, stakeIdentifier, thisPayout);
+
+        emit StakeClaimed(
+            stakeholder,
+            stakeIdentifier,
+            thisPayout);
         return true; }    
 
 //*************************************************************/
@@ -812,7 +903,7 @@ contract ILOCKV2 is Initializable,
 //*************************************************************/
 
          // on a stake by stake basis
-        // returns time remaining until next token traunch may be claimed
+        // returns time remaining until next token traunch release
     function timeRemaining(
         bytes32 stakeIdentifier
     ) public view returns (
@@ -827,33 +918,37 @@ contract ILOCKV2 is Initializable,
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake memory stake = _stakes[stakeIdentifier];
-        uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vests = _pool[stake.pool].vests;
+
+        // define relevant stake values
+        uint256 cliff = pool[stake.pool].cliff;
+        uint256 vests = pool[stake.pool].vests;
 
         uint256 timeLeft;
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
         if (monthsPassed >= vests + cliff ||
-            _nextPayout < block.timestamp) {
+            nextPayout < block.timestamp) {
             
             timeLeft = 0;
 
-        // when cliff hasn't been surpassed, include that time into countdown
+        // when cliff hasn't been surpassed,
+        // then include that time into countdown
         } else if (monthsPassed < cliff) {
             
             timeLeft = (cliff - monthsPassed - 1) * _MONTH +
-                        _nextPayout - block.timestamp;
+                        nextPayout - block.timestamp;
 
-        // during vesting period, timeleft is only time til next month's payment
+        // during vesting period,
+        // timeleft is only time til next month's payment
         } else {
 
-            timeLeft = _nextPayout - block.timestamp; }
+            timeLeft = nextPayout - block.timestamp; }
 
         return parseTimeLeft(timeLeft); }
 
 //***********************************/
 
-        // breaks time left into human readable units for display on arbiscan
+        // breaks time left into human readable units for blockscanner
     function parseTimeLeft(
         uint256 timeLeft
     ) internal pure returns (
@@ -888,10 +983,9 @@ contract ILOCKV2 is Initializable,
 
 //***********************************/
 
-            // get how much of amount left to pay is available to claim
-           // get amount left to pay
-          // get amount paid so far to member
-         // get amount investor still needs to pay in before claiming tokens
+           // get amount that is available to claim
+          // get amount left to pay to stakeholder
+         // get amount paid so far to stakeholder
         // get time remaining until next payout ready
     function stakeStatus(
         bytes32 stakeIdentifier
@@ -909,8 +1003,10 @@ contract ILOCKV2 is Initializable,
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake memory stake = _stakes[stakeIdentifier];
-        cliff = _pool[stake.pool].cliff;
-        vestingMonths = _pool[stake.pool].vests;
+
+        // define relevant stake values
+        cliff = pool[stake.pool].cliff;
+        vestingMonths = pool[stake.pool].vests;
         tokenShare = stake.share;
 
         // how much has member already claimed
@@ -922,27 +1018,32 @@ contract ILOCKV2 is Initializable,
         // and determine the number of payments claimant has received
         uint256 payments = tokensPaidOut / monthlyTokenAmount;
 
-        // how much does member have yet to collect, after vesting complete
+        // how much does member have yet to collect,
+        // after vesting complete
         tokensRemaining = tokenShare - tokensPaidOut;
 
         // compute the pay available to claim at current moment
-        // if months passed are inbetween cliff and end of vesting period
-        if (monthsPassed >= cliff && monthsPassed < cliff + vestingMonths) {
+        // if months passed are inbetween cliff and vesting end
+        if (monthsPassed >= cliff &&
+            monthsPassed < cliff + vestingMonths) {
             
-            tokensAvailable = (1 + monthsPassed - cliff - payments) * monthlyTokenAmount;
+            tokensAvailable = (1 + monthsPassed - cliff - payments) *
+                               monthlyTokenAmount;
 
         // until time reaches cliff, no pay is available
         } else if (monthsPassed < cliff ){
 
             tokensAvailable = 0;
 
-        // if time has passed cliff and vesting period, the entire remaining share is available
+        // if time has passed cliff and vesting period,
+        // the entire remaining share is available
         } else {
 
             tokensAvailable = tokenShare - tokensPaidOut; }
 
         // if at final payment, add remainder of share to final payment
-        if (tokenShare - tokensPaidOut - tokensAvailable < monthlyTokenAmount && tokensAvailable > 0) {
+        if (tokenShare - tokensPaidOut - tokensAvailable < monthlyTokenAmount &&
+            tokensAvailable > 0) {
             
             tokensAvailable += tokenShare % vestingMonths; }
 
@@ -957,7 +1058,7 @@ contract ILOCKV2 is Initializable,
 
 //***********************************/
 
-        // gets stake identifiers for stakes owned by message caller
+        // gets stake identifiers for owned by shareholder
     function getStakeIdentifiers(
         address stakeholder
     ) public view returns (
@@ -974,7 +1075,7 @@ contract ILOCKV2 is Initializable,
         address stakeholder,
         uint256 share,
         uint256 paid,
-        uint256 pool
+        uint256 poolNumber
     ) {
         Stake memory stake = _stakes[stakeIdentifier];
         return (
@@ -985,7 +1086,7 @@ contract ILOCKV2 is Initializable,
 
 //***********************************/
 
-        // view predicate for validating getStake & claimStake input
+        // view predicate for validating stake identifier input
     function stakeExists(
         bytes32 stakeIdentifier
     ) public view returns (
@@ -1018,7 +1119,7 @@ contract ILOCKV2 is Initializable,
 
 
     uint256 public newstorage;
-    uint256[99] public __gap;
+    uint256[99] public storageGap;
 }
 
 //*************************************************************/
