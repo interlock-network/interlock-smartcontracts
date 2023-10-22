@@ -79,10 +79,10 @@ contract ILOCKV1 is Initializable,
     uint256 constant private _MINUTE = 60 seconds;
     
     uint256 private _totalSupply;
-    uint256 public _nextPayout;
+    uint256 public nextPayout;
 
-    address public _owner;
-    address public _multisigSafe;
+    address public contractOwner;
+    address public multisigSafe;
 
     mapping(
         address => uint256) private _balances;
@@ -95,7 +95,7 @@ contract ILOCKV1 is Initializable,
     mapping(
         address => bytes32[]) private _stakeIdentifiers;
 
-    bool public TGEtriggered;
+    bool public tgeTriggered;
     bool public initialized;
     uint256 public monthsPassed;
 
@@ -112,7 +112,7 @@ contract ILOCKV1 is Initializable,
         uint256 vests;
         uint256 cliff; }
 
-    PoolData[_POOLCOUNT] public _pool;
+    PoolData[_POOLCOUNT] public pool;
 
 //*************************************************************/
 //*************************************************************/
@@ -129,7 +129,7 @@ contract ILOCKV1 is Initializable,
     function initialize(
     ) public initializer {
 
-        _owner = _msgSender();
+        contractOwner = _msgSender();
 
         _initializePools();
 
@@ -139,11 +139,11 @@ contract ILOCKV1 is Initializable,
 
             // here we are adding up tokens to make sure
             // sum is correct
-            sumTokens += _pool[i].tokens;
+            sumTokens += pool[i].tokens;
 
             // in the same breath we convert token amounts
             // to ERC20 format
-            _pool[i].tokens *= _DECIMAL_MAGNITUDE;
+            pool[i].tokens *= _DECIMAL_MAGNITUDE;
         }
         require(
             sumTokens == _CAP - _REWARDS_POOL,
@@ -151,77 +151,77 @@ contract ILOCKV1 is Initializable,
 
         _totalSupply = 0;
         initialized = true;
-        TGEtriggered = false; }
+        tgeTriggered = false; }
 
 //***********************************/
 
     function _initializePools(
     ) internal {
         
-        _pool[0] = PoolData({
+        pool[0] = PoolData({
             name: "Community Sale",
             addr: address(0),
             tokens: 3_703_703,
             vests: 3,
             cliff: 1
         });
-        _pool[1] = PoolData({
+        pool[1] = PoolData({
             name: "Presale 1",
             addr: address(0),
             tokens: 48_626_667,
             vests: 18,
             cliff: 1
         });
-        _pool[2] = PoolData({
+        pool[2] = PoolData({
             name: "Presale 2",
             addr: address(0),
             tokens: 33_333_333,
             vests: 15,
             cliff: 1
         });
-        _pool[3] = PoolData({
+        pool[3] = PoolData({
             name: "Presale 3",
             addr: address(0),
             tokens: 25_714_286,
             vests: 12,
             cliff: 2
         });
-        _pool[4] = PoolData({
+        pool[4] = PoolData({
             name: "Public Sale",
             addr: address(0),
             tokens: 28_500_000,
             vests: 3,
             cliff: 0
         });
-        _pool[5] = PoolData({
+        pool[5] = PoolData({
             name: "Founders and Team",
             addr: address(0),
             tokens: 200_000_000,
             vests: 36,
             cliff: 1
         });
-        _pool[6] = PoolData({
+        pool[6] = PoolData({
             name: "Outlier Ventures",
             addr: address(0),
             tokens: 40_000_000,
             vests: 24,
             cliff: 1
         });
-        _pool[7] = PoolData({
+        pool[7] = PoolData({
             name: "Advisors",
             addr: address(0),
             tokens: 25_000_000,
             vests: 24,
             cliff: 1
         });
-        _pool[8] = PoolData({
+        pool[8] = PoolData({
             name: "Interlock Foundation",
             addr: address(0),
             tokens: 258_122_011,
             vests: 84,
             cliff: 0
         });
-        _pool[9] = PoolData({
+        pool[9] = PoolData({
             name: "Strategic Partners and KOL",
             addr: address(0),
             tokens: 37_000_000,
@@ -243,7 +243,7 @@ contract ILOCKV1 is Initializable,
     modifier onlyOwner(
     ) {
         require(
-            _msgSender() == _owner,
+            _msgSender() == contractOwner,
             "only owner can call");
         _; }
 
@@ -253,7 +253,7 @@ contract ILOCKV1 is Initializable,
     modifier onlyMultisigSafe(
     ) {
         require(
-            _msgSender() == _multisigSafe,
+            _msgSender() == multisigSafe,
             "only multisig safe can call");
         _; }
 
@@ -299,20 +299,20 @@ contract ILOCKV1 is Initializable,
             initialized,
             "contract not initialized");
         require(
-            !TGEtriggered,
+            !tgeTriggered,
             "TGE already happened");
 
-        _multisigSafe = multisigSafe_;
+        multisigSafe = multisigSafe_;
 
         // create pool accounts and initiate
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
             
             // generate pools and mint to
             address Pool = address(new ILOCKpool());
-            _pool[i].addr = Pool;
+            pool[i].addr = Pool;
 
             // mint to pools
-            uint256 poolBalance = _pool[i].tokens;
+            uint256 poolBalance = pool[i].tokens;
             _balances[Pool] = poolBalance;
             emit Transfer(
                 address(0),
@@ -320,7 +320,7 @@ contract ILOCKV1 is Initializable,
                 poolBalance); }
 
         // start the clock for time vault pools
-        _nextPayout = block.timestamp + _MONTH;
+        nextPayout = block.timestamp + _MONTH;
         monthsPassed = 0;
 
         // approve owner to spend any tokens sent to this contract in future
@@ -330,7 +330,7 @@ contract ILOCKV1 is Initializable,
             _CAP * _DECIMAL_MAGNITUDE);
 
         // this must never happen again...
-        TGEtriggered = true; }
+        tgeTriggered = true; }
 
 //*************************************************************/
 //*************************************************************/
@@ -347,7 +347,7 @@ contract ILOCKV1 is Initializable,
         address newOwner
     ) public onlyMultisigSafe noZero(newOwner) {
 
-        _owner = newOwner; }
+        contractOwner = newOwner; }
 
 //***********************************/
 
@@ -482,7 +482,7 @@ contract ILOCKV1 is Initializable,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
-        PoolData memory thisPool = _pool[poolNumber];
+        PoolData memory thisPool = pool[poolNumber];
         uint256 poolBalance = balanceOf(thisPool.addr);
 
         return (
@@ -646,7 +646,7 @@ contract ILOCKV1 is Initializable,
         bool success
     ) {
         _approve(
-            _pool[poolNumber].addr,
+            pool[poolNumber].addr,
             spender,
             amount);
         return true; }
@@ -735,14 +735,14 @@ contract ILOCKV1 is Initializable,
         bool isTime
     ) {
         // test time
-        if (block.timestamp > _nextPayout) {
+        if (block.timestamp > nextPayout) {
 
             // delta time between now and last payout
-            uint256 deltaT = block.timestamp - _nextPayout;
+            uint256 deltaT = block.timestamp - nextPayout;
             // calculate how many months to increment
             uint256 months = deltaT / _MONTH + 1;
             // increment next payout by months in seconds
-            _nextPayout += _nextPayout + months * _MONTH;
+            nextPayout += nextPayout + months * _MONTH;
             // increment months passed
             monthsPassed += months;
 
@@ -772,7 +772,7 @@ contract ILOCKV1 is Initializable,
             data.paid == 0,
             "amount paid must be zero");
         require(
-            data.share >= _pool[data.pool].vests,
+            data.share >= pool[data.pool].vests,
             "share is too small");
         require(
             data.pool < _POOLCOUNT,
@@ -815,8 +815,8 @@ contract ILOCKV1 is Initializable,
         uint256 tokenShare = stake.share;
         uint256 tokensPaid = stake.paid;
         uint256 tokensRemaining = tokenShare - tokensPaid;
-        uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vestingMonths = _pool[stake.pool].vests;
+        uint256 cliff = pool[stake.pool].cliff;
+        uint256 vestingMonths = pool[stake.pool].vests;
 
         // make sure cliff has been surpassed
         require(
@@ -861,7 +861,7 @@ contract ILOCKV1 is Initializable,
         // transfer and make sure it succeeds
         require(
             _transfer(
-                _pool[stake.pool].addr,
+                pool[stake.pool].addr,
                 stakeholder,
                 thisPayout),
             "stake claim transfer failed");
@@ -905,14 +905,14 @@ contract ILOCKV1 is Initializable,
         Stake memory stake = _stakes[stakeIdentifier];
 
 		// define relevant stake values
-        uint256 cliff = _pool[stake.pool].cliff;
-        uint256 vests = _pool[stake.pool].vests;
+        uint256 cliff = pool[stake.pool].cliff;
+        uint256 vests = pool[stake.pool].vests;
 
         uint256 timeLeft;
         // compute the time left until the next payment is available
         // if months passed beyond last payment, stop counting
         if (monthsPassed >= vests + cliff ||
-            _nextPayout < block.timestamp) {
+            nextPayout < block.timestamp) {
             
             timeLeft = 0;
 
@@ -920,12 +920,12 @@ contract ILOCKV1 is Initializable,
         } else if (monthsPassed < cliff) {
             
             timeLeft = (cliff - monthsPassed - 1) * _MONTH +
-                        _nextPayout - block.timestamp;
+                        nextPayout - block.timestamp;
 
         // during vesting period, timeleft is only time til next month's payment
         } else {
 
-            timeLeft = _nextPayout - block.timestamp; }
+            timeLeft = nextPayout - block.timestamp; }
 
         return parseTimeLeft(timeLeft); }
 
@@ -987,8 +987,8 @@ contract ILOCKV1 is Initializable,
             stakeExists(stakeIdentifier),
             "this stake does not exist");
         Stake memory stake = _stakes[stakeIdentifier];
-        cliff = _pool[stake.pool].cliff;
-        vestingMonths = _pool[stake.pool].vests;
+        cliff = pool[stake.pool].cliff;
+        vestingMonths = pool[stake.pool].vests;
         tokenShare = stake.share;
 
         // how much has member already claimed
@@ -1052,7 +1052,7 @@ contract ILOCKV1 is Initializable,
         address stakeholder,
         uint256 share,
         uint256 paid,
-        uint256 pool
+        uint256 poolNumber
     ) {
         Stake memory stake = _stakes[stakeIdentifier];
         return (
@@ -1085,11 +1085,11 @@ contract ILOCKV1 is Initializable,
     ) public returns (uint256) {
 
         monthsPassed += 1;
-        _nextPayout += _MONTH;
+        nextPayout += _MONTH;
 
         return monthsPassed; }
 
-    uint256[100] public __gap;
+    uint256[100] public storageGap;
 }
 
 //*************************************************************/
