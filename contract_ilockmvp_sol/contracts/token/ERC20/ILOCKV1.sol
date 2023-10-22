@@ -293,7 +293,7 @@ contract ILOCKV1 is Initializable,
         // generates all the tokens
     function triggerTGE(
         address multisigSafe_
-    ) public onlyOwner {
+    ) public onlyOwner noZero(multisigSafe_) {
 
         require(
             initialized,
@@ -345,7 +345,7 @@ contract ILOCKV1 is Initializable,
         // changes the contract owner
     function changeOwner(
         address newOwner
-    ) public onlyMultisigSafe {
+    ) public onlyMultisigSafe noZero(newOwner) {
 
         _owner = newOwner; }
 
