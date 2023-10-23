@@ -377,7 +377,7 @@ contract ILOCKV1 is Initializable,
         // pauses any functions requiring unpause
     function pause(
     ) public
-        onlyMultisigSafe ]
+        onlyMultisigSafe
     {    
         require(
             paused(),

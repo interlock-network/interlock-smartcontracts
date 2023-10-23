@@ -377,7 +377,7 @@ contract ILOCKV2 is Initializable,
         // pauses any functions requiring unpause
     function pause(
     ) public
-        onlyMultisigSafe ]
+        onlyMultisigSafe
     {    
         require(
             paused(),
@@ -1108,7 +1108,7 @@ contract ILOCKV2 is Initializable,
     ) public returns (uint256) {
 
         monthsPassed += 1;
-        _nextPayout += _MONTH;
+        nextPayout += _MONTH;
 
         return monthsPassed; }
 
