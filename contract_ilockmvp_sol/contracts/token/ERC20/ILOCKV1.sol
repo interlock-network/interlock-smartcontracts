@@ -493,7 +493,7 @@ contract ILOCKV1 is Initializable,
         address poolAddress,
         uint256 poolTokenSize,
         uint256 poolTokenBalance,
-        uint256 poolTokensRemaining,
+        uint256 poolTokensPaid,
         uint256 vestingMonths,
         uint256 vestingCliff
     ) {
