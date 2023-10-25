@@ -27,6 +27,10 @@ const config: HardhatUserConfig = {
       accounts: [process.env.OWNER_PRIKEY as string],
       gasPrice: 1000000000,
     },
+    "goerli": {
+      url: process.env.ALCHEMY_URL,
+      accounts: [process.env.OWNER_PRIKEY as string],
+    },
   },
   etherscan: {
     url: "https://api-goerli.basescan.org/api",
