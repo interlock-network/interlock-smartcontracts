@@ -1,3 +1,5 @@
+**_NB, this directory SOP/MOP space is currently under construction and is quite messy._**
+
 # Interlock Blockchain: SOPs and MOPs Guide
 
 The intricate nature of blockchain technology and smart contracts necessitates rigorous oversight and accuracy. At Interlock Network, we are committed to maintaining a robust framework of standards and procedures to ensure the secure and efficient management of blockchain-related operations that impact our stakeholders.
