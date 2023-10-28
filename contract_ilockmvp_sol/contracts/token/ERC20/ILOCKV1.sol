@@ -65,21 +65,24 @@ contract ILOCKV1 is Initializable,
         uint256 amount);
 
     bool private _paused;
-
+    bool public tgeTriggered;
+    bool public initialized;
+    uint8 constant private _POOLCOUNT = 10;
+    uint8 constant private _DECIMALS = 18;
     string constant private _NAME = "Interlock Network";
     string constant private _SYMBOL = "TESTILOCK";
-    uint8 constant private _DECIMALS = 18;
+    uint256 private _totalSupply;
+    uint256 public monthsPassed;
+    uint256 public nextPayout;
+
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
     uint256 constant private _REWARDS_POOL = 300_000_000;
     uint256 constant private _CAP = 1_000_000_000;
-    uint8 constant private _POOLCOUNT = 10;
     uint256 constant private _MONTH = 30 days;
     uint256 constant private _DAY = 24 hours;
     uint256 constant private _HOUR = 60 minutes;
     uint256 constant private _MINUTE = 60 seconds;
     
-    uint256 private _totalSupply;
-    uint256 public nextPayout;
 
     address public contractOwner;
     address public multisigSafe;
@@ -94,10 +97,6 @@ contract ILOCKV1 is Initializable,
         bytes32 => Stake) private _stakes;
     mapping(
         address => bytes32[]) private _stakeIdentifiers;
-
-    bool public tgeTriggered;
-    bool public initialized;
-    uint256 public monthsPassed;
 
     struct Stake {
         address stakeholder;

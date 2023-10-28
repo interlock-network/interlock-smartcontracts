@@ -10,7 +10,7 @@ bin
 *.abi
 /mutagen.sh
 venv
-.env
+.env.dev
 .mnemonic*
 bigtable-admin.json
 bigtable-writer.json
@@ -40,11 +40,16 @@ package*
 .DS_STORE
 
 # hardhat
-.env
 coverage
 coverage.json
 typechain
 typechain-types
+
+claimReceipts.json
+registeredStakes.json
+contractAdmin.json
+stakeIdentifiers.json
+stakedata_test.json
 
 # Hardhat files
 cache
