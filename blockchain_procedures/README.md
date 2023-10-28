@@ -1,4 +1,4 @@
-**_NB, this directory SOP/MOP space is currently under construction and is quite messy._**
+#### **_NOTE: this directory SOP/MOP space is currently under construction and is quite messy._**
 
 # Interlock Blockchain: SOPs and MOPs Guide
 
@@ -10,17 +10,17 @@ Although Interlock Network doesn't maintain a global procedure management policy
 
 ### **SOP (Standard Operating Procedure)**:
 - **Definition**: SOPs outline the methodology for achieving a specific goal or objective.
-- **Example**: For a holistic understanding on how to launch a token, refer to [SOP 1, Launching ILOCK](./bcsop1.ILOCKlaunch.md).
+- **Example**: For a holistic understanding on how to launch a token, refer to [SOP 1, Deploying ILOCK](./sop1.deployingILOCK.md).
 - **Structure**: SOPs often incorporate MOPs to provide clarity on the finer details of the objective. SOPs typically focus on the _why_ and _how_.
 
 ### **MOP (Method of Procedure)**:
 - **Definition**: MOPs detail the step-by-step process to accomplish a particular task within an SOP.
-- **Example**: For instructions on deploying the ILOCK solidity contract for EVM chain integration, see [MOP 1, ILOCK Solidity Deployment](./bsmop1.ILOCKsolidityDeployment.md).
+- **Example**: For instructions on preparing the ILOCK solidity contract for EVM chain integration, see [MOP 1, ILOCK Prelaunch Preparation](./mop1.ILOCKprelaunchPreparation.md).
 - **Structure**: MOPs typically focus on the _how_ and _what_.
 
 ## Procedure Implementation:
 
-Each procedure type comes with a designated template: [bcsop0.standardOperatingProcedureTemplate.md](bcsop0.standardOperatingProcedureTemplate.md) for SOPs and [bcmop0.methodOfProcedureTemplate.md](bcmop0.methodOfProcedureTemplate.md) for MOPs. 
+Each procedure type comes with a designated template: [sop0.standardOperatingProcedureTemplate.md](sop0.standardOperatingProcedureTemplate.md) for SOPs and [mop0.methodOfProcedureTemplate.md](mop0.methodOfProcedureTemplate.md) for MOPs. 
 
 - **To Implement New Procedures**: Use the provided templates that explain each component's purpose. In the future we will implement a review and approval process.
 
