@@ -8,15 +8,19 @@ Contracts are written in [ink!](https://use.ink), employ [Openbrush](https://ope
 
 ## Contracts:
 
-#### [$ILOCK PSP22 Rewards](./contract_ilockmvp) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp/docs/ilockmvp/)
+#### [$ILOCK Vesting](./contract_ilockmvp_sol)
 
-This is our primary PSP22 token contract, which contains provisions for rewarding Interlockers, enforcing a token vesting schedule, higher-resolution book keeping, and connecting approved external application contracts for 'superuser' privileged access to internal contract functionalities and single-transaction purchases paid in $ILOCK token. (Read more in Universal Access NFT and Port/Socket Application Template.) This contract employs ink! 4 and Openbrush 3.
+This is our EVM (ERC20) token contract, containing provisions for maintaining the $ILOCK vesting schedule. This contract employs Solidity and OpenZeppelin.
+
+#### [$ILOCK Rewards & Security Staking](./contract_ilockmvp_ink) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp_ink/docs/ilockmvp/)
+
+This is our Substrate (PSP22) token contract, containing provisions for rewarding Interlockers, and connecting approved external application contracts for 'superuser' privileged access to internal contract functionalities and single-transaction purchases paid in $ILOCK token. (Read more in Universal Access NFT and Port/Socket Application Template.) This contract employs ink! 4 and Openbrush 3.
 
 #### [Universal Access NFT](./contract_uanft) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_uanft/docs/uanft/)
 
 This is a PSP34 token contract that is capable of managing general access to spaces services online such as API keys, two-factor authentication, and even applications such as traditional software licenses. This contract employs ink! 4, Openbrush 3, and is fully compatible with the Art Zero marketplace.
 
-#### [Port/Socket Application Template](./contract_application) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_application/docs/application/)
+#### [Port/Socket Application Template](./contract_application_ink) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_application_ink/docs/application/)
 
 This is a template for our port/socket contract application formalism, to be an integral part in the upcoming Interlock Network _Community Node_ architecture. The primary purpose of this contract template is to provide approved entities with a way to interact with our PSP22 token contract internals but _without_ needing Interlock Network to act as a transaction relay for only-owner functionalities (for example, minting an Interlock-owned NFT in exchange for $ILOCK). This contract employs ink! 4.
 
