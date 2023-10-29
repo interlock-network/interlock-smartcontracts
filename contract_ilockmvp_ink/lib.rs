@@ -2083,20 +2083,6 @@ pub mod ilockmvp {
             }
         }        
 
-        /// - This is a helper to perform checked_div match within iterator map.
-        pub fn calculate_payments(&self, stake: &StakeholderData) -> OtherResult<Balance> {
-
-            let payout: Balance = self.calculate_payout(stake)?;
-
-            // divide total paid by payamount to get number of payments made to date
-            let payments: Balance = match stake.paid.checked_div(payout) {
-                Some(quotient) => quotient,
-                None => return Err(OtherError::DivideByZero),
-            };
-
-            Ok(payments)
-        }
-    
 ////////////////////////////////////////////////////////////////////////////
 //// testing helper ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
