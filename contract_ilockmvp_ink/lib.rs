@@ -1540,16 +1540,6 @@ pub mod ilockmvp {
                 return Err(OtherError::IsZeroAddress)
             }
 
-            // make sure vest limit will not be passed with this reward
-            let monthly: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
-                POOLS[REWARDS as usize].vests as Balance;
-            let currentcap: Balance = (self.vest.monthspassed + 1) as Balance * monthly;
-            if currentcap < POOLS[REWARDS as usize].tokens * DECIMALS_POWER10
-                - self.balances[REWARDS as usize] + reward {
-
-                return Err(OtherError::PayoutTooEarly)
-            }
-
             // make sure reward not too large
             if monthly <= reward {
                 return Err(OtherError::PaymentTooLarge)
@@ -2092,20 +2082,6 @@ pub mod ilockmvp {
                 None => Default::default(),
             }
         }        
-
-        /// - This is a helper to perform checked_div match within iterator map.
-        pub fn calculate_payout(&self, stake: &StakeholderData) -> OtherResult<Balance> {
-
-            let pool = &POOLS[stake.pool as usize];
-
-            // divide total share by number of vests
-            let amount: Balance = match stake.share.checked_div(pool.vests as Balance) {
-                Some(quotient) => quotient,
-                None => return Err(OtherError::DivideByZero),
-            };
-
-            Ok(amount)
-        }
 
         /// - This is a helper to perform checked_div match within iterator map.
         pub fn calculate_payments(&self, stake: &StakeholderData) -> OtherResult<Balance> {
