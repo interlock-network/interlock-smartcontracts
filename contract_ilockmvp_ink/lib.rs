@@ -4,9 +4,9 @@
 //!  - ### REWARDS
 //!
 //! This is a standard ERC20-style token contract
-//! with provisions for enforcing a token distribution
-//! vesting schedule, and for rewarding interlockers for
-//! browsing the internet with the Interlock browser extension.
+//! with provisions for rewarding interlockers for
+//! browsing the internet with the Interlock browser extension,
+//! and eventually security staking and bounty hunting.
 //!
 //! #### To ensure build with cargo-contract version 2.0.0, run:
 //!
@@ -88,46 +88,6 @@ pub mod ilockmvp {
     pub const TOKEN_DECIMALS: u8 = 18;
     pub const TOKEN_SYMBOL: &str = "ILOCK";
 
-    #[derive(Debug)]
-    pub struct PoolData<'a> {
-        pub name: &'a str,
-        pub tokens: u128,
-        pub vests: u8,
-        pub cliffs: u8,
-    }
-
-    /// - Pool data.
-    pub const POOLS: [PoolData; POOL_COUNT] = [
-        PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
-        PoolData { name: "presale_2",                     tokens: 33_333_333,  vests: 15, cliffs: 1, },
-        PoolData { name: "presale_3",                     tokens: 93_750_000,  vests: 12, cliffs: 1, },
-        PoolData { name: "team+founders",                 tokens: 200_000_000, vests: 36, cliffs: 6, },
-        PoolData { name: "outlier_ventures",              tokens: 40_000_000,  vests: 24, cliffs: 1, },
-        PoolData { name: "advisors",                      tokens: 25_000_000,  vests: 24, cliffs: 1, },
-        PoolData { name: "foundation",                    tokens: 169_264_142, vests: 84, cliffs: 1, },
-        PoolData { name: "rewards",                       tokens: 300_000_000, vests: 48, cliffs: 0, },
-        PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
-        PoolData { name: "community_sale",                tokens: 3_030_303,   vests: 1,  cliffs: 0, },
-        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 1,  cliffs: 0, },
-        PoolData { name: "proceeds",                      tokens: 0,           vests: 0,  cliffs: 0, },
-        PoolData { name: "circulating",                   tokens: 0,           vests: 0,  cliffs: 0, },
-    ];
-
-    /// - Pools.
-    pub const PRESALE_1: u8         = 0;
-    pub const PRESALE_2: u8         = 1;
-    pub const PRESALE_3: u8         = 2;
-    pub const TEAM: u8              = 3;
-    pub const OUTLIER: u8           = 4;
-    pub const ADVISORS: u8          = 5;
-    pub const FOUNDATION: u8        = 6;
-    pub const REWARDS: u8           = 7;
-    pub const PARTNERS: u8          = 8;
-    pub const COMMUNITY: u8         = 9;
-    pub const PUBLIC: u8            = 10;
-    pub const PROCEEDS: u8          = 11;
-    pub const CIRCULATING: u8       = 12;
-
     /// - Multisig functions.
     pub const TRANSFER_OWNERSHIP: u8    = 0;
     pub const UNPAUSE: u8               = 1;
@@ -186,65 +146,6 @@ pub mod ilockmvp {
 
         /// - Expand storage related to the pool accounting functionality.
         pub _reserved: Option<()>,
-    }
-
-    /// - This is upgradable storage for the application connection feature of this
-    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
-    pub const VEST_KEY: u32 = openbrush::storage_unique_key!(VestData);
-    #[derive(Default, Debug)]
-    #[openbrush::upgradeable_storage(VEST_KEY)]
-    pub struct VestData {
-
-        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
-        // OR TYPES IF UPGRADING THIS CONTRACT!!!
-
-        /// - Contains information about stakeholders and the vesting
-        /// status.
-        /// - See detailed struct below.
-        ///
-        /// stakeholder:         stakeholder account address -> info about stakeholder
-        pub stakeholder: Mapping<AccountId, Vec<StakeholderData>>,
-
-        /// - Counter responsible for keeping track of how many months have passed
-        /// along the vesting schedule.
-        /// - Used in part to calculate and compare token amount paid out vs token amount owed.
-        pub monthspassed: u16,
-
-        /// - Stores the date timestamp one month ahead of the last increment of
-        /// `monthspassed`
-        pub nextpayout: Timestamp,
-
-        /// - Expand storage related to the vesting functionality.
-        pub _reserved: Option<()>,
-    }
-    /// - StakeholderData struct contains all pertinent information for each stakeholder
-    /// (Besides balance and allowance mappings).
-    /// - This is primarily for managing and implementing the vesting schedule.
-    #[derive(scale::Encode, scale::Decode, Clone, Default)]
-    #[cfg_attr(
-    feature = "std",
-    derive(
-        Debug,
-        PartialEq,
-        Eq,
-        scale_info::TypeInfo,
-        ink::storage::traits::StorageLayout,
-        )
-    )]
-    pub struct StakeholderData {
-
-        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
-        // OR TYPES IF UPGRADING THIS CONTRACT!!!
-
-        /// - How much so far has this stakeholder been paid in ILOCK?
-        pub paid: Balance,
-
-        /// - What is the overall ILOCK token share for this stakeholder?
-        pub share: Balance,
-
-        /// - Which vesting pool does this stakeholder belong to?
-        /// - The pool determines the vesting schedule.
-        pub pool: u8,
     }
 
     /// - This is upgradable storage for the application connection feature of this
@@ -530,10 +431,6 @@ pub mod ilockmvp {
         /// - ILOCK Rewards info.
         #[storage_field]
         pub reward: RewardData,
-
-        /// - ILOCK vesting info.
-        #[storage_field]
-        pub vest: VestData,
 
         /// - ILOCK connecting application contract info.
         #[storage_field]
@@ -1008,8 +905,6 @@ pub mod ilockmvp {
             contract.multisig.threshold = 2;
 
             // set initial data
-            contract.vest.monthspassed = 0;
-            contract.vest.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
             contract.reward.total = 0;
 
             contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
@@ -2036,24 +1931,6 @@ pub mod ilockmvp {
             }
         }        
 
-////////////////////////////////////////////////////////////////////////////
-//// testing helper ////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function to increment monthspassed for testing.
-        ///
-        ///     MUST BE DELETED PRIOR TO TGE
-        ///
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        pub fn TESTING_increment_month(
-            &mut self,
-        ) -> OtherResult<bool> {
-
-            self.vest.monthspassed += 1;
-
-            Ok(true)
-        }
     } // END OF ILOCKmvp IMPL BLOCK
  }
 
