@@ -1474,53 +1474,6 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
-/////// token distribution /////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-        /// - Function used to manually payout rewards tokens for airdrop purposes
-        #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
-        #[openbrush::modifiers(when_not_paused)]
-        pub fn airdrop_tokens(
-            &mut self,
-            stakeholder: AccountId,
-            amount: Balance,
-        ) -> OtherResult<()> {
-
-            let owner: AccountId = self.env().caller();
-
-            // make sure stakeholder is not zero address
-            if stakeholder == AccountId::from([0_u8; 32]) {
-                return Err(OtherError::IsZeroAddress)
-            }
-
-            // now transfer tokens
-            // increment distribution to stakeholder account
-            let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
-            match stakeholderbalance.checked_add(amount) {
-                Some(sum) => stakeholderbalance = sum,
-                None => return Err(OtherError::Overflow),
-            };
-            self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
-
-            // increment total supply
-            match self.balances[CIRCULATING as usize].checked_add(amount) {
-                Some(sum) => self.balances[CIRCULATING as usize] = sum,
-                None => return Err(OtherError::Overflow),
-            };
-
-            // deduct tokens from owners account
-            let mut ownerbalance: Balance = self.psp22.balance_of(owner);
-            match ownerbalance.checked_sub(amount) {
-                Some(difference) => ownerbalance = difference,
-                None => return Err(OtherError::Underflow),
-            };
-            self.psp22.balances.insert(&owner, &ownerbalance);
-
-            Ok(())
-        }
-
-////////////////////////////////////////////////////////////////////////////
 //// rewarding  ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
