@@ -87,6 +87,7 @@ pub mod ilockmvp {
     pub const TOKEN_NAME: &str = "Interlock Network";
     pub const TOKEN_DECIMALS: u8 = 18;
     pub const TOKEN_SYMBOL: &str = "ILOCK";
+    pub const INITIAL_REWARDS: u128 = 150_000_000 * DECIMALS_POWER10;
 
     /// - Multisig functions.
     pub const TRANSFER_OWNERSHIP: u8    = 0;
@@ -143,6 +144,9 @@ pub mod ilockmvp {
 
         /// - In total, how much ILOCK have we rewarded to Interlockers?
         total: Balance,
+
+        /// - Reward parameters
+        rewardmax: Balance,
 
         /// - Expand storage related to the pool accounting functionality.
         pub _reserved: Option<()>,
@@ -441,7 +445,9 @@ pub mod ilockmvp {
         pub multisig: MultisigData,
 
         /// - ILOCK token pool balances.
-        pub balances: [Balance; POOL_COUNT],
+        pub rewards: Balance,
+        pub circulating: Balance,
+        pub proceeds: Balance,
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -634,7 +640,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.balances[CIRCULATING as usize]
+            self.circulating
         }
 
         /// - Override default transfer doer.
@@ -661,12 +667,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.balances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.balances[REWARDS as usize] = sum,
+                match self.rewards.checked_add(value) {
+                    Some(sum) => self.rewards = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.balances[CIRCULATING as usize].checked_sub(value) {
-                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
+                match self.circulating.checked_sub(value) {
+                    Some(difference) => self.circulating = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -705,8 +711,8 @@ pub mod ilockmvp {
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
 
-                match self.balances[CIRCULATING as usize].checked_add(value) {
-                    Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                match self.circulating.checked_add(value) {
+                    Some(sum) => self.circulating = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
@@ -714,12 +720,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.balances[REWARDS as usize].checked_add(value) {
-                    Some(sum) => self.balances[REWARDS as usize] = sum,
+                match self.rewards.checked_add(value) {
+                    Some(sum) => self.rewards = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.balances[CIRCULATING as usize].checked_sub(value) {
-                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
+                match self.circulating.checked_sub(value) {
+                    Some(difference) => self.circulating = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -861,6 +867,7 @@ pub mod ilockmvp {
         #[ink(constructor)]
         pub fn new_token(
             timelimit: Timestamp,
+            rewardmax: Balance,
             signatory_2: AccountId,
             signatory_3: AccountId,
         ) -> OtherResult<Self> {
@@ -912,17 +919,16 @@ pub mod ilockmvp {
             contract.metadata.decimals = TOKEN_DECIMALS;
 
             // mint with openbrush:
-            contract._mint_to(caller, SUPPLY_CAP)
+            contract._mint_to(caller, INITIAL_REWARDS)
                     .expect("Failed to mint the initial supply");
             contract._init_with_owner(caller);
-
-            // create initial pool balances
-            for pool in 0..POOL_COUNT {
-
-                contract.balances[pool] =
-                            POOLS[pool].tokens * DECIMALS_POWER10;
-            }
             
+            contract.rewards = INITIAL_REWARDS;
+            contract.circulating = 0;
+            contract.proceeds = 0;
+
+            contract.reward.rewardmax = rewardmax;
+
             Ok(contract)
         }
 
@@ -1389,7 +1395,7 @@ pub mod ilockmvp {
             }
 
             // make sure reward not too large
-            if monthly <= reward {
+            if self.reward.rewardmax <= reward {
                 return Err(OtherError::PaymentTooLarge)
             }
 
@@ -1400,8 +1406,8 @@ pub mod ilockmvp {
 
             // update rewards pool balance
             // (contract calls transfer, not owner, thus we must update here)
-            match self.balances[REWARDS as usize].checked_sub(reward) {
-                Some(difference) => self.balances[REWARDS as usize] = difference,
+            match self.rewards.checked_sub(reward) {
+                Some(difference) => self.rewards = difference,
                 None => return Err(OtherError::PaymentTooLarge),
             };
 
@@ -1420,8 +1426,8 @@ pub mod ilockmvp {
             };
 
             // increment total supply
-            match self.balances[CIRCULATING as usize].checked_add(reward) {
-                Some(sum) => self.balances[CIRCULATING as usize] = sum,
+            match self.circulating.checked_add(reward) {
+                Some(sum) => self.circulating = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1584,7 +1590,7 @@ pub mod ilockmvp {
             };
 
             // guard to make sure cap is not greater than rewards on hand
-            if cap > self.balances[REWARDS as usize] {
+            if cap > self.rewards {
                 return Err(OtherError::CapTooLarge);
             }
 
@@ -1767,12 +1773,12 @@ pub mod ilockmvp {
                     self.psp22.balances.insert(&address, &minterbalance);
                 
                     // update pools
-                    match self.balances[REWARDS as usize].checked_add(amount) {
-                        Some(sum) => self.balances[REWARDS as usize] = sum,
+                    match self.rewards.checked_add(amount) {
+                        Some(sum) => self.rewards = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    match self.balances[CIRCULATING as usize].checked_sub(amount) {
-                        Some(difference) => self.balances[CIRCULATING as usize] = difference,
+                    match self.circulating.checked_sub(amount) {
+                        Some(difference) => self.circulating = difference,
                         None => return Err(OtherError::Underflow),
                     };
 
@@ -1862,12 +1868,12 @@ pub mod ilockmvp {
             };
 
             // update proceeds pool and total circulation
-            match self.balances[PROCEEDS as usize].checked_add(tax) {
-                Some(sum) => self.balances[PROCEEDS as usize] = sum,
+            match self.proceeds.checked_add(tax) {
+                Some(sum) => self.proceeds = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match self.balances[CIRCULATING as usize].checked_sub(tax) {
-                Some(difference) => self.balances[CIRCULATING as usize] = difference,
+            match self.circulating.checked_sub(tax) {
+                Some(difference) => self.circulating = difference,
                 None => return Err(OtherError::Underflow),
             };
 
