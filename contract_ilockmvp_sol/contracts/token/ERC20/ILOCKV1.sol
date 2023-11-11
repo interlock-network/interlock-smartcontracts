@@ -57,12 +57,6 @@ contract ILOCKV1 is Initializable,
         address account);
     event Unpaused(
         address account);
-    event StakeRegistered(
-        Stake stake);
-    event StakeClaimed(
-        address stakeholder,
-        bytes32 stakeIdentifier,
-        uint256 amount);
 
     bool private _paused;
     bool public tgeTriggered;
@@ -72,17 +66,15 @@ contract ILOCKV1 is Initializable,
     string constant private _NAME = "Interlock Network";
     string constant private _SYMBOL = "TESTILOCK";
     uint256 private _totalSupply;
-    uint256 public monthsPassed;
-    uint256 public nextPayout;
 
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
     uint256 constant private _REWARDS_POOL = 300_000_000;
+    uint256 constant private _AZERO_REWARDS_POOL = 150_000_000;
     uint256 constant private _CAP = 1_000_000_000;
     uint256 constant private _MONTH = 30 days;
     uint256 constant private _DAY = 24 hours;
     uint256 constant private _HOUR = 60 minutes;
     uint256 constant private _MINUTE = 60 seconds;
-    
 
     address public contractOwner;
     address public multisigSafe;
@@ -106,7 +98,6 @@ contract ILOCKV1 is Initializable,
 
     struct PoolData {
         string name;
-        address addr;
         uint256 tokens;
         uint256 vests;
         uint256 cliff; }
@@ -130,9 +121,13 @@ contract ILOCKV1 is Initializable,
 
         contractOwner = _msgSender();
 
+		require(
+			initialized == false,
+			"contract already initialized");
+
         _initializePools();
 
-        uint256 sumTokens;
+        uint256 sumTokens = _REWARDS_POOL - _AZERO_REWARDS_POOL;
         // iterate through pools to create struct array
         for (uint8 i = 0; i < _POOLCOUNT; i++) {
 
@@ -145,10 +140,14 @@ contract ILOCKV1 is Initializable,
             pool[i].tokens *= _DECIMAL_MAGNITUDE; }
 
         require(
-            sumTokens == _CAP - _REWARDS_POOL,
+            sumTokens == _CAP - _AZERO_REWARDS_POOL,
             "pool token amounts must add up to cap less rewards");
 
+		//
+		//
+		// ??? TokenOps: How do we manage supply incrementation
         _totalSupply = 0;
+
         initialized = true;
         tgeTriggered = false; }
 
@@ -159,70 +158,60 @@ contract ILOCKV1 is Initializable,
         
         pool[0] = PoolData({
             name: "Community Sale",
-            addr: address(0),
             tokens: 3_703_703,
             vests: 3,
             cliff: 1
         });
         pool[1] = PoolData({
             name: "Presale 1",
-            addr: address(0),
             tokens: 48_626_667,
             vests: 18,
             cliff: 1
         });
         pool[2] = PoolData({
             name: "Presale 2",
-            addr: address(0),
             tokens: 33_333_333,
             vests: 15,
             cliff: 1
         });
         pool[3] = PoolData({
             name: "Presale 3",
-            addr: address(0),
             tokens: 25_714_286,
             vests: 12,
             cliff: 2
         });
         pool[4] = PoolData({
             name: "Public Sale",
-            addr: address(0),
             tokens: 28_500_000,
             vests: 3,
             cliff: 0
         });
         pool[5] = PoolData({
             name: "Founders and Team",
-            addr: address(0),
             tokens: 200_000_000,
             vests: 36,
             cliff: 1
         });
         pool[6] = PoolData({
             name: "Outlier Ventures",
-            addr: address(0),
             tokens: 40_000_000,
             vests: 24,
             cliff: 1
         });
         pool[7] = PoolData({
             name: "Advisors",
-            addr: address(0),
             tokens: 25_000_000,
             vests: 24,
             cliff: 1
         });
         pool[8] = PoolData({
             name: "Interlock Foundation",
-            addr: address(0),
             tokens: 258_122_011,
             vests: 84,
             cliff: 0
         });
         pool[9] = PoolData({
             name: "Strategic Partners and KOL",
-            addr: address(0),
             tokens: 37_000_000,
             vests: 12,
             cliff: 1
@@ -306,6 +295,8 @@ contract ILOCKV1 is Initializable,
         onlyOwner
         noZero(multisigSafe_)
     {
+		// TokenOps safe approvals will happen manually, preTGE by contractOwner
+
         require(
             initialized,
             "contract not initialized");
@@ -314,31 +305,12 @@ contract ILOCKV1 is Initializable,
             "TGE already happened");
 
         multisigSafe = multisigSafe_;
+		contractOwner = multisigSafe_;
 
-        // create pool accounts and initiate
-        for (uint8 i = 0; i < _POOLCOUNT; i++) {
-            
-            // generate pools and mint to
-            address Pool = address(new ILOCKpool());
-            pool[i].addr = Pool;
-
-            // mint to pools
-            uint256 poolBalance = pool[i].tokens;
-            _balances[Pool] = poolBalance;
-            emit Transfer(
-                address(0),
-                Pool,
-                poolBalance); }
-
-        // start the clock for time vault pools
-        nextPayout = block.timestamp + _MONTH;
-        monthsPassed = 0;
-
-        // approve owner for tokens sent to this contract in future
-        _approve(
-            address(this),
-            _msgSender(),
-            _CAP * _DECIMAL_MAGNITUDE);
+		_approve(
+			address(this),
+			contractOwner,
+			_REWARDS_POOL - _AZERO_REWARDS_POOL);
 
         // this must never happen again...
         tgeTriggered = true; }
@@ -379,7 +351,7 @@ contract ILOCKV1 is Initializable,
         onlyMultisigSafe
     {    
         require(
-            paused(),
+            !paused(),
             "already paused");
         _paused = true;
         
@@ -393,7 +365,7 @@ contract ILOCKV1 is Initializable,
         onlyMultisigSafe
     {    
         require(
-            !paused(),
+            paused(),
             "already unpaused");
         _paused = false;
         
@@ -466,47 +438,12 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // gets total tokens remaining in pools
-    function reserve(
-    ) public view returns (
-        uint256 _reserve
-    ) {
-        return _CAP * _DECIMAL_MAGNITUDE - _totalSupply; }
-
-//***********************************/
-
         // gets token cap
     function cap(
     ) public pure returns (
         uint256 _cap
     ) {
         return _CAP * _DECIMAL_MAGNITUDE; }
-
-//***********************************/
-
-        // gets relevant pool data
-    function poolData(
-        uint8 poolNumber
-    ) public view returns (
-        string memory poolName,
-        address poolAddress,
-        uint256 poolTokenSize,
-        uint256 poolTokenBalance,
-        uint256 poolTokensPaid,
-        uint256 vestingMonths,
-        uint256 vestingCliff
-    ) {
-        PoolData memory thisPool = pool[poolNumber];
-        uint256 poolBalance = balanceOf(thisPool.addr);
-
-        return (
-            thisPool.name,
-            thisPool.addr,
-            thisPool.tokens,
-            poolBalance,
-            thisPool.tokens - poolBalance,
-            thisPool.vests,
-            thisPool.cliff); }
 
 //*************************************************************/
 //*************************************************************/
@@ -654,27 +591,6 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-           // emitting Approval event, reverting on failure
-          // only callable by multisig safe
-         // defines pool tokens directly available to spender
-        // example use case, approving exchange for public sale pool
-    function approvePool(
-        address spender,
-        uint256 amount,
-        uint8 poolNumber
-    ) public
-        onlyMultisigSafe
-    returns (
-        bool success
-    ) {
-        _approve(
-            pool[poolNumber].addr,
-            spender,
-            amount);
-        return true; }
-
-//***********************************/
-
         // allows client safe approval facing double spend attack
     function increaseAllowance(
         address spender,
@@ -728,388 +644,14 @@ contract ILOCKV1 is Initializable,
         uint256 amount
     ) internal virtual {}
 
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
-    /**
-    * stakeholder entry and distribution
-    **/
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
-
-        // makes sure that distributions do not happen too early
-    function checkTime(
-    ) public returns (
-        bool isTime
-    ) {
-        // test time
-        if (block.timestamp > nextPayout) {
-
-            // delta time between now and last payout
-            uint256 deltaT = block.timestamp - nextPayout;
-            // calculate how many months to increment
-            uint256 months = deltaT / _MONTH + 1;
-            // increment next payout by months in seconds
-            nextPayout += nextPayout + months * _MONTH;
-            // increment months passed
-            monthsPassed += months;
-
-            // is time
-            return true; }
-        // is not time
-        return false; }
-
 //***********************************/
 
-        // register stake
-    function registerStake(
-        Stake calldata stakeData
-    ) public
-        onlyOwner
-    returns (
-        bool success
-    ) {
-        // generate stake identifier
-        bytes32 stakeIdentifier = keccak256(
-                                  bytes.concat(bytes20(stakeData.stakeholder),
-                                               bytes32(stakeData.share),
-                                               bytes1(stakeData.pool) ) );
-        // validate input
-        require(
-            !stakeExists(stakeIdentifier),
-            "this stake already exists and cannot be edited");
-        require(
-            stakeData.paid == 0,
-            "amount paid must be zero");
-        require(
-            stakeData.share >= pool[stakeData.pool].vests,
-            "share is too small");
-        require(
-            stakeData.pool < _POOLCOUNT,
-            "invalid pool number");
-        require(
-            stakeData.stakeholder != address(0),
-            "stakeholder cannot be zero address");
-        require(
-            stakeData.stakeholder != address(this),
-            "stakeholder cannot be this contract address");
-
-        // store stake
-        _stakes[stakeIdentifier] = stakeData;
-        // store identifier for future iteration
-        _stakeIdentifiers[stakeData.stakeholder].push(stakeIdentifier);
-
-        emit StakeRegistered(
-            stakeData);
-        return true; }
-
-//***********************************/
-
-        // claim stake for vest periods accumulated
-    function claimStake(
-        bytes32 stakeIdentifier
-    ) public returns (
-        bool success
-    ) {
-        // see if we need to update time
-        checkTime();
-
-        // if stake exists, then get it
-        require(
-            stakeExists(stakeIdentifier),
-            "this stake does not exist");
-        Stake storage stake = _stakes[stakeIdentifier];
-
-        // define relevant stake values
-        address stakeholder = stake.stakeholder;
-        uint256 tokenShare = stake.share;
-        uint256 tokensPaid = stake.paid;
-        uint256 tokensRemaining = tokenShare - tokensPaid;
-        uint256 cliff = pool[stake.pool].cliff;
-        uint256 vestingMonths = pool[stake.pool].vests;
-
-        // make sure cliff has been surpassed
-        require(
-            monthsPassed >= cliff,
-            "too soon -- cliff not yet passed");
-        // number of payouts must not surpass number of vests
-        require(
-            tokensPaid < tokenShare,
-            "stakeholder already collected entire token share");
-        
-        // determine the traunch amount claimant
-        // has rights to for each vested month
-        uint256 monthlyTokenAmount = tokenShare / vestingMonths;
-        // and determine the number of payments
-        // claimant has received
-        uint256 paymentsMade = tokensPaid / monthlyTokenAmount;
-
-        // even if cliff is passed, is it too soon for next payment?
-        require(
-            paymentsMade <= monthsPassed - cliff,
-            "payout too early");
-        
-        uint256 thesePayments;
-        // when time has past vesting period,
-        // pay out remaining unclaimed payments
-        if (cliff + vestingMonths <= monthsPassed) {
-            
-            // these are all remaining payments in this case
-            thesePayments = vestingMonths - paymentsMade;
-
-        // don't count months past payments made + cliff as payments
-        } else {
-
-            // these are number of payments owed at time of claim
-            thesePayments = 1 + monthsPassed - paymentsMade - cliff; }
-
-        // use payments to calculate amount to pay out
-        uint256 thisPayout = thesePayments * monthlyTokenAmount;
-
-        // if final payment, add remainder of share to payout amount
-        if (tokensRemaining - thisPayout < monthlyTokenAmount) {
-            
-            thisPayout += tokenShare % vestingMonths; }
-
-        // transfer and make sure it succeeds
-        require(
-            _transfer(
-                pool[stake.pool].addr,
-                stakeholder,
-                thisPayout),
-            "stake claim transfer failed");
-
-        // update member state
-        _stakes[stakeIdentifier].paid += thisPayout;
-        // update total supply and reserve
-        _totalSupply += thisPayout;
-
-        emit StakeClaimed(
-            stakeholder,
-            stakeIdentifier,
-            thisPayout);
-        return true; }    
-
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
-    /**
-    * stakeholder getters
-    **/
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
-
-         // on a stake by stake basis
-        // returns time remaining until next token traunch release
-    function timeRemaining(
-        bytes32 stakeIdentifier
-    ) public view returns (
-        uint256 monthsRemaining,
-        uint256 daysRemaining,
-        uint256 hoursRemaining,
-        uint256 minutesRemaining,
-        uint256 secondsRemaining
-    ) {
-        // if stake exists, then get it
-        require(
-            stakeExists(stakeIdentifier),
-            "this stake does not exist");
-        Stake memory stake = _stakes[stakeIdentifier];
-
-        // define relevant stake values
-        uint256 cliff = pool[stake.pool].cliff;
-        uint256 vests = pool[stake.pool].vests;
-
-        uint256 timeLeft;
-        // compute the time left until the next payment is available
-        // if months passed beyond last payment, stop counting
-        if (monthsPassed >= vests + cliff ||
-            nextPayout < block.timestamp) {
-            
-            timeLeft = 0;
-
-        // when cliff hasn't been surpassed,
-        // then include that time into countdown
-        } else if (monthsPassed < cliff) {
-            
-            timeLeft = (cliff - monthsPassed - 1) * _MONTH +
-                        nextPayout - block.timestamp;
-
-        // during vesting period,
-        // timeleft is only time til next month's payment
-        } else {
-
-            timeLeft = nextPayout - block.timestamp; }
-
-        return parseTimeLeft(timeLeft); }
-
-//***********************************/
-
-        // breaks time left into human readable units for blockscanner
-    function parseTimeLeft(
-        uint256 timeLeft
-    ) internal pure returns (
-        uint256 monthsRemaining,
-        uint256 daysRemaining,
-        uint256 hoursRemaining,
-        uint256 minutesRemaining,
-        uint256 secondsRemaining
-    ) {
-        uint256 remainingSeconds;
-
-        monthsRemaining = timeLeft / _MONTH;
-        remainingSeconds = timeLeft % _MONTH;
-
-        daysRemaining = remainingSeconds / _DAY;
-        remainingSeconds = remainingSeconds % _DAY;
-
-        hoursRemaining = remainingSeconds / _HOUR;
-        remainingSeconds = remainingSeconds % _HOUR;
-
-        minutesRemaining = remainingSeconds / _MINUTE;
-        remainingSeconds = remainingSeconds % _MINUTE;
-
-        secondsRemaining = remainingSeconds;
-
-        return (
-            monthsRemaining,
-            daysRemaining,
-            hoursRemaining,
-            minutesRemaining,
-            secondsRemaining); }
-
-//***********************************/
-
-           // get amount that is available to claim
-          // get amount left to pay to stakeholder
-         // get amount paid so far to stakeholder
-        // get time remaining until next payout ready
-    function stakeStatus(
-        bytes32 stakeIdentifier
-    ) public view returns (
-        uint256 tokenShare,
-        uint256 tokensPaidOut,
-        uint256 tokensRemaining,
-        uint256 tokensAvailable,
-        uint256 monthlyTokenAmount,
-        uint256 vestingMonths,
-        uint256 cliff
-    ) {
-        // if stake exists, then get it
-        require(
-            stakeExists(stakeIdentifier),
-            "this stake does not exist");
-        Stake memory stake = _stakes[stakeIdentifier];
-
-        // define relevant stake values
-        cliff = pool[stake.pool].cliff;
-        vestingMonths = pool[stake.pool].vests;
-        tokenShare = stake.share;
-
-        // how much has member already claimed
-        tokensPaidOut = stake.paid;
-
-        // determine the number of payments claimant has rights to
-        monthlyTokenAmount = tokenShare / vestingMonths;
-
-        // and determine the number of payments claimant has received
-        uint256 payments = tokensPaidOut / monthlyTokenAmount;
-
-        // how much does member have yet to collect,
-        // after vesting complete
-        tokensRemaining = tokenShare - tokensPaidOut;
-
-        // compute the pay available to claim at current moment
-        // if months passed are inbetween cliff and vesting end
-        if (monthsPassed >= cliff &&
-            monthsPassed < cliff + vestingMonths) {
-            
-            tokensAvailable = (1 + monthsPassed - cliff - payments) *
-                               monthlyTokenAmount;
-
-        // until time reaches cliff, no pay is available
-        } else if (monthsPassed < cliff ){
-
-            tokensAvailable = 0;
-
-        // if time has passed cliff and vesting period,
-        // the entire remaining share is available
-        } else {
-
-            tokensAvailable = tokenShare - tokensPaidOut; }
-
-        // if at final payment, add remainder of share to final payment
-        if (tokenShare - tokensPaidOut - tokensAvailable < monthlyTokenAmount &&
-            tokensAvailable > 0) {
-            
-            tokensAvailable += tokenShare % vestingMonths; }
-
-        return (
-            tokenShare,
-            tokensPaidOut,
-            tokensRemaining,
-            tokensAvailable,
-            monthlyTokenAmount,
-            vestingMonths,
-            cliff); }
-
-//***********************************/
-
-        // gets stake identifiers for owned by shareholder
-    function getStakeIdentifiers(
-        address stakeholder
-    ) public view returns (
-        bytes32[] memory stakeIdentifiers
-    ) {
-        return _stakeIdentifiers[stakeholder]; }
-
-//***********************************/
-
-        // gets stake designated by stake identifier
-    function getStake(
-        bytes32 stakeIdentifier
-    ) public view returns (
-        address stakeholder,
-        uint256 share,
-        uint256 paid,
-        uint256 poolNumber
-    ) {
-        Stake memory stake = _stakes[stakeIdentifier];
-        return (
-            stake.stakeholder,
-            stake.share,
-            stake.paid,
-            stake.pool); }
-
-//***********************************/
-
-        // view predicate for validating stake identifier input
-    function stakeExists(
-        bytes32 stakeIdentifier
-    ) public view returns (
-        bool exists
-    ) {
-        if (_stakes[stakeIdentifier].share > 0 &&
-            _stakes[stakeIdentifier].stakeholder != address(0)) {
-            
-            // does exist
-            return true; }
-        // does not exist
-        return false; }
-
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
 
     function testingIncrementMonth(
     ) public returns (uint256) {
 
-        monthsPassed += 1;
-        nextPayout += _MONTH;
 
-        return monthsPassed; }
+        return 1; }
 
     uint256[100] public storageGap;
 }
