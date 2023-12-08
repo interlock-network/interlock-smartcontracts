@@ -1,4 +1,4 @@
-<img align="right" width="300" height="300" src="https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cf46d2650fee84e33f_interlock-visual-5.png">
+<img align="right" width="300" height="300" src="https://assets-global.website-files.com/64d9930f57641d176ab09b78/64df168bc9c81b986abd0e9b_img-ilock-token.png">
 
 # $ILOCK PSP22 Rewards Smart Contract
 
