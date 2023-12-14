@@ -1673,28 +1673,24 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 
         /// - General function to transfer share a stakeholder is currently entitled to.
-        /// - This is called once per stakeholder per month by Interlock, Interlock paying fees.
+        /// - This is called once per stakeholder per month by stakeholder.
         /// - Pools are guaranteed to have enough tokens for all stakeholders.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
         #[openbrush::modifiers(when_not_paused)]
-        pub fn distribute_tokens(
+        pub fn claim_tokens(
             &mut self,
-            stakeholder: AccountId,
             poolnumber: u8,
         ) -> OtherResult<()> {
 
-            // make sure stakeholder is not zero address
-            if stakeholder == AccountId::from([0_u8; 32]) {
-                return Err(OtherError::IsZeroAddress)
-            }
+            let stakeholder: AccountId = self.env().caller();
 
             // make sure pool is valid
             if poolnumber >= POOL_COUNT as u8 {
                 return Err(OtherError::PoolOutOfBounds);
             }
 
-            // get stakes held by this stakeholder
+            // get stake held by this stakeholder
             let mut stakes = match self.vest.stakeholder.get(stakeholder) {
                 Some(stakes) => stakes,
                 None => { return Err(OtherError::StakeholderNotFound) },
