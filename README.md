@@ -14,7 +14,7 @@ If you find something wrong or concerning, open an issue. If the finding is a se
 
 Interlock Network has been and always will be, blockchain agnostic. The first phase of our web3 launch involves positioning for future security staking, as well as maximizing the likelihood of successful token value hike.
 
-The ILOCK token will span two ecosystems as mentioned: Polkadot (the Aleph Zero Substrate fork), and Ethereum (the Arbitrum layer 2 EVM). Vesting and rewards will be maintainted on both. Security staking will likely exist primarily on Aleph Zero, due to the superior transaction fee and throughput metrics. If security staking does NOT need to be high-frequency, then we may also implement on Arbitrum.
+The ILOCK token will span two ecosystems as mentioned: Polkadot (the Aleph Zero Substrate fork), and Ethereum (the Arbitrum layer 2 EVM). Vesting and rewards will be maintained on both. Security staking will likely exist primarily on Aleph Zero, due to the superior transaction fee and throughput metrics. If security staking does NOT need to be high-frequency, then we may also implement on Arbitrum.
 
 The choice in these two chains has been informed by active work being done to bridge the two ecosystems. We would not have chosen these chains to launch if we did not know that there would be a bridge in the near future.
 
