@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"ilockmvp":[["impl OccupyStorage for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.RewardData.html\" title=\"struct ilockmvp::ilockmvp::RewardData\">RewardData</a>"],["impl OccupyStorage for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.MultisigData.html\" title=\"struct ilockmvp::ilockmvp::MultisigData\">MultisigData</a>"],["impl OccupyStorage for <a class=\"struct\" href=\"ilockmvp/ilockmvp/struct.AppData.html\" title=\"struct ilockmvp::ilockmvp::AppData\">AppData</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
