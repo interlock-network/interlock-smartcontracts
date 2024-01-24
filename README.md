@@ -8,11 +8,11 @@ Contracts are written in [ink!](https://use.ink), employ [Openbrush](https://ope
 
 ## Contracts:
 
-#### [$ILOCK Vesting](./contract_ilockmvp_sol)
+#### [$ILOCK Vesting & Rewards](./contract_ilockmvp_sol)
 
-This is our EVM (ERC20) token contract, containing provisions for maintaining the $ILOCK vesting schedule. This contract employs Solidity and OpenZeppelin.
+This is our EVM (ERC20) token contract written for [Arbitrum](https://arbitrum.io), containing provisions for maintaining the $ILOCK vesting schedule. This contract employs Solidity, drawing directly from the standard (audited) OpenZeppelin 5 contract suite. To avoid needing to perform a new audit, reward functionality will simply employ the `TransferFrom` ERC20 standard method.
 
-#### [$ILOCK Rewards & Security Staking](./contract_ilockmvp_ink) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp_ink/docs/ilockmvp/)
+#### [$ILOCK Vesting, Rewards & Security Staking](./contract_ilockmvp_ink) ~ [_[DOCUMENTATION]_](https://interlock-network.github.io/interlock-smartcontracts/contract_ilockmvp_ink/docs/ilockmvp/)
 
 This is our Substrate (PSP22) token contract, containing provisions for rewarding Interlockers, and connecting approved external application contracts for 'superuser' privileged access to internal contract functionalities and single-transaction purchases paid in $ILOCK token. (Read more in Universal Access NFT and Port/Socket Application Template.) This contract employs ink! 4 and Openbrush 3.
 
