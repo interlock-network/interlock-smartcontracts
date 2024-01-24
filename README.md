@@ -1,4 +1,4 @@
-<img align="right" width="300" height="300" src="https://assets-global.website-files.com/64d9930f57641d176ab09b78/64df168bc9c81b986abd0e9b_img-ilock-token.png">
+<img align="right" width="300" height="300" src="https://assets-global.website-files.com/64d9930f57641d176ab09b78/64dde3b1459a01ddf7b4a529_interlock-logo-large.webp">
 
 # Interlock Network Smart Contracts
 
