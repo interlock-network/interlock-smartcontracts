@@ -28,8 +28,8 @@
 //!
 
 #![doc(
-    html_logo_url = "https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cffa42ae33001294d1_interlock-visual-hero.png",
-    html_favicon_url = "https://uploads-ssl.webflow.com/6293b370c2da3eda80121e92/6293d7cffa42ae33001294d1_interlock-visual-hero.png",
+    html_logo_url = "https://assets-global.website-files.com/64d9930f57641d176ab09b78/64dde3b1459a01ddf7b4a529_interlock-logo-large.webp",
+    html_favicon_url = "https://assets-global.website-files.com/64d9930f57641d176ab09b78/64da50c8875e833f16060147_Favicon.png",
 )]
 
 #![allow(non_snake_case)]
