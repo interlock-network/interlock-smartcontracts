@@ -2,7 +2,7 @@
 
 # Interlock Network Smart Contracts
 
-Welcome! This repo hosts development of all smart contracts that actualize our [**Interlock token model**](https://github.com/interlock-network/interlock-models) and [**DeSec**](https://docs.interlock.network) infrastructure. It exists to be transparent about our contract development.
+Welcome! This repo hosts development of all smart contracts that actualize our [Interlock token model](https://github.com/interlock-network/interlock-models) and [DeSec](https://docs.interlock.network) infrastructure. It exists to be transparent about our contract development.
 
 Contracts are written in [ink!](https://use.ink), employ [Openbrush](https://openbrush.io), and are hosted on the [Aleph Zero blockchain](https://alephzero.org) as well as the [Arbitrum blockchain](https://arbitrum.io).
 
