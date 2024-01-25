@@ -8,7 +8,7 @@ Contracts are written in [ink!](https://use.ink), employ [Openbrush](https://ope
 
 ## SECURITY NOTICE:
 
-If you find something wrong or concerning, open an issue. If the finding is a sensitive security concern, then for now the best course of action is to email smartcontract POC Blair Munro directly, or reach out on discord: [blair@interlock.network](blair@interlock.network) & @blairmunroakusa.
+If you find something wrong or concerning, open an issue. If the finding is a sensitive security concern, then for now the best course of action is to email smartcontract POC Blair Munro directly, or reach out on discord: [blair@interlock.network](mailto:blair@interlock.network) & @blairmunroakusa.
 
 ## Multichain:
 
