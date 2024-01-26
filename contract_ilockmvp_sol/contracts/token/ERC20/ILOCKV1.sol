@@ -54,7 +54,10 @@ contract ILOCKV1 is Initializable,
     uint256 private _totalSupply;
 
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
-    uint256 constant private _CAP = 1_000_000_000;
+    uint256 constant private _CAP = 1_000_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _ALEPH_SUPPLY = 300_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _REWARDS_POOL = 300_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _AZERO_REWARDS_POOL = 150_000_000 * _DECIMAL_MAGNITUDE;
 
     address public contractOwner;
     address public multisigSafe;
@@ -82,13 +85,13 @@ contract ILOCKV1 is Initializable,
 
         contractOwner = _msgSender();
 
-		require(
-			initialized == false,
-			"contract already initialized");
+        require(
+            initialized == false,
+            "contract already initialized");
 
-		//
-		//
-		// ??? TokenOps: How do we manage supply incrementation
+        //
+        //
+        // ??? TokenOps: How do we manage supply incrementation
         _totalSupply = 0;
 
         initialized = true;
@@ -172,7 +175,7 @@ contract ILOCKV1 is Initializable,
         onlyOwner
         noZero(multisigSafe_)
     {
-		// TokenOps safe approvals will happen manually, preTGE by contractOwner
+        // TokenOps safe approvals will happen manually, preTGE by contractOwner
 
         require(
             initialized,
@@ -182,12 +185,15 @@ contract ILOCKV1 is Initializable,
             "TGE already happened");
 
         multisigSafe = multisigSafe_;
-		contractOwner = multisigSafe_;
 
-		_approve(
-			address(this),
-			contractOwner,
-			_REWARDS_POOL - _AZERO_REWARDS_POOL);
+		// mint the tokens
+		_balances[address(this)] = _CAP - _ALEPH_SUPPLY;
+
+		// approve the contract owner to issue rewards
+        _approve(
+            address(this),
+            contractOwner,
+            _REWARDS_POOL - _AZERO_REWARDS_POOL);
 
         // this must never happen again...
         tgeTriggered = true; }
@@ -320,7 +326,7 @@ contract ILOCKV1 is Initializable,
     ) public pure returns (
         uint256 _cap
     ) {
-        return _CAP * _DECIMAL_MAGNITUDE; }
+        return _CAP; }
 
 //*************************************************************/
 //*************************************************************/
