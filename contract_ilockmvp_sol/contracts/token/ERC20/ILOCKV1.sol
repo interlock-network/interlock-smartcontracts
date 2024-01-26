@@ -9,8 +9,7 @@
 // blairmunroakusa
 // ...
 //
-// This contract is comprised of Open Zeppelin components and
-// bespoke components.
+// This contract is from the Open Zeppelin.
 //
 // This is a token contract that implements a vesting schedule
 // for ILOCK stakeholders to claim their share of token (their 
@@ -61,20 +60,13 @@ contract ILOCKV1 is Initializable,
     bool private _paused;
     bool public tgeTriggered;
     bool public initialized;
-    uint8 constant private _POOLCOUNT = 10;
     uint8 constant private _DECIMALS = 18;
     string constant private _NAME = "Interlock Network";
     string constant private _SYMBOL = "TESTILOCK";
     uint256 private _totalSupply;
 
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
-    uint256 constant private _REWARDS_POOL = 300_000_000;
-    uint256 constant private _AZERO_REWARDS_POOL = 150_000_000;
     uint256 constant private _CAP = 1_000_000_000;
-    uint256 constant private _MONTH = 30 days;
-    uint256 constant private _DAY = 24 hours;
-    uint256 constant private _HOUR = 60 minutes;
-    uint256 constant private _MINUTE = 60 seconds;
 
     address public contractOwner;
     address public multisigSafe;
@@ -84,25 +76,6 @@ contract ILOCKV1 is Initializable,
     mapping(
         address => mapping(
             address => uint256)) private _allowances;
-
-    mapping(
-        bytes32 => Stake) private _stakes;
-    mapping(
-        address => bytes32[]) private _stakeIdentifiers;
-
-    struct Stake {
-        address stakeholder;
-        uint256 share;
-        uint256 paid;
-        uint8 pool; }
-
-    struct PoolData {
-        string name;
-        uint256 tokens;
-        uint256 vests;
-        uint256 cliff; }
-
-    PoolData[_POOLCOUNT] public pool;
 
 //*************************************************************/
 //*************************************************************/
@@ -125,24 +98,6 @@ contract ILOCKV1 is Initializable,
 			initialized == false,
 			"contract already initialized");
 
-        _initializePools();
-
-        uint256 sumTokens = _REWARDS_POOL - _AZERO_REWARDS_POOL;
-        // iterate through pools to create struct array
-        for (uint8 i = 0; i < _POOLCOUNT; i++) {
-
-            // here we are adding up tokens to make sure
-            // sum is correct
-            sumTokens += pool[i].tokens;
-
-            // in the same breath we convert token amounts
-            // to ERC20 format
-            pool[i].tokens *= _DECIMAL_MAGNITUDE; }
-
-        require(
-            sumTokens == _CAP - _AZERO_REWARDS_POOL,
-            "pool token amounts must add up to cap less rewards");
-
 		//
 		//
 		// ??? TokenOps: How do we manage supply incrementation
@@ -150,72 +105,6 @@ contract ILOCKV1 is Initializable,
 
         initialized = true;
         tgeTriggered = false; }
-
-//***********************************/
-
-    function _initializePools(
-    ) internal {
-        
-        pool[0] = PoolData({
-            name: "Community Sale",
-            tokens: 3_703_703,
-            vests: 3,
-            cliff: 1
-        });
-        pool[1] = PoolData({
-            name: "Presale 1",
-            tokens: 48_626_667,
-            vests: 18,
-            cliff: 1
-        });
-        pool[2] = PoolData({
-            name: "Presale 2",
-            tokens: 33_333_333,
-            vests: 15,
-            cliff: 1
-        });
-        pool[3] = PoolData({
-            name: "Presale 3",
-            tokens: 25_714_286,
-            vests: 12,
-            cliff: 2
-        });
-        pool[4] = PoolData({
-            name: "Public Sale",
-            tokens: 28_500_000,
-            vests: 3,
-            cliff: 0
-        });
-        pool[5] = PoolData({
-            name: "Founders and Team",
-            tokens: 200_000_000,
-            vests: 36,
-            cliff: 1
-        });
-        pool[6] = PoolData({
-            name: "Outlier Ventures",
-            tokens: 40_000_000,
-            vests: 24,
-            cliff: 1
-        });
-        pool[7] = PoolData({
-            name: "Advisors",
-            tokens: 25_000_000,
-            vests: 24,
-            cliff: 1
-        });
-        pool[8] = PoolData({
-            name: "Interlock Foundation",
-            tokens: 258_122_011,
-            vests: 84,
-            cliff: 0
-        });
-        pool[9] = PoolData({
-            name: "Strategic Partners and KOL",
-            tokens: 37_000_000,
-            vests: 12,
-            cliff: 1
-        }); }
 
 //*************************************************************/
 //*************************************************************/
