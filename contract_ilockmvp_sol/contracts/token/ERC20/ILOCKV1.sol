@@ -9,20 +9,9 @@
 // blairmunroakusa
 // ...
 //
-// This contract is from the Open Zeppelin.
+// This contract is from the Open Zeppelin 5 contract suite.
 //
-// This is a token contract that implements a vesting schedule
-// for ILOCK stakeholders to claim their share of token (their 
-// 'stake') over the course of the vesting period. NOTE: a stake
-// in this context is not the same as 'staking tokens' in the
-// typical web3 sense. 'Stake' in this context in in the sense
-// that a stakeholder has a stake or investment in the project.
-//
-// Stakeholders are grouped into various token pools, with each
-// pool being defined by the Interlock Network tokenomics token
-// distribution schedule. Each pool is devoted to a specific
-// type of stakeholder with its own vesting schedule (cliff and
-// vesting period).
+// Vesting is managed by external TokenOps vesting contracts.
 //
 //*************************************************************/
 //*************************************************************/
@@ -31,7 +20,6 @@
 pragma solidity ^0.8.18;
 
 import "./IERC20Upgradeable.sol";
-import "./ILOCKpool.sol";
 import "./extensions/IERC20MetadataUpgradeable.sol";
 import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
