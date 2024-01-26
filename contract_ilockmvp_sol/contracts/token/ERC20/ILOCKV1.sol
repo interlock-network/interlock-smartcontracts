@@ -24,6 +24,8 @@ import "./extensions/IERC20MetadataUpgradeable.sol";
 import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
 
+/** @title A contract for Interlock Network token management. */
+/** @notice This contract includes events, state variables, and functions for the Interlock Network ERC20 token. */
 contract ILOCKV1 is Initializable,
                     ContextUpgradeable,
                     IERC20Upgradeable,
@@ -39,31 +41,50 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-    /** @dev **/
+    /** @dev Emitted when the contract is paused. */
     event Paused(
         address account);
+    /** @dev Emitted when the contract is unpaused. */
     event Unpaused(
         address account);
-
+	/** @dev Indicates if the contract is paused. */
     bool private _paused;
+
+	/** @dev Indicates if the TGE (Token Generation Event) has been triggered. */
     bool public tgeTriggered;
+	/** @dev Indicates if the contract has been initialized. */
     bool public initialized;
+
+	/** @dev Constant value for token decimals. */
     uint8 constant private _DECIMALS = 18;
+	/** @dev Constant value for token name. */
     string constant private _NAME = "Interlock Network";
+	/** @dev Constant value for token symbol. */
     string constant private _SYMBOL = "TESTILOCK";
+
+	/** @dev Total supply of tokens. */
     uint256 private _totalSupply;
 
+    /** @dev Constant value for decimal magnitude. */
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
+	/** @dev Constant value for token cap. */
     uint256 constant private _CAP = 1_000_000_000 * _DECIMAL_MAGNITUDE;
+	/** @dev Constant value for Aleph token supply. */
     uint256 constant private _ALEPH_SUPPLY = 300_000_000 * _DECIMAL_MAGNITUDE;
+	/** @dev Constant value for Rewards Pool. */
     uint256 constant private _REWARDS_POOL = 300_000_000 * _DECIMAL_MAGNITUDE;
+	/** @dev Constant value for Azero Rewards Pool. */
     uint256 constant private _AZERO_REWARDS_POOL = 150_000_000 * _DECIMAL_MAGNITUDE;
 
+	/** @dev Address of the contract owner. */
     address public contractOwner;
+	/** @dev Address of the multisig safe. */
     address public multisigSafe;
 
+	/** @dev Mapping for tracking balances. */
     mapping(
         address => uint256) private _balances;
+	/** @dev Mapping for tracking allowances. */
     mapping(
         address => mapping(
             address => uint256)) private _allowances;
