@@ -99,8 +99,7 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-         // owned by msg.sender
-        // initializes contract
+	/** @dev Initializes the contract, setting the contract owner and marking it as initialized. */
     function initialize(
     ) public initializer {
 
@@ -113,6 +112,7 @@ contract ILOCKV1 is Initializable,
         //
         //
         // ??? TokenOps: How do we manage supply incrementation
+		// Answer: implement issue #242
         _totalSupply = 0;
 
         initialized = true;
@@ -128,8 +128,8 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-        // only allows owner to call
-    modifier onlyOwner(
+    /** @dev Ensures that the function is called only by the contract owner. */
+	modifier onlyOwner(
     ) {
         require(
             _msgSender() == contractOwner,
@@ -138,7 +138,7 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // only allows the Safe wallet multisig safe to call
+    /** @dev Ensures that the function is called only by the multisig safe. */
     modifier onlyMultisigSafe(
     ) {
         require(
@@ -148,7 +148,8 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // verifies zero address was not provied
+    /** @dev Ensures that a non-zero address is provided. */
+	/** @param _address - Address of interest to check. */
     modifier noZero(
         address _address
     ) {
@@ -159,7 +160,9 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // verifies there exists enough token to proceed
+    /** @dev Ensures that there are enough tokens available for the operation. */
+	/** @param _available - Address of token available. */
+	/** @param _amount - Address of token needed. */
     modifier isEnough(
         uint256 _available,
         uint256 _amount
@@ -171,7 +174,7 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-        // verifies that contract is not paused
+    /** @dev Ensures that the contract is not paused. */
     modifier notPaused(
     ) {
         require(
