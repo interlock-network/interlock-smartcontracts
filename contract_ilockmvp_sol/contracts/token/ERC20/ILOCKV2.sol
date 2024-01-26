@@ -9,21 +9,9 @@
 // blairmunroakusa
 // ...
 //
-// This contract is comprised of Open Zeppelin components and
-// bespoke components.
+// This contract is from the Open Zeppelin 5 contract suite.
 //
-// This is a token contract that implements a vesting schedule
-// for ILOCK stakeholders to claim their share of token (their
-// 'stake') over the course of the vesting period. NOTE: a stake
-// in this context is not the same as 'staking tokens' in the
-// typical web3 sense. 'Stake' in this context in in the sense
-// that a stakeholder has a stake or investment in the project.
-//
-// Stakeholders are grouped into various token pools, with each
-// pool being defined by the Interlock Network tokenomics token
-// distribution schedule. Each pool is devoted to a specific
-// type of stakeholder with its own vesting schedule (cliff and
-// vesting period).
+// Vesting is managed by external TokenOps vesting contracts.
 //
 //*************************************************************/
 //*************************************************************/
@@ -32,7 +20,6 @@
 pragma solidity ^0.8.18;
 
 import "./IERC20Upgradeable.sol";
-import "./ILOCKpool.sol";
 import "./extensions/IERC20MetadataUpgradeable.sol";
 import "../../utils/ContextUpgradeable.sol";
 import "../../proxy/utils/Initializable.sol";
@@ -61,20 +48,16 @@ contract ILOCKV2 is Initializable,
     bool private _paused;
     bool public tgeTriggered;
     bool public initialized;
-    uint8 constant private _POOLCOUNT = 10;
     uint8 constant private _DECIMALS = 18;
     string constant private _NAME = "Interlock Network";
     string constant private _SYMBOL = "TESTILOCK";
     uint256 private _totalSupply;
 
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
-    uint256 constant private _REWARDS_POOL = 300_000_000;
-    uint256 constant private _AZERO_REWARDS_POOL = 150_000_000;
-    uint256 constant private _CAP = 1_000_000_000;
-    uint256 constant private _MONTH = 30 days;
-    uint256 constant private _DAY = 24 hours;
-    uint256 constant private _HOUR = 60 minutes;
-    uint256 constant private _MINUTE = 60 seconds;
+    uint256 constant private _CAP = 1_000_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _ALEPH_SUPPLY = 300_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _REWARDS_POOL = 300_000_000 * _DECIMAL_MAGNITUDE;
+    uint256 constant private _AZERO_REWARDS_POOL = 150_000_000 * _DECIMAL_MAGNITUDE;
 
     address public contractOwner;
     address public multisigSafe;
@@ -84,25 +67,6 @@ contract ILOCKV2 is Initializable,
     mapping(
         address => mapping(
             address => uint256)) private _allowances;
-
-    mapping(
-        bytes32 => Stake) private _stakes;
-    mapping(
-        address => bytes32[]) private _stakeIdentifiers;
-
-    struct Stake {
-        address stakeholder;
-        uint256 share;
-        uint256 paid;
-        uint8 pool; }
-
-    struct PoolData {
-        string name;
-        uint256 tokens;
-        uint256 vests;
-        uint256 cliff; }
-
-    PoolData[_POOLCOUNT] public pool;
 
 //*************************************************************/
 //*************************************************************/
@@ -121,101 +85,17 @@ contract ILOCKV2 is Initializable,
 
         contractOwner = _msgSender();
 
-		require(
-			initialized == false,
-			"contract already initialized");
-
-        _initializePools();
-
-        uint256 sumTokens = _REWARDS_POOL - _AZERO_REWARDS_POOL;
-        // iterate through pools to create struct array
-        for (uint8 i = 0; i < _POOLCOUNT; i++) {
-
-            // here we are adding up tokens to make sure
-            // sum is correct
-            sumTokens += pool[i].tokens;
-
-            // in the same breath we convert token amounts
-            // to ERC20 format
-            pool[i].tokens *= _DECIMAL_MAGNITUDE; }
-
         require(
-            sumTokens == _CAP - _AZERO_REWARDS_POOL,
-            "pool token amounts must add up to cap less rewards");
+            initialized == false,
+            "contract already initialized");
 
-		//
-		//
-		// ??? TokenOps: How do we manage supply incrementation
+        //
+        //
+        // ??? TokenOps: How do we manage supply incrementation
         _totalSupply = 0;
 
         initialized = true;
         tgeTriggered = false; }
-
-//***********************************/
-
-    function _initializePools(
-    ) internal {
-
-        pool[0] = PoolData({
-            name: "Community Sale",
-            tokens: 3_703_703,
-            vests: 3,
-            cliff: 1
-        });
-        pool[1] = PoolData({
-            name: "Presale 1",
-            tokens: 48_626_667,
-            vests: 18,
-            cliff: 1
-        });
-        pool[2] = PoolData({
-            name: "Presale 2",
-            tokens: 33_333_333,
-            vests: 15,
-            cliff: 1
-        });
-        pool[3] = PoolData({
-            name: "Presale 3",
-            tokens: 25_714_286,
-            vests: 12,
-            cliff: 2
-        });
-        pool[4] = PoolData({
-            name: "Public Sale",
-            tokens: 28_500_000,
-            vests: 3,
-            cliff: 0
-        });
-        pool[5] = PoolData({
-            name: "Founders and Team",
-            tokens: 200_000_000,
-            vests: 36,
-            cliff: 1
-        });
-        pool[6] = PoolData({
-            name: "Outlier Ventures",
-            tokens: 40_000_000,
-            vests: 24,
-            cliff: 1
-        });
-        pool[7] = PoolData({
-            name: "Advisors",
-            tokens: 25_000_000,
-            vests: 24,
-            cliff: 1
-        });
-        pool[8] = PoolData({
-            name: "Interlock Foundation",
-            tokens: 258_122_011,
-            vests: 84,
-            cliff: 0
-        });
-        pool[9] = PoolData({
-            name: "Strategic Partners and KOL",
-            tokens: 37_000_000,
-            vests: 12,
-            cliff: 1
-        }); }
 
 //*************************************************************/
 //*************************************************************/
@@ -291,12 +171,10 @@ contract ILOCKV2 is Initializable,
         // generates all the tokens
     function triggerTGE(
         address multisigSafe_
-    ) public
+    ) public 
         onlyOwner
         noZero(multisigSafe_)
     {
-		// TokenOps safe approvals will happen manually, preTGE by contractOwner
-
         require(
             initialized,
             "contract not initialized");
@@ -305,12 +183,20 @@ contract ILOCKV2 is Initializable,
             "TGE already happened");
 
         multisigSafe = multisigSafe_;
-		contractOwner = multisigSafe_;
 
-		_approve(
-			address(this),
-			contractOwner,
-			_REWARDS_POOL - _AZERO_REWARDS_POOL);
+        // mint the tokens
+        _balances[address(this)] = _CAP - _ALEPH_SUPPLY;
+
+        // TODO:
+        // here, manually approve all tokenops vesting contracts
+        // ...this will be safer and more transparent than
+        //    separate approval transaction post-TGE
+
+        // approve the contract owner to issue rewards
+        _approve(
+            address(this),
+            contractOwner,
+            _REWARDS_POOL - _AZERO_REWARDS_POOL);
 
         // this must never happen again...
         tgeTriggered = true; }
@@ -323,12 +209,12 @@ contract ILOCKV2 is Initializable,
     **/
 //*************************************************************/
 //*************************************************************/
-//*************************************************************/
+//*************************************************************/                    
 
         // changes the contract owner
     function changeOwner(
         address newOwner
-    ) public
+    ) public 
         onlyMultisigSafe
         noZero(newOwner)
     {
@@ -349,12 +235,12 @@ contract ILOCKV2 is Initializable,
     function pause(
     ) public
         onlyMultisigSafe
-    {
+    {    
         require(
             !paused(),
             "already paused");
         _paused = true;
-
+        
         emit Paused(_msgSender()); }
 
 //***********************************/
@@ -363,12 +249,12 @@ contract ILOCKV2 is Initializable,
     function unpause(
     ) public
         onlyMultisigSafe
-    {
+    {    
         require(
             paused(),
             "already unpaused");
         _paused = false;
-
+        
         emit Unpaused(_msgSender()); }
 
 //*************************************************************/
@@ -443,7 +329,7 @@ contract ILOCKV2 is Initializable,
     ) public pure returns (
         uint256 _cap
     ) {
-        return _CAP * _DECIMAL_MAGNITUDE; }
+        return _CAP; }
 
 //*************************************************************/
 //*************************************************************/
@@ -486,7 +372,7 @@ contract ILOCKV2 is Initializable,
     ) public virtual override returns (
         bool success
     ) {
-        address spender = _msgSender();
+        address spender = _msgSender();        
         _spendAllowance(
             from,
             spender,
@@ -527,7 +413,7 @@ contract ILOCKV2 is Initializable,
             to,
             amount);
         _afterTokenTransfer(
-            from,
+            from, 
             to,
             amount);
         return true; }
@@ -552,7 +438,7 @@ contract ILOCKV2 is Initializable,
 //***********************************/
 
          // emitting Approvl event, reverting on failure
-        // is internal implementation of approve() above
+        // is internal implementation of approve() above 
     function _approve(
         address owner,
         address spender,
@@ -570,7 +456,7 @@ contract ILOCKV2 is Initializable,
 
 //***********************************/
 
-           // emitting Approval event, reverting on failure
+           // emitting Approval event, reverting on failure 
           // will do nothing if infinite allowance
          // used strictly internally
         // deducts from spender's allowance with owner
@@ -597,7 +483,7 @@ contract ILOCKV2 is Initializable,
         uint256 addedValue
     ) public virtual returns (
         bool success
-    ) {
+    ) {    
         address owner = _msgSender();
         _approve(
             owner,
@@ -645,17 +531,6 @@ contract ILOCKV2 is Initializable,
     ) internal virtual {}
 
 //***********************************/
-
-
-    function testingIncrementMonth(
-    ) public returns (uint256) {
-
-
-        return 1; }
-
-//*************************************************************/
-//*************************************************************/
-//*************************************************************/
 
 
     function newFeature(

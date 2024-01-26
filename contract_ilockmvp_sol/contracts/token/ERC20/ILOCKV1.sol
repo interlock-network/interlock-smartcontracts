@@ -175,8 +175,6 @@ contract ILOCKV1 is Initializable,
         onlyOwner
         noZero(multisigSafe_)
     {
-        // TokenOps safe approvals will happen manually, preTGE by contractOwner
-
         require(
             initialized,
             "contract not initialized");
@@ -186,10 +184,15 @@ contract ILOCKV1 is Initializable,
 
         multisigSafe = multisigSafe_;
 
-		// mint the tokens
-		_balances[address(this)] = _CAP - _ALEPH_SUPPLY;
+        // mint the tokens
+        _balances[address(this)] = _CAP - _ALEPH_SUPPLY;
 
-		// approve the contract owner to issue rewards
+        // TODO:
+        // here, manually approve all tokenops vesting contracts
+        // ...this will be safer and more transparent than
+        //    separate approval transaction post-TGE
+
+        // approve the contract owner to issue rewards
         _approve(
             address(this),
             contractOwner,
