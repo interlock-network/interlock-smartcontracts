@@ -640,11 +640,22 @@ contract ILOCKV1 is Initializable,
 //***********************************/
 
     /** @dev Hook that is called after any transfer of tokens. */
+    /** @notice This takes care of the supply increment decrement functionality. */
     function _afterTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal virtual {}
+    ) internal virtual {
+    	
+		// token transfer from this contract means tokens entering circulation
+		if (from == address(this)) {
+			_totalSupply += amount;	
+		}
+		// token transfer to this contract means tokens leaving circulation
+		if (to == address(this)) {
+			_totalSupply -= amount;	
+		}
+    }
 
 //***********************************/
 
