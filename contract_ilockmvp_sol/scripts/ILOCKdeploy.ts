@@ -1,4 +1,4 @@
-//import { getContractFactory, upgrades } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 //import { ethers } from "ethers";
 import { writeFileSync } from "fs";
 
@@ -12,7 +12,7 @@ const IDENTIFIER_LOG_PATH = process.env.IDENTIFIER_LOG_PATH;
 
 async function main () {
 
-  const ILOCKV1 = await getContractFactory(CONTRACT);
+  const ILOCKV1 = await ethers.getContractFactory(CONTRACT);
 
   console.log('Deploying ILOCK token contract...');
   const ilockv1 = await upgrades.deployProxy(ILOCKV1, { initializer: 'initialize' });

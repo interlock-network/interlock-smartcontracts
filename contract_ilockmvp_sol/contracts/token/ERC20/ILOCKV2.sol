@@ -26,7 +26,7 @@ import "../../proxy/utils/Initializable.sol";
 
 /** @title A contract for Interlock Network token management. */
 /** @notice This contract includes events, state variables, and functions for the Interlock Network ERC20 token. */
-contract ILOCKV1 is Initializable,
+contract ILOCKV2 is Initializable,
                     ContextUpgradeable,
                     IERC20Upgradeable,
                     IERC20MetadataUpgradeable {
