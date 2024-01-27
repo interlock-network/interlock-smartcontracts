@@ -1,5 +1,4 @@
 import { ethers, upgrades } from "hardhat";
-//import { ethers } from "ethers";
 import { writeFileSync } from "fs";
 
 import * as dotenv from "dotenv";
