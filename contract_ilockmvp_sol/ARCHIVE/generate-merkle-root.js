@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const program = require('commander');
 const fs = require('fs');
-const parse_balance_map_1 = require("../src/parse-balance-map");
+const parse_balance_map_1 = require("./parse-balance-map");
 program
     .version('0.0.0')
     .requiredOption('-i, --input <path>', 'input JSON file location containing a map of account addresses to string balances');

@@ -1,7 +1,7 @@
+import "@openzeppelin/hardhat-upgrades";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
-import "@openzeppelin/hardhat-upgrades";
 
 import * as dotenv from "dotenv";
 dotenv.config({ path: './.env.dev' });

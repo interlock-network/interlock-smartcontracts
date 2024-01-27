@@ -44,55 +44,55 @@ contract ILOCKV1 is Initializable,
     /** @dev Emitted when the contract is paused. */
     event Paused(
         address account
-	);
+    );
     /** @dev Emitted when the contract is unpaused. */
     event Unpaused(
         address account
-	);
-	/** @dev Indicates if the contract is paused. */
+    );
+    /** @dev Indicates if the contract is paused. */
     bool private _paused;
 
-	/** @dev Indicates if the TGE (Token Generation Event) has been triggered. */
+    /** @dev Indicates if the TGE (Token Generation Event) has been triggered. */
     bool public tgeTriggered;
-	/** @dev Indicates if the contract has been initialized. */
+    /** @dev Indicates if the contract has been initialized. */
     bool public initialized;
 
-	/** @dev Constant value for token decimals. */
+    /** @dev Constant value for token decimals. */
     uint8 constant private _DECIMALS = 18;
-	/** @dev Constant value for token name. */
+    /** @dev Constant value for token name. */
     string constant private _NAME = "Interlock Network";
-	/** @dev Constant value for token symbol. */
+    /** @dev Constant value for token symbol. */
     string constant private _SYMBOL = "TESTILOCK";
 
-	/** @dev Total supply of tokens. */
+    /** @dev Total supply of tokens. */
     uint256 private _totalSupply;
 
     /** @dev Constant value for decimal magnitude. */
     uint256 constant private _DECIMAL_MAGNITUDE = 10 ** _DECIMALS;
-	/** @dev Constant value for token cap. */
+    /** @dev Constant value for token cap. */
     uint256 constant private _CAP = 1_000_000_000 * _DECIMAL_MAGNITUDE;
-	/** @dev Constant value for Aleph token supply. */
+    /** @dev Constant value for Aleph token supply. */
     uint256 constant private _ALEPH_SUPPLY = 300_000_000 * _DECIMAL_MAGNITUDE;
-	/** @dev Constant value for Rewards Pool. */
+    /** @dev Constant value for Rewards Pool. */
     uint256 constant private _REWARDS_POOL = 300_000_000 * _DECIMAL_MAGNITUDE;
-	/** @dev Constant value for Azero Rewards Pool. */
+    /** @dev Constant value for Azero Rewards Pool. */
     uint256 constant private _AZERO_REWARDS_POOL = 150_000_000 * _DECIMAL_MAGNITUDE;
 
-	/** @dev Address of the contract owner. */
+    /** @dev Address of the contract owner. */
     address public contractOwner;
-	/** @dev Address of the multisig safe. */
+    /** @dev Address of the multisig safe. */
     address public multisigSafe;
 
-	/** @dev ERC20 mapping for tracking balances. */
+    /** @dev ERC20 mapping for tracking balances. */
     mapping(
         address => uint256
-	) private _balances;
-	/** @dev ERC20 mapping for tracking allowances. */
+    ) private _balances;
+    /** @dev ERC20 mapping for tracking allowances. */
     mapping(
         address => mapping(
             address => uint256
-		)
-	) private _allowances;
+        )
+    ) private _allowances;
 
 //*************************************************************/
 //*************************************************************/
@@ -104,7 +104,7 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-	/** @dev Initializes the contract, setting the contract owner and marking it as initialized. */
+    /** @dev Initializes the contract, setting the contract owner and marking it as initialized. */
     function initialize(
     ) public initializer {
 
@@ -113,17 +113,17 @@ contract ILOCKV1 is Initializable,
         require(
             initialized == false,
             "contract already initialized"
-		);
+        );
 
         //
         //
         // ??? TokenOps: How do we manage supply incrementation
-		// Answer: implement issue #242
+        // Answer: implement issue #242
         _totalSupply = 0;
 
         initialized = true;
         tgeTriggered = false;
-	}
+    }
 
 //*************************************************************/
 //*************************************************************/
@@ -136,14 +136,14 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 
     /** @dev Ensures that the function is called only by the contract owner. */
-	modifier onlyOwner(
+    modifier onlyOwner(
     ) {
         require(
             _msgSender() == contractOwner,
             "only owner can call"
-		);
+        );
         _;
-	}
+    }
 
 //***********************************/
 
@@ -153,29 +153,29 @@ contract ILOCKV1 is Initializable,
         require(
             _msgSender() == multisigSafe,
             "only multisig safe can call"
-		);
+        );
         _;
-	}
+    }
 
 //***********************************/
 
     /** @dev Ensures that a non-zero address is provided. */
-	/** @param _address - Address of interest to check. */
+    /** @param _address - Address of interest to check. */
     modifier noZero(
         address _address
     ) {
         require(
             _address != address(0),
             "zero address where it shouldn't be"
-		);
+        );
         _;
-	}
+    }
 
 //***********************************/
 
     /** @dev Ensures that there are enough tokens available for the operation. */
-	/** @param _available - Address of token available. */
-	/** @param _amount - Address of token needed. */
+    /** @param _available - Address of token available. */
+    /** @param _amount - Address of token needed. */
     modifier isEnough(
         uint256 _available,
         uint256 _amount
@@ -183,9 +183,9 @@ contract ILOCKV1 is Initializable,
         require(
             _available >= _amount,
             "not enough tokens available"
-		);
+        );
         _;
-	}
+    }
 
 //***********************************/
 
@@ -195,9 +195,9 @@ contract ILOCKV1 is Initializable,
         require(
             !_paused,
             "contract is paused"
-		);
+        );
         _;
-	}
+    }
 
 //*************************************************************/
 //*************************************************************/
@@ -210,7 +210,7 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 
     /** @dev Triggers the Token Generation Event, setting up the initial token distribution. */
-	/** @param multisigSafe_ - Address of Gnosis Safe multisig account. */
+    /** @param multisigSafe_ - Address of Gnosis Safe multisig account. */
     /** @notice Only contract owner may call. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits one approval event per vesting pool. */
@@ -224,11 +224,11 @@ contract ILOCKV1 is Initializable,
         require(
             initialized,
             "contract not initialized"
-		);
+        );
         require(
             !tgeTriggered,
             "TGE already happened"
-		);
+        );
 
         multisigSafe = multisigSafe_;
 
@@ -245,11 +245,11 @@ contract ILOCKV1 is Initializable,
             address(this),
             contractOwner,
             _REWARDS_POOL - _AZERO_REWARDS_POOL
-		);
+        );
 
         // this must never happen again...
         tgeTriggered = true;
-	}
+    }
 
 //*************************************************************/
 //*************************************************************/
@@ -262,7 +262,7 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/                    
 
     /** @dev Changes the contract owner to a new owner. */
-	/** @param newOwner - Address of Gnosis Safe multisig account. */
+    /** @param newOwner - Address of Gnosis Safe multisig account. */
     /** @notice Only multisig Safe address may call. */
     /** @notice Input address parameter may not be zero address. */
     function changeOwner(
@@ -272,18 +272,18 @@ contract ILOCKV1 is Initializable,
         noZero(newOwner)
     {
         contractOwner = newOwner;
-	}
+    }
 
 //***********************************/
 
     /** @dev Returns the pause status of the contract. */
-	/** @return Paused status. */
+    /** @return isPaused - Paused status. */
     function paused(
     ) public view returns (
         bool isPaused
     ) {
         return _paused;
-	}
+    }
 
 //***********************************/
 
@@ -297,11 +297,11 @@ contract ILOCKV1 is Initializable,
         require(
             !paused(),
             "already paused"
-		);
+        );
         _paused = true;
         
         emit Paused(_msgSender());
-	}
+    }
 
 //***********************************/
 
@@ -315,11 +315,11 @@ contract ILOCKV1 is Initializable,
         require(
             paused(),
             "already unpaused"
-		);
+        );
         _paused = false;
         
         emit Unpaused(_msgSender());
-	}
+    }
 
 //*************************************************************/
 //*************************************************************/
@@ -331,66 +331,66 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-	/** @dev Returns the name of the token. */
-	/** @return Token name, string, Interlock Network. */
+    /** @dev Returns the name of the token. */
+    /** @return _name -  Token name, string, Interlock Network. */
     function name(
     ) public pure override returns (
         string memory _name
     ) {
         return _NAME;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Returns the symbol of the token. */
-	/** @return Token symbol, string, ILOCK. */
+    /** @dev Returns the symbol of the token. */
+    /** @return _symbol - Token symbol, string, ILOCK. */
     function symbol(
     ) public pure override returns (
         string memory _symbol
     ) {
         return _SYMBOL;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Returns the number of decimals the token uses. */
-	/** @return Token decimals, uint8, 18. */
+    /** @dev Returns the number of decimals the token uses. */
+    /** @return _decimals - Token decimals, uint8, 18. */
     function decimals(
     ) public pure override returns (
         uint8 _decimals
     ) {
         return _DECIMALS;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Returns the total supply of tokens. */
-	/** @return Circulating supply (CAP - ALEPH - address(this) balance), uint256. */
+    /** @dev Returns the total supply of tokens. */
+    /** @return _supply - Circulating supply (CAP - ALEPH - address(this) balance), uint256. */
     function totalSupply(
     ) public view override returns (
         uint256 _supply
     ) {
         return _totalSupply;
-	}
+    }
 
 //***********************************/
 
     /** @dev Returns the balance of the specified account. */
-	/** @notice Input address parameter may not be zero address. */
-	/** @return account token balance, uint256. */
+    /** @notice Input address parameter may not be zero address. */
+    /** @return _balance - account token balance, uint256. */
     function balanceOf(
         address account
     ) public view override returns (
         uint256 _balance
     ) {
         return _balances[account];
-	}
+    }
 
 //***********************************/
 
     /** @dev Returns the allowance one address has to spend on behalf of another. */
-	/** @notice Input address parameter may not be zero address. */
-	/** @return account token allowance for spender, uint256. */
+    /** @notice Input address parameter may not be zero address. */
+    /** @return _allowance - account token allowance for spender, uint256. */
     function allowance(
         address owner,
         address spender
@@ -398,18 +398,18 @@ contract ILOCKV1 is Initializable,
         uint256 _allowance
     ) {
         return _allowances[owner][spender];
-	}
+    }
 
 //***********************************/
 
-	/** @dev Returns the token cap. */
-	/** @return ILOCK token cap accross all blockchains, uint256, 1_000_000_000. */
+    /** @dev Returns the token cap. */
+    /** @return _cap - ILOCK token cap accross all blockchains, uint256, 1_000_000_000. */
     function cap(
     ) public pure returns (
         uint256 _cap
     ) {
         return _CAP;
-	}
+    }
 
 //*************************************************************/
 //*************************************************************/
@@ -421,10 +421,10 @@ contract ILOCKV1 is Initializable,
 //*************************************************************/
 //*************************************************************/
 
-	/** @dev Transfer tokens from msg.sender to another address, per ERC20 standard. */
+    /** @dev Transfer tokens from msg.sender to another address, per ERC20 standard. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits Transfer event. */
-	/** @return true. Revert on failure. */
+    /** @return success - true. Revert on failure. */
     function transfer(
         address to,
         uint256 amount
@@ -436,17 +436,17 @@ contract ILOCKV1 is Initializable,
             owner,
             to,
             amount
-		);
+        );
         return true;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Transfer tokens from one address to another, per ERC20 standard. */
+    /** @dev Transfer tokens from one address to another, per ERC20 standard. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits Transfer event. */
     /** @notice Emits Approval event. */
-	/** @return true. Revert on failure. */
+    /** @return success - true. Revert on failure. */
     function transferFrom(
         address from,
         address to,
@@ -459,23 +459,23 @@ contract ILOCKV1 is Initializable,
             from,
             spender,
             amount
-		);
+        );
         _transfer(
             from,
             to,
             amount
-		);
+        );
         return true;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Internal transfer function, per ERC20 standard. */
+    /** @dev Internal transfer function, per ERC20 standard. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Contract must not be paused. */
     /** @notice Origin address must have enough tokens. */
     /** @notice Emits Transfer event. */
-	/** @return true. Revert on failure. */
+    /** @return success - true. Revert on failure. */
     function _transfer(
         address from,
         address to,
@@ -492,31 +492,31 @@ contract ILOCKV1 is Initializable,
             from,
             to,
             amount
-		);
+        );
         uint256 fromBalance = _balances[from];
         unchecked {
             _balances[from] = fromBalance - amount;
             _balances[to] += amount;
-		}
+        }
         emit Transfer(
             from,
             to,
             amount
-		);
+        );
         _afterTokenTransfer(
             from, 
             to,
             amount
-		);
+        );
         return true;
-	}
+    }
 
 //***********************************/
 
     /** @dev Approves spender to transfer tokens from from msg.sender, per ERC20 standard. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits Approval event. */
-	/** @return true. Revert on failure. */
+    /** @return success - true. Revert on failure. */
     function approve(
         address spender,
         uint256 amount
@@ -528,9 +528,9 @@ contract ILOCKV1 is Initializable,
             owner,
             spender,
             amount
-		);
+        );
         return true;
-	}
+    }
 
 //***********************************/
 
@@ -552,12 +552,12 @@ contract ILOCKV1 is Initializable,
             owner,
             spender,
             amount
-		);
-	}
+        );
+    }
 
 //***********************************/
 
-	/** @dev Updates `owner` s allowance for `spender` based on spent `amount`.
+    /** @dev Updates `owner` s allowance for `spender` based on spent `amount`.
     /** @notice Allowance must be enough tokens. */
     /** @notice Emits Approval event. */
     function _spendAllowance(
@@ -574,17 +574,17 @@ contract ILOCKV1 is Initializable,
                     owner,
                     spender,
                     currentAllowance - amount
-				);
-			}
-		}
-	}
+                );
+            }
+        }
+    }
 
 //***********************************/
 
     /** @dev Allows client safe approval facing double spend attack. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits Approval event. */
-	/** @return true. Reverts on failure. */
+    /** @return success - true. Reverts on failure. */
     function increaseAllowance(
         address spender,
         uint256 addedValue
@@ -596,16 +596,16 @@ contract ILOCKV1 is Initializable,
             owner,
             spender,
             allowance(owner, spender) + addedValue
-		);
+        );
         return true;
-	}
+    }
 
 //***********************************/
 
     /** @dev Allows client safe approval facing double spend attack. */
     /** @notice Input address parameter may not be zero address. */
     /** @notice Emits Approval event. */
-	/** @return true. Reverts on failure. */
+    /** @return success - true. Reverts on failure. */
     function decreaseAllowance(
         address spender,
         uint256 subtractedValue
@@ -617,20 +617,20 @@ contract ILOCKV1 is Initializable,
         require(
             currentAllowance >= subtractedValue,
             "ERC20: decreased allowance below zero"
-		);
+        );
         unchecked {
             _approve(
                 owner,
                 spender,
                 currentAllowance - subtractedValue
-			);
-		}
+            );
+        }
         return true;
-	}
+    }
 
 //***********************************/
 
-	/** @dev Hook that is called before any transfer of tokens. */
+    /** @dev Hook that is called before any transfer of tokens. */
     function _beforeTokenTransfer(
         address _from,
         address _to,
@@ -639,7 +639,7 @@ contract ILOCKV1 is Initializable,
 
 //***********************************/
 
-	/** @dev Hook that is called after any transfer of tokens. */
+    /** @dev Hook that is called after any transfer of tokens. */
     function _afterTokenTransfer(
         address from,
         address to,
@@ -653,9 +653,9 @@ contract ILOCKV1 is Initializable,
 
 
         return 1;
-	}
+    }
 
-	/** @dev Gap for upgradeable storage. */
+    /** @dev Gap for upgradeable storage. */
     uint256[100] public storageGap;
 }
 
