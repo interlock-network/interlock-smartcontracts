@@ -15,3 +15,20 @@ We use Defender 2.0 to manage and monitor the contract and its activity.
 ## How to get setup and build:
 
 This is a standard Hardhat project. If you are unfamiliar with Hardhat, [then start here](https://hardhat.org/hardhat-runner/docs/getting-started#overview).
+
+### (But for now, compile and run stuff lest not to forget...)
+
+Compile contracts:
+```
+npx hardhat compile
+```
+
+Run local EVM node (blockchain):
+```
+npx hardhat node
+```
+
+Run script:
+```
+npx hardhat run --network localhost scripts/ILOCKdeploy.ts
+```
