@@ -1672,11 +1672,9 @@ pub mod ilockmvp {
 /////// token distribution /////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - General function to transfer share a stakeholder is currently entitled to.
-        /// - This is called once per stakeholder per month by stakeholder.
+        /// - General function for stakeholder to claim their own tokens per vesting schedule.
         /// - Pools are guaranteed to have enough tokens for all stakeholders.
         #[ink(message)]
-        #[openbrush::modifiers(only_owner)]
         #[openbrush::modifiers(when_not_paused)]
         pub fn claim_tokens(
             &mut self,
