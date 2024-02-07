@@ -87,7 +87,46 @@ pub mod ilockmvp {
     pub const TOKEN_NAME: &str = "Interlock Network";
     pub const TOKEN_DECIMALS: u8 = 18;
     pub const TOKEN_SYMBOL: &str = "ILOCK";
-    pub const INITIAL_REWARDS: u128 = 150_000_000 * DECIMALS_POWER10;
+
+    #[derive(Debug)]
+    pub struct PoolData<'a> {
+        pub name: &'a str,
+        pub tokens: u128,
+        pub vests: u8,
+        pub cliffs: u8,
+    }
+
+    /// - Pool data.
+    pub const POOLS: [PoolData; POOL_COUNT] = [
+        PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
+        PoolData { name: "presale_2",                     tokens: 33_333_333,  vests: 15, cliffs: 1, },
+        PoolData { name: "presale_3",                     tokens: 93_750_000,  vests: 12, cliffs: 1, },
+        PoolData { name: "team+founders",                 tokens: 200_000_000, vests: 36, cliffs: 6, },
+        PoolData { name: "outlier_ventures",              tokens: 40_000_000,  vests: 24, cliffs: 1, },
+        PoolData { name: "advisors",                      tokens: 25_000_000,  vests: 24, cliffs: 1, },
+        PoolData { name: "foundation",                    tokens: 169_264_142, vests: 84, cliffs: 1, },
+        PoolData { name: "rewards",                       tokens: 300_000_000, vests: 48, cliffs: 0, },
+        PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
+        PoolData { name: "community_sale",                tokens: 3_030_303,   vests: 1,  cliffs: 0, },
+        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 1,  cliffs: 0, },
+        PoolData { name: "proceeds",                      tokens: 0,           vests: 0,  cliffs: 0, },
+        PoolData { name: "circulating",                   tokens: 0,           vests: 0,  cliffs: 0, },
+    ];
+
+    /// - Pools.
+    pub const PRESALE_1: u8         = 0;
+    pub const PRESALE_2: u8         = 1;
+    pub const PRESALE_3: u8         = 2;
+    pub const TEAM: u8              = 3;
+    pub const OUTLIER: u8           = 4;
+    pub const ADVISORS: u8          = 5;
+    pub const FOUNDATION: u8        = 6;
+    pub const REWARDS: u8           = 7;
+    pub const PARTNERS: u8          = 8;
+    pub const COMMUNITY: u8         = 9;
+    pub const PUBLIC: u8            = 10;
+    pub const PROCEEDS: u8          = 11;
+    pub const CIRCULATING: u8       = 12;
 
     /// - Multisig functions.
     pub const TRANSFER_OWNERSHIP: u8    = 0;
@@ -145,11 +184,67 @@ pub mod ilockmvp {
         /// - In total, how much ILOCK have we rewarded to Interlockers?
         total: Balance,
 
-        /// - Reward parameters
-        rewardmax: Balance,
-
         /// - Expand storage related to the pool accounting functionality.
         pub _reserved: Option<()>,
+    }
+
+    /// - This is upgradable storage for the application connection feature of this
+    /// PSP22 contract (ie, the application/socket/port contract connectivity formalism).
+    pub const VEST_KEY: u32 = openbrush::storage_unique_key!(VestData);
+    #[derive(Default, Debug)]
+    #[openbrush::upgradeable_storage(VEST_KEY)]
+    pub struct VestData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - Contains information about stakeholders and the vesting
+        /// status.
+        /// - See detailed struct below.
+        ///
+        /// stakeholder:         stakeholder account address -> info about stakeholder
+        pub stakeholder: Mapping<AccountId, Vec<StakeholderData>>,
+
+        /// - Counter responsible for keeping track of how many months have passed
+        /// along the vesting schedule.
+        /// - Used in part to calculate and compare token amount paid out vs token amount owed.
+        pub monthspassed: u16,
+
+        /// - Stores the date timestamp one month ahead of the last increment of
+        /// `monthspassed`
+        pub nextpayout: Timestamp,
+
+        /// - Expand storage related to the vesting functionality.
+        pub _reserved: Option<()>,
+    }
+    /// - StakeholderData struct contains all pertinent information for each stakeholder
+    /// (Besides balance and allowance mappings).
+    /// - This is primarily for managing and implementing the vesting schedule.
+    #[derive(scale::Encode, scale::Decode, Clone, Default)]
+    #[cfg_attr(
+    feature = "std",
+    derive(
+        Debug,
+        PartialEq,
+        Eq,
+        scale_info::TypeInfo,
+        ink::storage::traits::StorageLayout,
+        )
+    )]
+    pub struct StakeholderData {
+
+        // ABSOLUTELY DO NOT CHANGE THE ORDER OF THESE VARIABLES
+        // OR TYPES IF UPGRADING THIS CONTRACT!!!
+
+        /// - How much so far has this stakeholder been paid in ILOCK?
+        pub paid: Balance,
+
+        /// - What is the overall ILOCK token share for this stakeholder?
+        pub share: Balance,
+
+        /// - Which vesting pool does this stakeholder belong to?
+        /// - The pool determines the vesting schedule.
+        pub pool: u8,
     }
 
     /// - This is upgradable storage for the application connection feature of this
@@ -436,6 +531,10 @@ pub mod ilockmvp {
         #[storage_field]
         pub reward: RewardData,
 
+        /// - ILOCK vesting info.
+        #[storage_field]
+        pub vest: VestData,
+
         /// - ILOCK connecting application contract info.
         #[storage_field]
         pub app: AppData,
@@ -445,9 +544,7 @@ pub mod ilockmvp {
         pub multisig: MultisigData,
 
         /// - ILOCK token pool balances.
-        pub rewards: Balance,
-        pub circulating: Balance,
-        pub proceeds: Balance,
+        pub balances: [Balance; POOL_COUNT],
     }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -640,7 +737,7 @@ pub mod ilockmvp {
         fn total_supply(&self) -> Balance {
 
             // revert, testing set code hash
-            self.circulating
+            self.balances[CIRCULATING as usize]
         }
 
         /// - Override default transfer doer.
@@ -667,12 +764,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.rewards.checked_add(value) {
-                    Some(sum) => self.rewards = sum,
+                match self.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.circulating.checked_sub(value) {
-                    Some(difference) => self.circulating = difference,
+                match self.balances[CIRCULATING as usize].checked_sub(value) {
+                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -711,8 +808,8 @@ pub mod ilockmvp {
             // if sender is owner, then tokens are entering circulation
             if from == self.ownable.owner {
 
-                match self.circulating.checked_add(value) {
-                    Some(sum) => self.circulating = sum,
+                match self.balances[CIRCULATING as usize].checked_add(value) {
+                    Some(sum) => self.balances[CIRCULATING as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
             }
@@ -720,12 +817,12 @@ pub mod ilockmvp {
             // if recipient is owner, then tokens are being returned or added to rewards pool
             if to == self.ownable.owner {
 
-                match self.rewards.checked_add(value) {
-                    Some(sum) => self.rewards = sum,
+                match self.balances[REWARDS as usize].checked_add(value) {
+                    Some(sum) => self.balances[REWARDS as usize] = sum,
                     None => return Err(OtherError::Overflow.into()),
                 };
-                match self.circulating.checked_sub(value) {
-                    Some(difference) => self.circulating = difference,
+                match self.balances[CIRCULATING as usize].checked_sub(value) {
+                    Some(difference) => self.balances[CIRCULATING as usize] = difference,
                     None => return Err(OtherError::Underflow.into()),
                 };
             }
@@ -867,7 +964,6 @@ pub mod ilockmvp {
         #[ink(constructor)]
         pub fn new_token(
             timelimit: Timestamp,
-            rewardmax: Balance,
             signatory_2: AccountId,
             signatory_3: AccountId,
         ) -> OtherResult<Self> {
@@ -912,6 +1008,8 @@ pub mod ilockmvp {
             contract.multisig.threshold = 2;
 
             // set initial data
+            contract.vest.monthspassed = 0;
+            contract.vest.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
             contract.reward.total = 0;
 
             contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
@@ -919,16 +1017,17 @@ pub mod ilockmvp {
             contract.metadata.decimals = TOKEN_DECIMALS;
 
             // mint with openbrush:
-            contract._mint_to(caller, INITIAL_REWARDS)
+            contract._mint_to(caller, SUPPLY_CAP)
                     .expect("Failed to mint the initial supply");
             contract._init_with_owner(caller);
+
+            // create initial pool balances
+            for pool in 0..POOL_COUNT {
+
+                contract.balances[pool] =
+                            POOLS[pool].tokens * DECIMALS_POWER10;
+            }
             
-            contract.rewards = INITIAL_REWARDS;
-            contract.circulating = 0;
-            contract.proceeds = 0;
-
-            contract.reward.rewardmax = rewardmax;
-
             Ok(contract)
         }
 
@@ -1375,6 +1474,468 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
+/////// timing /////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - Function to check if enough time has passed to collect next payout.
+        /// - This function ensures Interlock cannot rush the vesting schedule.
+        /// - This function must be called before the next round of token distributions.
+        #[ink(message)]
+        pub fn check_time(
+            &mut self,
+        ) -> OtherResult<()> {
+    
+            let caller: AccountID = AccountID { address: self.env().caller() };
+
+            // make sure caller is designated multisigtx account
+            if !self.multisig.signatories.contains(&caller) {
+
+                return Err(OtherError::CallerNotSignatory);
+            }
+
+            // test to see if current time falls beyond time for next payout
+            if self.env().block_timestamp() > self.vest.nextpayout {
+
+                // update time variables
+                self.vest.nextpayout += ONE_MONTH;
+                self.vest.monthspassed += 1;
+
+                return Ok(());
+            }
+
+            // too early, do nothing
+            return Err(OtherError::PayoutTooEarly)
+        }
+        
+        /// - Time in seconds until next payout in minutes.
+        #[ink(message)]
+        pub fn remaining_time(
+            &self
+        ) -> Timestamp {
+
+            // calculate remaining time
+            let timeleft: Timestamp = match self.vest.nextpayout.checked_sub(self.env().block_timestamp()) {
+                Some(difference) => difference,
+                None => return 0,
+            };
+
+            timeleft
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// stakeholders  //////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - Function that registers a stakeholder's wallet and vesting info.
+        /// - Data used to calculate monthly payouts and track net paid.
+        /// - Stakeholder data also used for stakeholder to verify their place in vesting schedule.
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        pub fn register_stakeholder(
+            &mut self,
+            stakeholder: AccountId,
+            share: Balance,
+            poolnumber: u8,
+            overwrite: bool,
+        ) -> OtherResult<()> {
+
+            // make sure share is large enough to not round to zero on div
+            if share < MIN_SHARE as Balance {
+                return Err(OtherError::ShareTooSmall);
+            }
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => Vec::new(),
+            };
+
+            // iterate through the stakeholders stakes and check to make sure no duplicate
+            if stakes.iter().any(|stake| stake.pool == poolnumber) && !overwrite {
+                return Err(OtherError::AlreadyRegistered)
+            }
+
+            // create stake struct
+            let this_stake = StakeholderData {
+                paid: 0,
+                share: share,
+                pool: poolnumber,
+            };
+
+            // iterate through preexisting stakes
+            for stake in stakes.iter_mut() {
+
+                if stake.pool == poolnumber {
+
+                    // replace old stake data
+                    *stake = this_stake;
+
+                    // insert stakeholder struct into mapping
+                    self.vest.stakeholder.insert(stakeholder, &stakes);
+
+                    return Ok(());
+                }
+            }
+            
+            // add stake to stakeholder's stake collection
+            stakes.push(this_stake);
+
+            // insert stakeholder struct into mapping
+            self.vest.stakeholder.insert(stakeholder, &stakes);
+
+            Ok(())
+        }
+
+        /// - Function that returns stakeholder data for each stake..
+        #[ink(message)]
+        pub fn get_stakes(
+            &self,
+            stakeholder: AccountId,
+        ) -> OtherResult<Vec<StakeholderData>> {
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let stakes: Vec<StakeholderData> = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            Ok(stakes)
+        }
+
+        /// - Function that returns a stakeholder's pay remaining for each stake.
+        #[ink(message)]
+        pub fn get_stakes_payremaining(
+            &self,
+            stakeholder: AccountId,
+        ) -> OtherResult<Vec<Balance>> {
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            // calculate pay remaining for each element?
+            let payremaining: Vec<Balance> = stakes.iter().map(|stake| stake.share - stake.paid).collect();
+
+            Ok(payremaining)
+        }
+
+        /// - Function that returns a stakeholder's payout amount for each stake.
+        #[ink(message)]
+        pub fn get_stakes_payamount(
+            &self,
+            stakeholder: AccountId,
+        ) -> OtherResult<Vec<Balance>> {
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            // calculate payout amount
+            stakes.iter().map(|stake| self.calculate_payout(stake)).collect()
+        }
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////
+/////// token distribution /////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - General function to transfer share a stakeholder is currently entitled to.
+        /// - This is called once per stakeholder per month by stakeholder.
+        /// - Pools are guaranteed to have enough tokens for all stakeholders.
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
+        pub fn claim_tokens(
+            &mut self,
+            poolnumber: u8,
+        ) -> OtherResult<()> {
+
+            let stakeholder: AccountId = self.env().caller();
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
+
+            // get stake held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            // iterate through the stakeholders stakes and check to make sure pool stake exists
+            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
+                return Err(OtherError::NoStake)
+            }
+
+            // iterate through the stakeholders stakes and distribute tokens
+            for stake in stakes.iter_mut() {
+
+                if stake.pool == poolnumber {
+
+                    let pool = &POOLS[stake.pool as usize];
+
+                    // require cliff to have been surpassed
+                    if self.vest.monthspassed < pool.cliffs as u16 {
+                        return Err(OtherError::CliffNotPassed)
+                    }
+
+                    // require share has not been completely paid out
+                    if stake.paid == stake.share {
+                        return Err(OtherError::StakeholderSharePaid)
+                    }
+
+                    // calculate the payout owed
+                    // ! no checked_div needed; pool.vests guaranteed to be nonzero
+                    let mut payout: Balance = self.calculate_payout(stake)?;
+
+                    // require that payout isn't repeatable for this month
+                    // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
+                    let payments = self.calculate_payments(stake)?;
+                    if payments >= self.vest.monthspassed as u128 {
+                        return Err(OtherError::PayoutTooEarly)
+                    }
+
+                    // calculate the new total paid to stakeholder
+                    let mut newpaidtotal: Balance = match stake.paid.checked_add(payout) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // calculate remaining share
+                    let remainingshare: Balance = match stake.share.checked_sub(newpaidtotal) {
+                        Some(difference) => difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+
+                    // if this is final payment, add token remainder to payout
+                    // (this is to compensate for floor division that calculates payamount)
+                    if remainingshare < payout {
+    
+                        payout += remainingshare;
+                        newpaidtotal = stake.share;
+                    }
+
+                    // increment distribution to stakeholder account
+                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+                    match stakeholderbalance.checked_add(payout) {
+                        Some(sum) => stakeholderbalance = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+                    // increment total supply
+                    match self.balances[CIRCULATING as usize].checked_add(payout) {
+                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // deduct tokens from owners account
+                    let mut ownerbalance: Balance = self.psp22.balance_of(self.env().caller());
+                    match ownerbalance.checked_sub(payout) {
+                        Some(difference) => ownerbalance = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+                    self.psp22.balances.insert(&self.env().caller(), &ownerbalance);
+
+                    // update pool balance
+                    match self.balances[stake.pool as usize].checked_sub(payout) {
+                        Some(difference) => self.balances[stake.pool as usize] = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+
+                    // update amount paid for this particular stake
+                    stake.paid = newpaidtotal;
+                }
+            }
+
+            // finally update stakeholder data struct state
+            self.vest.stakeholder.insert(stakeholder, &stakes);
+
+            Ok(())
+        }
+
+        /// - Function used to payout tokens to pools with no vesting schedule.
+        /// POOL ARGUMENTS:
+        ///      PARTNERS
+        ///      COMMUNITY
+        ///      PUBLIC
+        ///      PROCEEDS
+        #[ink(message)]
+        #[openbrush::modifiers(only_owner)]
+        #[openbrush::modifiers(when_not_paused)]
+        pub fn payout_tokens(
+            &mut self,
+            stakeholder: AccountId,
+            amount: Balance,
+            pool: String,
+        ) -> OtherResult<()> {
+
+            let owner: AccountId = self.env().caller();
+
+            // make sure stakeholder is not zero address
+            if stakeholder == AccountId::from([0_u8; 32]) {
+                return Err(OtherError::IsZeroAddress)
+            }
+
+            // get stakes held by this stakeholder
+            let mut stakes = match self.vest.stakeholder.get(stakeholder) {
+                Some(stakes) => stakes,
+                None => { return Err(OtherError::StakeholderNotFound) },
+            };
+
+            let poolnumber: u8 = match pool.as_str() {
+                "PARTNERS"      => PARTNERS,
+                "COMMUNITY"     => COMMUNITY,
+                "PUBLIC"        => PUBLIC,
+                "PROCEEDS"      => PROCEEDS,
+                _ => return Err(OtherError::InvalidPool)
+            };
+
+            // iterate through the stakeholders stakes and distribute tokens
+            if !stakes.iter().any(|stake| stake.pool == poolnumber) {
+                return Err(OtherError::NoStake)
+            }
+
+            // iterate through the stakeholders stakes and distribute tokens
+            for stake in stakes.iter_mut() {
+
+                if stake.pool == poolnumber {
+
+                    // require share has not been completely paid out
+                    if stake.paid == stake.share {
+                        return Err(OtherError::StakeholderSharePaid)
+                    }
+
+                    // calculate new total amount paid after amount
+                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // make sure payout doesn't exceed share
+                    if newpaidtotal > stake.share {
+
+                        return Err(OtherError::PaymentTooLarge);
+                    }
+
+                    // now transfer tokens
+                    // increment distribution to stakeholder account
+                    let mut stakeholderbalance: Balance = self.psp22.balance_of(stakeholder);
+                    match stakeholderbalance.checked_add(amount) {
+                        Some(sum) => stakeholderbalance = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+                    self.psp22.balances.insert(&stakeholder, &stakeholderbalance);
+
+                    // increment total supply
+                    match self.balances[CIRCULATING as usize].checked_add(amount) {
+                        Some(sum) => self.balances[CIRCULATING as usize] = sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // calculate the new total paid to stakeholder
+                    let newpaidtotal: Balance = match stake.paid.checked_add(amount) {
+                        Some(sum) => sum,
+                        None => return Err(OtherError::Overflow),
+                    };
+
+                    // deduct tokens from owners account
+                    let mut ownerbalance: Balance = self.psp22.balance_of(owner);
+                    match ownerbalance.checked_sub(amount) {
+                        Some(difference) => ownerbalance = difference,
+                        None => return Err(OtherError::Underflow),
+                    };
+                    self.psp22.balances.insert(&owner, &ownerbalance);
+
+                    // update amount paid for this particular stake
+                    stake.paid = newpaidtotal;
+                }
+            }
+
+            Ok(())
+        }
+
+////////////////////////////////////////////////////////////////////////////
+/////// pool data //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+        /// - Function that returns pool data in human readable format..
+        /// - This will allow observers to verify vesting parameters for each pool (esp. theirs).
+        /// - Observers may verify pool data from explorer if so motivated.
+        /// - Pool numbers range from 0-11.
+        /// - Returns (name, tokens, vests, cliff) (formatted for convenient for Substrate UI)..
+        #[ink(message)]
+        pub fn pool_data(
+            &self,
+            poolnumber: u8,
+        ) -> OtherResult<(String, String, String, String)> {
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
+        
+            let pool = &POOLS[poolnumber as usize];
+
+            Ok((
+                format!("pool: {:?} ", pool.name.to_string()),
+                format!("tokens alotted: {:?} ", pool.tokens),
+                format!("number of vests: {:?} ", pool.vests),
+                format!("vesting cliff: {:?} ", pool.cliffs),
+            ))
+        }
+        
+        /// - Get current balance of any vesting pool.
+        /// - Provide human readable and numberic format.
+        #[ink(message)]
+        pub fn pool_balance(
+            &self,
+            poolnumber: u8,
+        ) -> OtherResult<Balance> {
+
+            // make sure pool is valid
+            if poolnumber >= POOL_COUNT as u8 {
+                return Err(OtherError::PoolOutOfBounds);
+            }
+
+            Ok(self.balances[poolnumber as usize])
+        }
+
+////////////////////////////////////////////////////////////////////////////
 //// rewarding  ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -1394,8 +1955,18 @@ pub mod ilockmvp {
                 return Err(OtherError::IsZeroAddress)
             }
 
+            // make sure vest limit will not be passed with this reward
+            let monthly: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
+                POOLS[REWARDS as usize].vests as Balance;
+            let currentcap: Balance = (self.vest.monthspassed + 1) as Balance * monthly;
+            if currentcap < POOLS[REWARDS as usize].tokens * DECIMALS_POWER10
+                - self.balances[REWARDS as usize] + reward {
+
+                return Err(OtherError::PayoutTooEarly)
+            }
+
             // make sure reward not too large
-            if self.reward.rewardmax <= reward {
+            if monthly <= reward {
                 return Err(OtherError::PaymentTooLarge)
             }
 
@@ -1406,8 +1977,8 @@ pub mod ilockmvp {
 
             // update rewards pool balance
             // (contract calls transfer, not owner, thus we must update here)
-            match self.rewards.checked_sub(reward) {
-                Some(difference) => self.rewards = difference,
+            match self.balances[REWARDS as usize].checked_sub(reward) {
+                Some(difference) => self.balances[REWARDS as usize] = difference,
                 None => return Err(OtherError::PaymentTooLarge),
             };
 
@@ -1426,8 +1997,8 @@ pub mod ilockmvp {
             };
 
             // increment total supply
-            match self.circulating.checked_add(reward) {
-                Some(sum) => self.circulating = sum,
+            match self.balances[CIRCULATING as usize].checked_add(reward) {
+                Some(sum) => self.balances[CIRCULATING as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
 
@@ -1490,9 +2061,30 @@ pub mod ilockmvp {
         }
 
 ////////////////////////////////////////////////////////////////////////////
-//// portability and extensibility  ////////////////////////////////////////
+//// misc  /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+        /// - Function to get the number of months passed for contract.
+        #[ink(message)]
+        pub fn months_passed(
+            &self,
+        ) -> u16 {
+
+            self.vest.monthspassed
+        }
+
+        /// - Function to get the supply cap minted on TGE.
+        #[ink(message)]
+        pub fn cap(
+            &self,
+        ) -> Balance {
+
+            SUPPLY_CAP
+        }
+
+////////////////////////////////////////////////////////////////////////////
+//// portability and extensibility  ////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
         #[ink(message)]
         pub fn transfer_ownership(
             &mut self,
@@ -1590,7 +2182,7 @@ pub mod ilockmvp {
             };
 
             // guard to make sure cap is not greater than rewards on hand
-            if cap > self.rewards {
+            if cap > self.balances[REWARDS as usize] {
                 return Err(OtherError::CapTooLarge);
             }
 
@@ -1773,12 +2365,12 @@ pub mod ilockmvp {
                     self.psp22.balances.insert(&address, &minterbalance);
                 
                     // update pools
-                    match self.rewards.checked_add(amount) {
-                        Some(sum) => self.rewards = sum,
+                    match self.balances[REWARDS as usize].checked_add(amount) {
+                        Some(sum) => self.balances[REWARDS as usize] = sum,
                         None => return Err(OtherError::Overflow),
                     };
-                    match self.circulating.checked_sub(amount) {
-                        Some(difference) => self.circulating = difference,
+                    match self.balances[CIRCULATING as usize].checked_sub(amount) {
+                        Some(difference) => self.balances[CIRCULATING as usize] = difference,
                         None => return Err(OtherError::Underflow),
                     };
 
@@ -1868,12 +2460,12 @@ pub mod ilockmvp {
             };
 
             // update proceeds pool and total circulation
-            match self.proceeds.checked_add(tax) {
-                Some(sum) => self.proceeds = sum,
+            match self.balances[PROCEEDS as usize].checked_add(tax) {
+                Some(sum) => self.balances[PROCEEDS as usize] = sum,
                 None => return Err(OtherError::Overflow),
             };
-            match self.circulating.checked_sub(tax) {
-                Some(difference) => self.circulating = difference,
+            match self.balances[CIRCULATING as usize].checked_sub(tax) {
+                Some(difference) => self.balances[CIRCULATING as usize] = difference,
                 None => return Err(OtherError::Underflow),
             };
 
@@ -1937,6 +2529,34 @@ pub mod ilockmvp {
             }
         }        
 
+        /// - This is a helper to perform checked_div match within iterator map.
+        pub fn calculate_payout(&self, stake: &StakeholderData) -> OtherResult<Balance> {
+
+            let pool = &POOLS[stake.pool as usize];
+
+            // divide total share by number of vests
+            let amount: Balance = match stake.share.checked_div(pool.vests as Balance) {
+                Some(quotient) => quotient,
+                None => return Err(OtherError::DivideByZero),
+            };
+
+            Ok(amount)
+        }
+
+        /// - This is a helper to perform checked_div match within iterator map.
+        pub fn calculate_payments(&self, stake: &StakeholderData) -> OtherResult<Balance> {
+
+            let payout: Balance = self.calculate_payout(stake)?;
+
+            // divide total paid by payamount to get number of payments made to date
+            let payments: Balance = match stake.paid.checked_div(payout) {
+                Some(quotient) => quotient,
+                None => return Err(OtherError::DivideByZero),
+            };
+
+            Ok(payments)
+        }
+    
     } // END OF ILOCKmvp IMPL BLOCK
  }
 
