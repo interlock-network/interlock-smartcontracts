@@ -74,7 +74,7 @@ pub mod ilockmvp {
     /// - Magic numbers.
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 13;                               // number of token pools
-    pub const ONE_MONTH: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
+    pub const VEST_INCREMENT: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
     pub const MULTISIG_TIME: Timestamp = 86400_000;                 // milliseconds in 30 days
     pub const MIN_SHARE: u128 = 1_000_000_000;
     pub const TIME_LIMIT_MIN: Timestamp = 600_000;                  // 10 minutes
@@ -205,13 +205,13 @@ pub mod ilockmvp {
         /// stakeholder:         stakeholder account address -> info about stakeholder
         pub stakeholder: Mapping<AccountId, Vec<StakeholderData>>,
 
-        /// - Counter responsible for keeping track of how many months have passed
+        /// - Counter responsible for keeping track of how many vesting time increments have passed
         /// along the vesting schedule.
         /// - Used in part to calculate and compare token amount paid out vs token amount owed.
-        pub monthspassed: u16,
+        pub vestincrementspassed: u16,
 
-        /// - Stores the date timestamp one month ahead of the last increment of
-        /// `monthspassed`
+        /// - Stores the date timestamp one time increment ahead of the last increment of
+        /// `vestincrementspassed`
         pub nextpayout: Timestamp,
 
         /// - Expand storage related to the vesting functionality.
@@ -594,7 +594,7 @@ pub mod ilockmvp {
         StakeholderNotFound,
         /// - Returned if stakeholder has not yet passed cliff.
         CliffNotPassed,
-        /// - Returned if it is too soon to payout for month.
+        /// - Returned if it is too soon to payout for vesting time increment.
         PayoutTooEarly,
         /// - Returned if reward is too large.
         PaymentTooLarge,
@@ -1008,8 +1008,8 @@ pub mod ilockmvp {
             contract.multisig.threshold = 2;
 
             // set initial data
-            contract.vest.monthspassed = 0;
-            contract.vest.nextpayout = Self::env().block_timestamp() + ONE_MONTH;
+            contract.vest.vestincrementspassed = 0;
+            contract.vest.nextpayout = Self::env().block_timestamp() + VEST_INCREMENT;
             contract.reward.total = 0;
 
             contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
@@ -1497,8 +1497,8 @@ pub mod ilockmvp {
             if self.env().block_timestamp() > self.vest.nextpayout {
 
                 // update time variables
-                self.vest.nextpayout += ONE_MONTH;
-                self.vest.monthspassed += 1;
+                self.vest.nextpayout += VEST_INCREMENT;
+                self.vest.vestincrementspassed += 1;
 
                 return Ok(());
             }
@@ -1527,7 +1527,7 @@ pub mod ilockmvp {
 ////////////////////////////////////////////////////////////////////////////
 
         /// - Function that registers a stakeholder's wallet and vesting info.
-        /// - Data used to calculate monthly payouts and track net paid.
+        /// - Data used to calculate vesting payouts and track net paid.
         /// - Stakeholder data also used for stakeholder to verify their place in vesting schedule.
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -1707,7 +1707,7 @@ pub mod ilockmvp {
                     let pool = &POOLS[stake.pool as usize];
 
                     // require cliff to have been surpassed
-                    if self.vest.monthspassed < pool.cliffs as u16 {
+                    if self.vest.vestincrementspassed < pool.cliffs as u16 {
                         return Err(OtherError::CliffNotPassed)
                     }
 
@@ -1720,10 +1720,10 @@ pub mod ilockmvp {
                     // ! no checked_div needed; pool.vests guaranteed to be nonzero
                     let mut payout: Balance = self.calculate_payout(stake)?;
 
-                    // require that payout isn't repeatable for this month
+                    // require that payout isn't repeatable for this vesting time increment
                     // ! no checked_div needed; this_stakeholder.share guaranteed to be nonzero
                     let payments = self.calculate_payments(stake)?;
-                    if payments >= self.vest.monthspassed as u128 {
+                    if payments >= self.vest.vestincrementspassed as u128 {
                         return Err(OtherError::PayoutTooEarly)
                     }
 
@@ -1954,9 +1954,9 @@ pub mod ilockmvp {
             }
 
             // make sure vest limit will not be passed with this reward
-            let monthly: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
+            let incrementamount: Balance = POOLS[REWARDS as usize].tokens * DECIMALS_POWER10 /
                 POOLS[REWARDS as usize].vests as Balance;
-            let currentcap: Balance = (self.vest.monthspassed + 1) as Balance * monthly;
+            let currentcap: Balance = (self.vest.vestincrementspassed + 1) as Balance * incrementamount;
             if currentcap < POOLS[REWARDS as usize].tokens * DECIMALS_POWER10
                 - self.balances[REWARDS as usize] + reward {
 
@@ -1964,7 +1964,7 @@ pub mod ilockmvp {
             }
 
             // make sure reward not too large
-            if monthly <= reward {
+            if incrementamount <= reward {
                 return Err(OtherError::PaymentTooLarge)
             }
 
@@ -2062,13 +2062,13 @@ pub mod ilockmvp {
 //// misc  /////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-        /// - Function to get the number of months passed for contract.
+        /// - Function to get the number of vesting increments passed for contract.
         #[ink(message)]
-        pub fn months_passed(
+        pub fn vest_increments_passed(
             &self,
         ) -> u16 {
 
-            self.vest.monthspassed
+            self.vest.vestincrementspassed
         }
 
         /// - Function to get the supply cap minted on TGE.
@@ -2586,7 +2586,7 @@ pub mod tests_unit;
 // [x] happye2e_reward_interlocker
 // [x] happyunit_rewarded_interlocker_total  <-- checked within reward_interlocker()
 // [x] happyunit_rewarded_total              <-- checked within reward_interlocker()
-// [x] happyunit_months_passed               <-- checked within new_token()
+// [x] happyunit_vest_increments_passed               <-- checked within new_token()
 // [x] happyunit_cap                         <-- checked within new_token()
 // [!] happyunit_update_contract             <-- TEST ON TESTNET
 // [] sadunit_update_contract
