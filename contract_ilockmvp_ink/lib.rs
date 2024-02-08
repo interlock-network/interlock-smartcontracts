@@ -74,8 +74,8 @@ pub mod ilockmvp {
     /// - Magic numbers.
     pub const ID_LENGTH: usize = 32;                                // 32B account id
     pub const POOL_COUNT: usize = 13;                               // number of token pools
-    pub const VEST_INCREMENT: Timestamp = 2_592_000_000;                 // milliseconds in 30 days
-    pub const MULTISIG_TIME: Timestamp = 86400_000;                 // milliseconds in 30 days
+    pub const VEST_INCREMENT: Timestamp = 2_592_000_000;            // milliseconds in 30 days
+    pub const MULTISIG_TIME: Timestamp = 86_400_000;                // milliseconds in 30 days
     pub const MIN_SHARE: u128 = 1_000_000_000;
     pub const TIME_LIMIT_MIN: Timestamp = 600_000;                  // 10 minutes
     pub const THRESHOLD_MIN: u16 = 2;                               // two signers
@@ -525,7 +525,7 @@ pub mod ilockmvp {
 
         /// - Openbrush pausable extensios.
         #[storage_field]
-		pub pausable: pausable::Data,
+        pub pausable: pausable::Data,
 
         /// - ILOCK Rewards info.
         #[storage_field]
