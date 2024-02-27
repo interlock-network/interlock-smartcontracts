@@ -50,6 +50,7 @@ registeredStakes.json
 contractAdmin.json
 stakeIdentifiers.json
 stakedata_test.json
+scripts/*.js
 
 # Hardhat files
 cache
