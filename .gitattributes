@@ -1,3 +1,2 @@
 * linguist-vendored
-*.rs linguist-vendored=false
-*.sol linguist-vendored=false
+*.rs *.sol linguist-vendored=false
